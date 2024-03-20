@@ -13,7 +13,6 @@ namespace TSISP003.TCP
         private SemaphoreSlim _readSemaphore = new SemaphoreSlim(1, 1);
         private SemaphoreSlim _writeSemaphore = new SemaphoreSlim(1, 1);
 
-
         public TCPClient(string ipAddress, int port)
         {
             _ipAddress = ipAddress;
