@@ -5,6 +5,9 @@ namespace TSISP003.SignControllerService
 {
     public class SignControllerService : ISignControllerService
     {
+        private Task heartBeatPollTask;
+        private Task socketReaderTask;
+
         private readonly TCPClient _tcpClient;
         private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
 
@@ -13,11 +16,58 @@ namespace TSISP003.SignControllerService
             _tcpClient = tcpClient;
         }
 
-        public async Task StartAsync(CancellationToken cancellationToken)
+        public Task StartAsync(CancellationToken cancellationToken)
         {
             _cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-            await KeepAliveRoutine(_cancellationTokenSource.Token);
+
+            heartBeatPollTask = Task.Run(() => HeartBeatPollTask(_cancellationTokenSource.Token));
+            socketReaderTask = Task.Run(() => SocketReaderTask(_cancellationTokenSource.Token));
+
+            return Task.CompletedTask;
         }
+
+        private async void HeartBeatPollTask(CancellationToken cancellationToken)
+        {
+            while (!cancellationToken.IsCancellationRequested)
+            {
+                await HeartbeatPoll();
+                Thread.Sleep(3000);
+            }
+        }
+
+        private async void SocketReaderTask(CancellationToken cancellationToken)
+        {
+            try
+            {
+                while (!cancellationToken.IsCancellationRequested)
+                {
+                    string response = await _tcpClient.ReadAsync();
+                    if (!string.IsNullOrEmpty(response))
+                    {
+                        ProcessResponse(response);
+                    }
+                    else
+                    {
+                        // Handle the scenario when the read returns null or empty string
+                        // This could mean that the connection was closed or there was an issue
+                    }
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                // Ignore 
+            }
+            catch (Exception ex)
+            {
+                // handle
+            }
+        }
+
+        private void ProcessResponse(string response)
+        {
+            // Process the received response here
+        }
+
 
         public Task StopAsync(CancellationToken cancellationToken)
         {
@@ -25,32 +75,259 @@ namespace TSISP003.SignControllerService
             return Task.CompletedTask;
         }
 
-        private async Task DoSomethingElse(CancellationToken cancellationToken)
+        public Task HeartbeatPoll()
         {
-            await _tcpClient.SendAsync("TODO");
-
+            throw new NotImplementedException();
         }
 
-        private async Task KeepAliveRoutine(CancellationToken cancellationToken)
+        public Task StartSession()
         {
-            while (!cancellationToken.IsCancellationRequested)
-            {
-                try
-                {
-                    await _tcpClient.SendAsync("TODO");
-                    await Task.Delay(TimeSpan.FromSeconds(30), cancellationToken); // Example keep-alive interval
-                }
-                catch (OperationCanceledException)
-                {
-                    // Handle cancellation
-                    break;
-                }
-                catch (Exception ex)
-                {
-                    // Handle other exceptions, possibly logging them
-                    Console.WriteLine($"Error in KeepAliveRoutine: {ex.Message}");
-                }
-            }
+            throw new NotImplementedException();
+        }
+
+        public Task Password()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task EndSession()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task SystemReset()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task UpdateTime()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task SignSetTextFrame()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task SignSetGraphicsFrame()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task SignSetHighResolutionGraphicsFrame()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task SignConfigurationRequest()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task SignDisplayAtomicFrames()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task SignSetMessage()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task SignSetPlan()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task SignDisplayFrame()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task SignDisplayMessage()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task EnablePlan()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task DisablePlan()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task RequestEnabledPlans()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task SignSetDimmingLevel()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task PowerOnOff()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task DisableEnableDevice()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task SignRequestStoredFrameMessagePlan()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task SignExtendedStatusRequest()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task RetrieveFaultLog()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task ResetFaultLog()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task HARSetVoiceDataIncomplete()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task HARSetVoiceDataComplete()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task HARSetStrategy()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task HARActivateStrategy()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task HARSetPlan()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task HARRequestStoredVoiceStrategyPlan()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task RequestEnvironmentalWeatherValues()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task EnvironmentalWeatherValues()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task EnvironmentalWeatherThresholdDefinition()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task RequestThresholdDefinition()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task RequestEnvironmentalWeatherEventLog()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task ResetEnvironmentalWeatherEventLog()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task ProcessPasswordSeed()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task ProcessAcknowledge()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task ProcessSignStatusReply()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task ProcessHARStatusReply()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task ProcessEnvironmentalWeatherStatusReply()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task ProcessSignConfigurationReply()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task ProcessReportEnabledPlans()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task ProcessSignExtendedStatusReply()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task ProcessFaultLogReply()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task ProcessHARVoiceDataAck()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task ProcessHARVoiceDataNak()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task ProcessEnvironmentalWeatherValuesReply()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task ProcessEnvironmentalWeatherThresholdDefinitionReply()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task ProcessEnvironmentalWeatherEventLogReply()
+        {
+            throw new NotImplementedException();
         }
     }
 }
