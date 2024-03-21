@@ -1,4 +1,5 @@
 
+using TSISP003.ProtocolUtils;
 using TSISP003.TCP;
 
 namespace TSISP003.SignControllerService
@@ -41,31 +42,45 @@ namespace TSISP003.SignControllerService
             {
                 while (!cancellationToken.IsCancellationRequested)
                 {
-                    string response = await _tcpClient.ReadAsync();
-                    if (!string.IsNullOrEmpty(response))
-                    {
-                        ProcessResponse(response);
-                    }
-                    else
-                    {
-                        // Handle the scenario when the read returns null or empty string
-                        // This could mean that the connection was closed or there was an issue
-                    }
+                    ReadStream();
                 }
             }
             catch (OperationCanceledException)
             {
                 // Ignore 
             }
+        }
+
+        private async void ReadStream()
+        {
+            try
+            {
+                string response = await _tcpClient.ReadAsync();
+                if (!string.IsNullOrEmpty(response))
+                {
+                    Console.WriteLine("Processing response");
+                    ProcessResponse(response);
+                }
+                else
+                {
+                    Console.WriteLine("Empty response");
+                    // Handle the scenario when the read returns null or empty string
+                    // This could mean that the connection was closed or there was an issue
+                }
+            }
             catch (Exception ex)
             {
-                // handle
+                // Ignore 
+                Thread.Sleep(3000);
             }
         }
 
         private void ProcessResponse(string response)
         {
-            // Process the received response here
+            foreach (var command in Utils.GetChunks(response))
+            {
+                Console.WriteLine("Response: " + command);
+            }
         }
 
 
@@ -75,9 +90,10 @@ namespace TSISP003.SignControllerService
             return Task.CompletedTask;
         }
 
-        public Task HeartbeatPoll()
+        public async Task HeartbeatPoll()
         {
-            throw new NotImplementedException();
+            Console.WriteLine("Sending poll");
+            await _tcpClient.SendAsync("310210210212");
         }
 
         public Task StartSession()

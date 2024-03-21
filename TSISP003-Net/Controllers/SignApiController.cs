@@ -4,7 +4,7 @@ using Microsoft.AspNetCore.Mvc;
 namespace TSISP003.Controllers
 {
     [ApiController]
-    [Route("[api]")]
+    [Route("api")]
     public class SignApiController : ControllerBase
     {
         private readonly ILogger<SignApiController> _logger; // I am unsure whether injecting ILogger here is best practice

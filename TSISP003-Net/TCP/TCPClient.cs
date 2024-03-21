@@ -22,7 +22,14 @@ namespace TSISP003.TCP
 
         public async Task ConnectAsync()
         {
-            await _client.ConnectAsync(_ipAddress, _port);
+            try
+            {
+                await _client.ConnectAsync(_ipAddress, _port);
+            }
+            catch (System.Net.Sockets.SocketException)
+            {
+                Console.WriteLine($"Unable to connect to {_ipAddress}:{_port}");
+            }
         }
 
         public void Disconnect()
@@ -38,10 +45,17 @@ namespace TSISP003.TCP
                 if (!_client.Connected)
                     await ConnectAsync();
 
-                NetworkStream stream = _client.GetStream();
-                byte[] data = Encoding.UTF8.GetBytes(message);
+                if (_client.Connected)
+                {
+                    NetworkStream stream = _client.GetStream();
+                    byte[] data = Encoding.UTF8.GetBytes(message);
 
-                await stream.WriteAsync(data, 0, data.Length);
+                    await stream.WriteAsync(data, 0, data.Length);
+                }
+                else
+                {
+                    Console.WriteLine("Unable to send message, client is disconnected");
+                }
             }
             finally
             {
@@ -58,15 +72,12 @@ namespace TSISP003.TCP
                     await ConnectAsync();
 
                 NetworkStream stream = _client.GetStream();
-                byte[] data = new byte[1024];
+                byte[] buffer = new byte[1024];
                 using (MemoryStream ms = new MemoryStream())
                 {
-                    int numBytesRead;
-                    while ((numBytesRead = await stream.ReadAsync(data, 0, data.Length)) > 0)
-                    {
-                        ms.Write(data, 0, numBytesRead);
-                    }
-                    return Encoding.UTF8.GetString(ms.ToArray());
+                    int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
+                    if (bytesRead > 0) ms.Write(buffer, 0, bytesRead);
+                    return Encoding.ASCII.GetString(ms.ToArray());
                 }
             }
             finally
@@ -74,6 +85,7 @@ namespace TSISP003.TCP
                 _readSemaphore.Release();
             }
         }
+
     }
 
 }

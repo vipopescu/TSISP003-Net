@@ -4,12 +4,12 @@ namespace TSISP003.SignControllerService
     public class SignControllerServiceConfig
     {
         // Data Presentation Tags
-        public const int SOH = 0x01;
-        public const int STX = 0x02;
-        public const int ETX = 0x03;
-        public const int EOT = 0x04;
-        public const int ACK = 0x06;
-        public const int NAK = 0x15;
+        public const char SOH = '\u0001';
+        public const char STX = '\u0002';
+        public const char ETX = '\u0003';
+        public const char EOT = '\u0004';
+        public const char ACK = '\u0006';
+        public const char NAK = '\u0015';
 
         // Mi Codes
         public const int MI_REJECT_MESSAGE = 0x15;
