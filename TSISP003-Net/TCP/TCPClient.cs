@@ -53,7 +53,7 @@ namespace TSISP003.TCP
                 if (_client.Connected)
                 {
                     NetworkStream stream = _client.GetStream();
-                    byte[] data = Encoding.UTF8.GetBytes(message);
+                    byte[] data = Encoding.ASCII.GetBytes(message);
 
                     await stream.WriteAsync(data, 0, data.Length);
                 }
