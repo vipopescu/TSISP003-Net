@@ -9,6 +9,7 @@ namespace TSISP003.SignControllerService
     public class SignControllerService(TCPClient tcpClient) : ISignControllerService, IDisposable
     {
         private Task heartBeatPollTask;
+        private Task startSessionTask;
         private readonly TCPClient _tcpClient = tcpClient;
         private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
 
@@ -16,7 +17,8 @@ namespace TSISP003.SignControllerService
         {
             _cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
-            heartBeatPollTask = Task.Run(() => HeartBeatPollTask(_cancellationTokenSource.Token));
+
+            startSessionTask = Task.Run(() => StartSessionTask(_cancellationTokenSource.Token));
 
             return Task.CompletedTask;
         }
@@ -27,6 +29,57 @@ namespace TSISP003.SignControllerService
             heartBeatPollTask.Dispose();
             throw new NotImplementedException();
         }
+
+        private async void StartSessionTask(CancellationToken cancellationToken)
+        {
+            bool sessionStarted = false;
+            while (!sessionStarted && !cancellationToken.IsCancellationRequested)
+            {
+                // 1 - Send the start session
+                await StartSession();
+
+                // 2 - Receive an Ack and the password seed
+                string response = await _tcpClient.ReadAsync();
+                bool isAcknowledged = false;
+                string passwordSeed = string.Empty;
+
+                foreach (var packet in Utils.GetChunks(response))
+                {
+                    // Iterate over both messages, we need to receive ACK and password seed response
+                    if (packet[0] == SignControllerServiceConfig.ACK || packet[0] == SignControllerServiceConfig.NAK)
+                        isAcknowledged = packet[0] == SignControllerServiceConfig.ACK;
+                    else if (packet[0] == SignControllerServiceConfig.SOH
+                                && Convert.ToInt32(packet[8..10], 16) == SignControllerServiceConfig.MI_PASSWORD_SEED)
+                        passwordSeed = packet[8..10];
+                }
+
+                if (!isAcknowledged || string.IsNullOrEmpty(passwordSeed)) continue;
+
+                // 3 - Send the password command 
+                await Password();
+
+                // 4 - Receive an ACK and ACK* mi code
+                response = await _tcpClient.ReadAsync();
+                isAcknowledged = false;
+                bool isAckProtocolReceived = false;
+
+                foreach (var packet in Utils.GetChunks(response))
+                {
+                    // Iterate over both messages, we need to receive ACK and ACK from the protocol
+                    if (packet[0] == SignControllerServiceConfig.ACK || packet[0] == SignControllerServiceConfig.NAK)
+                        isAcknowledged = packet[0] == SignControllerServiceConfig.ACK;
+                    else if (packet[0] == SignControllerServiceConfig.ACK)
+                        isAckProtocolReceived = true;
+                }
+
+                // 5 - If successful, get out
+                sessionStarted = isAcknowledged && isAckProtocolReceived;
+            }
+
+            if (!cancellationToken.IsCancellationRequested)
+                heartBeatPollTask = Task.Run(() => HeartBeatPollTask(_cancellationTokenSource.Token));
+        }
+
 
         private async void HeartBeatPollTask(CancellationToken cancellationToken)
         {
@@ -135,7 +188,9 @@ namespace TSISP003.SignControllerService
 
         public Task StartSession()
         {
-            throw new NotImplementedException();
+            string message = SignControllerServiceConfig.SOH
+                        + "00"
+                        + "00";
         }
 
         public Task Password()

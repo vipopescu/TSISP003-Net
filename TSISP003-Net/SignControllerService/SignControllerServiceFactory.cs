@@ -17,7 +17,7 @@ namespace TSISP003.SignControllerService
 
         }
 
-        private ISignControllerService CreateServiceForDevice(string deviceName, TcpClientOptions deviceSettings)
+        private ISignControllerService CreateServiceForDevice(SignControllerConnectionOptions deviceSettings)
         {
             return new SignControllerService(new TCPClient(deviceSettings.IpAddress, deviceSettings.Port));
         }
@@ -38,7 +38,7 @@ namespace TSISP003.SignControllerService
             foreach (var deviceName in _options.Value.Devices.Keys)
             {
                 var serviceOptions = _options.Value.Devices[deviceName];
-                var service = CreateServiceForDevice(deviceName, serviceOptions);
+                var service = CreateServiceForDevice(serviceOptions);
                 _services.Add(deviceName, service);
 
                 if (service is IHostedService hostedService)
