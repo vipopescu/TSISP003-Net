@@ -58,7 +58,7 @@ namespace TSISP003.SignControllerService
                 if (!isAcknowledged || string.IsNullOrEmpty(passwordSeed)) continue;
 
                 // 3 - Send the password command 
-                await Password();
+                await Password(passwordSeed);
 
                 // 4 - Receive an ACK and ACK* mi code
                 response = await _tcpClient.ReadAsync();
@@ -70,7 +70,7 @@ namespace TSISP003.SignControllerService
                     // Iterate over both messages, we need to receive ACK and ACK from the protocol
                     if (packet[0] == SignControllerServiceConfig.ACK || packet[0] == SignControllerServiceConfig.NAK)
                         isAcknowledged = packet[0] == SignControllerServiceConfig.ACK;
-                    else if (packet[0] == SignControllerServiceConfig.ACK)
+                    else if (packet[0] == SignControllerServiceConfig.MI_ACK_MESSAGE)
                         isAckProtocolReceived = true;
                 }
 
@@ -205,9 +205,22 @@ namespace TSISP003.SignControllerService
             await _tcpClient.SendAsync(message);
         }
 
-        public Task Password()
+        public async Task Password(string passwordSeed)
         {
-            throw new NotImplementedException();
+            // build body
+            string message = SignControllerServiceConfig.SOH // Start of header
+                        + "00" + "00" // NS and NR
+                        + _deviceSettings.Address // ADDR
+                        + SignControllerServiceConfig.STX
+                        + SignControllerServiceConfig.MI_PASSWORD.ToString("X2")
+                        + Utils.GeneratePassword(passwordSeed, _deviceSettings.PasswordOffset);
+
+            // append crc and end of message
+            message = message
+                        + Utils.PacketCRC(Encoding.ASCII.GetBytes(message))
+                        + SignControllerServiceConfig.ETX;
+
+            await _tcpClient.SendAsync(message);
         }
 
         public Task EndSession()

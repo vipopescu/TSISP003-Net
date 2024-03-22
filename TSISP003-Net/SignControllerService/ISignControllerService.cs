@@ -4,7 +4,7 @@ namespace TSISP003.SignControllerService
     public interface ISignControllerService : IHostedService
     {
         Task StartSession();
-        Task Password();
+        Task Password(string passwordSeed);
         Task HeartbeatPoll();
         Task EndSession();
         Task SystemReset();
