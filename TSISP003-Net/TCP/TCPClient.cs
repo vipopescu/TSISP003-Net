@@ -20,13 +20,18 @@ namespace TSISP003.TCP
             _client = new TcpClient();
         }
 
-        public async Task ConnectAsync()
+        private async Task ConnectAsync()
         {
             try
             {
+                if (_client == null) _client = new TcpClient();
                 await _client.ConnectAsync(_ipAddress, _port);
             }
             catch (System.Net.Sockets.SocketException)
+            {
+                Console.WriteLine($"Unable to connect to {_ipAddress}:{_port}");
+            }
+            catch (System.IO.IOException)
             {
                 Console.WriteLine($"Unable to connect to {_ipAddress}:{_port}");
             }
@@ -52,10 +57,10 @@ namespace TSISP003.TCP
 
                     await stream.WriteAsync(data, 0, data.Length);
                 }
-                else
-                {
-                    Console.WriteLine("Unable to send message, client is disconnected");
-                }
+            }
+            catch (System.IO.IOException ex)
+            {
+                Console.WriteLine("Unable to read -> disconnected from the socket.");
             }
             finally
             {
@@ -68,6 +73,8 @@ namespace TSISP003.TCP
             await _readSemaphore.WaitAsync();
             try
             {
+                CancellationTokenSource cts = new CancellationTokenSource(250);
+
                 if (!_client.Connected)
                     await ConnectAsync();
 
@@ -75,7 +82,7 @@ namespace TSISP003.TCP
                 byte[] buffer = new byte[1024];
                 using (MemoryStream ms = new MemoryStream())
                 {
-                    int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length);
+                    int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, cts.Token);
                     if (bytesRead > 0) ms.Write(buffer, 0, bytesRead);
                     return Encoding.ASCII.GetString(ms.ToArray());
                 }

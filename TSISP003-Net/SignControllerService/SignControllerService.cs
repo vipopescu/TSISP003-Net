@@ -22,7 +22,6 @@ namespace TSISP003.SignControllerService
             _cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
 
             heartBeatPollTask = Task.Run(() => HeartBeatPollTask(_cancellationTokenSource.Token));
-            socketReaderTask = Task.Run(() => SocketReaderTask(_cancellationTokenSource.Token));
 
             return Task.CompletedTask;
         }
@@ -32,22 +31,8 @@ namespace TSISP003.SignControllerService
             while (!cancellationToken.IsCancellationRequested)
             {
                 await HeartbeatPoll();
+                ReadStream();
                 Thread.Sleep(3000);
-            }
-        }
-
-        private async void SocketReaderTask(CancellationToken cancellationToken)
-        {
-            try
-            {
-                while (!cancellationToken.IsCancellationRequested)
-                {
-                    ReadStream();
-                }
-            }
-            catch (OperationCanceledException)
-            {
-                // Ignore 
             }
         }
 
@@ -64,8 +49,6 @@ namespace TSISP003.SignControllerService
                 else
                 {
                     Console.WriteLine("Empty response");
-                    // Handle the scenario when the read returns null or empty string
-                    // This could mean that the connection was closed or there was an issue
                 }
             }
             catch (Exception ex)
