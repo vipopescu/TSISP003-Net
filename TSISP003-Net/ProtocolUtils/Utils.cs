@@ -75,7 +75,7 @@ namespace TSISP003.ProtocolUtils
             }
         }
 
-        static string GeneratePassword(string passwordSeedStr, string seedOffsetStr)
+        public static string GeneratePassword(string passwordSeedStr, string seedOffsetStr)
         {
             // Convert hex strings to integers
             uint passwordSeed = Convert.ToUInt32(passwordSeedStr, 16);
