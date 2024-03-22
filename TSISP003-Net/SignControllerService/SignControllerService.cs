@@ -1,21 +1,16 @@
 
+using System.Runtime.CompilerServices;
+using System.Text;
 using TSISP003.ProtocolUtils;
 using TSISP003.TCP;
 
 namespace TSISP003.SignControllerService
 {
-    public class SignControllerService : ISignControllerService
+    public class SignControllerService(TCPClient tcpClient) : ISignControllerService, IDisposable
     {
         private Task heartBeatPollTask;
-        private Task socketReaderTask;
-
-        private readonly TCPClient _tcpClient;
+        private readonly TCPClient _tcpClient = tcpClient;
         private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
-
-        public SignControllerService(TCPClient tcpClient)
-        {
-            _tcpClient = tcpClient;
-        }
 
         public Task StartAsync(CancellationToken cancellationToken)
         {
@@ -24,6 +19,13 @@ namespace TSISP003.SignControllerService
             heartBeatPollTask = Task.Run(() => HeartBeatPollTask(_cancellationTokenSource.Token));
 
             return Task.CompletedTask;
+        }
+
+        public void Dispose()
+        {
+            _cancellationTokenSource.Cancel();
+            heartBeatPollTask.Dispose();
+            throw new NotImplementedException();
         }
 
         private async void HeartBeatPollTask(CancellationToken cancellationToken)
@@ -44,11 +46,7 @@ namespace TSISP003.SignControllerService
                 if (!string.IsNullOrEmpty(response))
                 {
                     Console.WriteLine("Processing response");
-                    ProcessResponse(response);
-                }
-                else
-                {
-                    Console.WriteLine("Empty response");
+                    ProcessResponses(response);
                 }
             }
             catch (Exception ex)
@@ -58,13 +56,69 @@ namespace TSISP003.SignControllerService
             }
         }
 
-        private void ProcessResponse(string response)
+        private void ProcessResponses(string responses)
         {
-            foreach (var command in Utils.GetChunks(response))
+            foreach (var packet in Utils.GetChunks(responses))
             {
-                Console.WriteLine("Response: " + command);
+                if (packet[0] == SignControllerServiceConfig.ACK || packet[0] == SignControllerServiceConfig.NAK)
+                    ProcessNonDataPacket(packet);
+                else if (packet[0] == SignControllerServiceConfig.SOH)
+                    DispatchDataPacket(packet);
+                else Console.WriteLine("Unable to determine type of the packet.");
             }
         }
+
+        private void ProcessNonDataPacket(string packet)
+        {
+            // TODO: get the NS from here
+            //Console.WriteLine(Utils.PacketCRC(Encoding.ASCII.GetBytes(packet[0..5])));
+            //Console.WriteLine("Non Data Packet: " + packet);
+        }
+
+        private void DispatchDataPacket(string packet)
+        {
+            // packet[0]                        -> SOH
+            // packet[1]                        -> NR
+            // packet[2]                        -> NS
+            // packet[4..6]                     -> SOH
+            // packet[7]                        -> STX
+            // packet[(packet.Length-5)..^1]    -> CRC
+            // packet[8..^5]                    -> Packet Data 
+            // packet[^1]                       -> ETX
+
+            string applicationData = packet[8..^5];
+            int miCode = Convert.ToInt32(packet[8..10], 16);
+
+            if (miCode == SignControllerServiceConfig.MI_SIGN_STATUS_REPLY)
+                ProcessSignStatusReply(applicationData);
+            else if (miCode == SignControllerServiceConfig.MI_PASSWORD_SEED)
+                ProcessPasswordSeed(applicationData);
+            else if (miCode == SignControllerServiceConfig.MI_HAR_STATUS_REPLY)
+                ProcessHARStatusReply(applicationData);
+            else if (miCode == SignControllerServiceConfig.MI_ENVIRONMENTAL_WEATHER_STATUS_REPLY)
+                ProcessEnvironmentalWeatherStatusReply(applicationData);
+            else if (miCode == SignControllerServiceConfig.MI_SIGN_CONFIGURATION_REPLY)
+                ProcessSignConfigurationReply(applicationData);
+            else if (miCode == SignControllerServiceConfig.MI_REPORT_ENABLED_PLANS)
+                ProcessReportEnabledPlans(applicationData);
+            else if (miCode == SignControllerServiceConfig.MI_SIGN_EXTENDED_STATUS_REPLY)
+                ProcessSignExtendedStatusReply(applicationData);
+            else if (miCode == SignControllerServiceConfig.MI_FAULT_LOG_REPLY)
+                ProcessFaultLogReply(applicationData);
+            else if (miCode == SignControllerServiceConfig.MI_SIGN_SET_TEXT_FRAME)
+                ProcessSignSetTextFrame(applicationData);
+            else if (miCode == SignControllerServiceConfig.MI_SIGN_SET_GRAPHIC_FRAME)
+                ProcessSignSetGraphicsFrame(applicationData);
+            else if (miCode == SignControllerServiceConfig.MI_SIGN_SET_HIGH_RESOLUTION_GRAPHICS_FRAME)
+                ProcessSignSetHighResolutionGraphicsFrame(applicationData);
+            else if (miCode == SignControllerServiceConfig.MI_SIGN_SET_MESSAGE)
+                ProcessSignSetMessage(applicationData);
+            else if (miCode == SignControllerServiceConfig.MI_SIGN_SET_PLAN)
+                ProcessSignSetMessage(applicationData);
+            else
+                Console.WriteLine("Unexpected mi code: " + miCode);
+        }
+
 
 
         public Task StopAsync(CancellationToken cancellationToken)
@@ -109,7 +163,18 @@ namespace TSISP003.SignControllerService
             throw new NotImplementedException();
         }
 
+        public Task ProcessSignSetTextFrame(string applicationData)
+        {
+            throw new NotImplementedException();
+        }
+
+
         public Task SignSetGraphicsFrame()
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task ProcessSignSetGraphicsFrame(string applicationData)
         {
             throw new NotImplementedException();
         }
@@ -259,72 +324,88 @@ namespace TSISP003.SignControllerService
             throw new NotImplementedException();
         }
 
-        public Task ProcessPasswordSeed()
+        public Task ProcessPasswordSeed(string applicationData)
         {
             throw new NotImplementedException();
         }
 
-        public Task ProcessAcknowledge()
+        public Task ProcessAcknowledge(string applicationData)
+        {
+            // ?? not sure if I need this...
+            throw new NotImplementedException();
+        }
+
+        public Task ProcessSignStatusReply(string applicationData)
         {
             throw new NotImplementedException();
         }
 
-        public Task ProcessSignStatusReply()
+        public Task ProcessHARStatusReply(string applicationData)
         {
             throw new NotImplementedException();
         }
 
-        public Task ProcessHARStatusReply()
+        public Task ProcessEnvironmentalWeatherStatusReply(string applicationData)
         {
             throw new NotImplementedException();
         }
 
-        public Task ProcessEnvironmentalWeatherStatusReply()
+        public Task ProcessSignConfigurationReply(string applicationData)
         {
             throw new NotImplementedException();
         }
 
-        public Task ProcessSignConfigurationReply()
+        public Task ProcessReportEnabledPlans(string applicationData)
         {
             throw new NotImplementedException();
         }
 
-        public Task ProcessReportEnabledPlans()
+        public Task ProcessSignExtendedStatusReply(string applicationData)
         {
             throw new NotImplementedException();
         }
 
-        public Task ProcessSignExtendedStatusReply()
+        public Task ProcessFaultLogReply(string applicationData)
         {
             throw new NotImplementedException();
         }
 
-        public Task ProcessFaultLogReply()
+        public Task ProcessHARVoiceDataAck(string applicationData)
         {
             throw new NotImplementedException();
         }
 
-        public Task ProcessHARVoiceDataAck()
+        public Task ProcessHARVoiceDataNak(string applicationData)
         {
             throw new NotImplementedException();
         }
 
-        public Task ProcessHARVoiceDataNak()
+        public Task ProcessEnvironmentalWeatherValuesReply(string applicationData)
         {
             throw new NotImplementedException();
         }
 
-        public Task ProcessEnvironmentalWeatherValuesReply()
+        public Task ProcessEnvironmentalWeatherThresholdDefinitionReply(string applicationData)
         {
             throw new NotImplementedException();
         }
 
-        public Task ProcessEnvironmentalWeatherThresholdDefinitionReply()
+        public Task ProcessEnvironmentalWeatherEventLogReply(string applicationData)
         {
             throw new NotImplementedException();
         }
 
-        public Task ProcessEnvironmentalWeatherEventLogReply()
+        public Task ProcessSignSetHighResolutionGraphicsFrame(string applicationData)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task ProcessSignSetMessage(string applicationData)
+        {
+            throw new NotImplementedException();
+        }
+
+        public Task ProcessSignSetPlan(string applicationData)
         {
             throw new NotImplementedException();
         }
