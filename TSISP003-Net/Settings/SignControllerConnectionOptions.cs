@@ -6,5 +6,6 @@ namespace TSISP003.Settings
         public required int Port { get; set; }
         public required string PasswordOffset { get; set; }
         public required string SeedOffset { get; set; }
+        public required string Address { get; set; }
     }
 }

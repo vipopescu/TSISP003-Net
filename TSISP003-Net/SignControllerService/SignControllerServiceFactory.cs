@@ -19,7 +19,7 @@ namespace TSISP003.SignControllerService
 
         private ISignControllerService CreateServiceForDevice(SignControllerConnectionOptions deviceSettings)
         {
-            return new SignControllerService(new TCPClient(deviceSettings.IpAddress, deviceSettings.Port));
+            return new SignControllerService(new TCPClient(deviceSettings.IpAddress, deviceSettings.Port), deviceSettings);
         }
 
         public ISignControllerService GetSignControllerService(string deviceName)

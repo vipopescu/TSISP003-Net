@@ -2,15 +2,17 @@
 using System.Runtime.CompilerServices;
 using System.Text;
 using TSISP003.ProtocolUtils;
+using TSISP003.Settings;
 using TSISP003.TCP;
 
 namespace TSISP003.SignControllerService
 {
-    public class SignControllerService(TCPClient tcpClient) : ISignControllerService, IDisposable
+    public class SignControllerService(TCPClient tcpClient, SignControllerConnectionOptions deviceSettings) : ISignControllerService, IDisposable
     {
         private Task heartBeatPollTask;
         private Task startSessionTask;
         private readonly TCPClient _tcpClient = tcpClient;
+        private readonly SignControllerConnectionOptions _deviceSettings = deviceSettings;
         private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
 
         public Task StartAsync(CancellationToken cancellationToken)
@@ -186,11 +188,21 @@ namespace TSISP003.SignControllerService
             await _tcpClient.SendAsync("310210210212");
         }
 
-        public Task StartSession()
+        public async Task StartSession()
         {
-            string message = SignControllerServiceConfig.SOH
-                        + "00"
-                        + "00";
+            // build body
+            string message = SignControllerServiceConfig.SOH // Start of header
+                        + "00" + "00" // NS and NR
+                        + _deviceSettings.Address // ADDR
+                        + SignControllerServiceConfig.STX
+                        + SignControllerServiceConfig.MI_START_SESSION.ToString("X2");
+
+            // append crc and end of message
+            message = message
+                        + Utils.PacketCRC(Encoding.ASCII.GetBytes(message))
+                        + SignControllerServiceConfig.ETX;
+
+            await _tcpClient.SendAsync(message);
         }
 
         public Task Password()
