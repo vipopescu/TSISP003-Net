@@ -22,19 +22,8 @@ namespace TSISP003.TCP
 
         private async Task ConnectAsync()
         {
-            try
-            {
-                if (_client == null) _client = new TcpClient();
-                await _client.ConnectAsync(_ipAddress, _port);
-            }
-            catch (System.Net.Sockets.SocketException)
-            {
-                Console.WriteLine($"Unable to connect to {_ipAddress}:{_port}");
-            }
-            catch (System.IO.IOException)
-            {
-                Console.WriteLine($"Unable to connect to {_ipAddress}:{_port}");
-            }
+            if (_client == null) _client = new TcpClient();
+            await _client.ConnectAsync(_ipAddress, _port);
         }
 
         public void Disconnect()
@@ -57,10 +46,6 @@ namespace TSISP003.TCP
 
                     await stream.WriteAsync(data, 0, data.Length);
                 }
-            }
-            catch (System.IO.IOException ex)
-            {
-                Console.WriteLine("Unable to read -> disconnected from the socket.");
             }
             finally
             {

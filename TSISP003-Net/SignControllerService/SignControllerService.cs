@@ -37,45 +37,62 @@ namespace TSISP003.SignControllerService
             bool sessionStarted = false;
             while (!sessionStarted && !cancellationToken.IsCancellationRequested)
             {
-                // 1 - Send the start session
-                await StartSession();
-
-                // 2 - Receive an Ack and the password seed
-                string response = await _tcpClient.ReadAsync();
-                bool isAcknowledged = false;
-                string passwordSeed = string.Empty;
-
-                foreach (var packet in Utils.GetChunks(response))
+                try
                 {
-                    // Iterate over both messages, we need to receive ACK and password seed response
-                    if (packet[0] == SignControllerServiceConfig.ACK || packet[0] == SignControllerServiceConfig.NAK)
-                        isAcknowledged = packet[0] == SignControllerServiceConfig.ACK;
-                    else if (packet[0] == SignControllerServiceConfig.SOH
-                                && Convert.ToInt32(packet[8..10], 16) == SignControllerServiceConfig.MI_PASSWORD_SEED)
-                        passwordSeed = packet[8..10];
+
+                    // 1 - Send the start session
+                    await StartSession();
+
+                    // 2 - Receive an Ack and the password seed
+                    string response = await _tcpClient.ReadAsync();
+                    bool isAcknowledged = false;
+                    string passwordSeed = string.Empty;
+
+                    foreach (var packet in Utils.GetChunks(response))
+                    {
+                        // Iterate over both messages, we need to receive ACK and password seed response
+                        if (packet[0] == SignControllerServiceConfig.ACK || packet[0] == SignControllerServiceConfig.NAK)
+                            isAcknowledged = packet[0] == SignControllerServiceConfig.ACK;
+                        else if (packet[0] == SignControllerServiceConfig.SOH
+                                    && Convert.ToInt32(packet[8..10], 16) == SignControllerServiceConfig.MI_PASSWORD_SEED)
+                            passwordSeed = packet[8..10];
+                    }
+
+                    if (!isAcknowledged || string.IsNullOrEmpty(passwordSeed)) continue;
+
+                    // 3 - Send the password command 
+                    await Password(passwordSeed);
+
+                    // 4 - Receive an ACK and ACK* mi code
+                    response = await _tcpClient.ReadAsync();
+                    isAcknowledged = false;
+                    bool isAckProtocolReceived = false;
+
+                    foreach (var packet in Utils.GetChunks(response))
+                    {
+                        // Iterate over both messages, we need to receive ACK and ACK from the protocol
+                        if (packet[0] == SignControllerServiceConfig.ACK || packet[0] == SignControllerServiceConfig.NAK)
+                            isAcknowledged = packet[0] == SignControllerServiceConfig.ACK;
+                        else if (packet[0] == SignControllerServiceConfig.MI_ACK_MESSAGE)
+                            isAckProtocolReceived = true;
+                    }
+
+                    // 5 - If successful, get out
+                    sessionStarted = isAcknowledged && isAckProtocolReceived;
                 }
-
-                if (!isAcknowledged || string.IsNullOrEmpty(passwordSeed)) continue;
-
-                // 3 - Send the password command 
-                await Password(passwordSeed);
-
-                // 4 - Receive an ACK and ACK* mi code
-                response = await _tcpClient.ReadAsync();
-                isAcknowledged = false;
-                bool isAckProtocolReceived = false;
-
-                foreach (var packet in Utils.GetChunks(response))
+                catch (System.Net.Sockets.SocketException soex)
                 {
-                    // Iterate over both messages, we need to receive ACK and ACK from the protocol
-                    if (packet[0] == SignControllerServiceConfig.ACK || packet[0] == SignControllerServiceConfig.NAK)
-                        isAcknowledged = packet[0] == SignControllerServiceConfig.ACK;
-                    else if (packet[0] == SignControllerServiceConfig.MI_ACK_MESSAGE)
-                        isAckProtocolReceived = true;
+                    Console.WriteLine($"Starting session failed: {soex.Message}");
                 }
+                catch (System.IO.IOException ioex)
+                {
+                    Console.WriteLine($"Starting session failed: {ioex.Message}");
 
-                // 5 - If successful, get out
-                sessionStarted = isAcknowledged && isAckProtocolReceived;
+                }
+                finally
+                {
+                    await Task.Delay(3000, cancellationToken);
+                }
             }
 
             if (!cancellationToken.IsCancellationRequested)
@@ -85,15 +102,35 @@ namespace TSISP003.SignControllerService
 
         private async void HeartBeatPollTask(CancellationToken cancellationToken)
         {
-            while (!cancellationToken.IsCancellationRequested)
+            int failedAttempts = 0;
+            const int maxAttempts = 3;
+
+            while (!cancellationToken.IsCancellationRequested && failedAttempts < maxAttempts)
             {
-                await HeartbeatPoll();
-                ReadStream();
-                Thread.Sleep(3000);
+                try
+                {
+                    await HeartbeatPoll();
+                    await ReadStream();
+
+                    failedAttempts = 0;
+                }
+                catch (Exception ex)
+                {
+                    Console.WriteLine($"Failed to read from the socket: {ex.Message}");
+                    failedAttempts++;
+                    await Task.Delay(3000, cancellationToken);
+                }
+            }
+
+            if (!cancellationToken.IsCancellationRequested && failedAttempts >= maxAttempts)
+            {
+                Console.WriteLine($"Cancelling the pool. Restarting the session...");
+                startSessionTask = Task.Run(() => StartSessionTask(_cancellationTokenSource.Token));
             }
         }
 
-        private async void ReadStream()
+
+        private async Task ReadStream()
         {
             try
             {
