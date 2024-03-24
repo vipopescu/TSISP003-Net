@@ -22,13 +22,18 @@ namespace TSISP003.TCP
 
         private async Task ConnectAsync()
         {
+            Disconnect();
             if (_client == null) _client = new TcpClient();
             await _client.ConnectAsync(_ipAddress, _port);
         }
 
         public void Disconnect()
         {
-            _client.Close();
+            if (_client != null)
+            {
+                _client.Close();
+                _client = null;
+            }
         }
 
         public async Task SendAsync(string message)
@@ -36,7 +41,7 @@ namespace TSISP003.TCP
             await _writeSemaphore.WaitAsync();
             try
             {
-                if (!_client.Connected)
+                if (_client == null || !_client.Connected)
                     await ConnectAsync();
 
                 if (_client.Connected)
