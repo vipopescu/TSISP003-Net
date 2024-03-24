@@ -87,11 +87,18 @@ namespace TSISP003.SignControllerService
                 catch (System.IO.IOException ioex)
                 {
                     Console.WriteLine($"Starting session failed: {ioex.Message}");
-
+                }
+                catch (System.OperationCanceledException opex)
+                {
+                    Console.WriteLine($"Starting session failed: {opex.Message}");
                 }
                 finally
                 {
-                    await Task.Delay(3000, cancellationToken);
+                    if (!sessionStarted)
+                    {
+                        _tcpClient.Disconnect();
+                        await Task.Delay(3000, cancellationToken);
+                    }
                 }
             }
 
@@ -221,8 +228,19 @@ namespace TSISP003.SignControllerService
 
         public async Task HeartbeatPoll()
         {
-            Console.WriteLine("Sending poll");
-            await _tcpClient.SendAsync("310210210212");
+            // build body
+            string message = SignControllerServiceConfig.SOH // Start of header
+                        + "00" + "00" // NS and NR
+                        + _deviceSettings.Address // ADDR
+                        + SignControllerServiceConfig.STX
+                        + SignControllerServiceConfig.MI_HEARTBEAT_POLL.ToString("X2");
+
+            // append crc and end of message
+            message = message
+                        + Utils.PacketCRC(Encoding.ASCII.GetBytes(message))
+                        + SignControllerServiceConfig.ETX;
+
+            await _tcpClient.SendAsync(message);
         }
 
         public async Task StartSession()
