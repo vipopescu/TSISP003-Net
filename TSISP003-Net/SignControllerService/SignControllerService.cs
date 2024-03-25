@@ -1,5 +1,3 @@
-
-using System.Runtime.CompilerServices;
 using System.Text;
 using TSISP003.ProtocolUtils;
 using TSISP003.Settings;
