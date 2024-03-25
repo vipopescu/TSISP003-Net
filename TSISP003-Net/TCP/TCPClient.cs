@@ -69,7 +69,7 @@ namespace TSISP003.TCP
                     await ConnectAsync();
 
                 NetworkStream stream = _client.GetStream();
-                byte[] buffer = new byte[1024];
+                byte[] buffer = new byte[4096];
                 using (MemoryStream ms = new MemoryStream())
                 {
                     int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, cts.Token);

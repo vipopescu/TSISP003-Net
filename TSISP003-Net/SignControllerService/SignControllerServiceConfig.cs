@@ -12,7 +12,7 @@ namespace TSISP003.SignControllerService
         public const char NAK = '\u0015';
 
         // Mi Codes
-        public const int MI_REJECT_MESSAGE = 0x15;
+        public const int MI_REJECT_MESSAGE = 0x00;
         public const int MI_ACK_MESSAGE = 0x01;
         public const int MI_START_SESSION = 0x02;
         public const int MI_PASSWORD_SEED = 0x03;

@@ -15,10 +15,37 @@ namespace TSISP003.SignControllerService
         private readonly SignControllerConnectionOptions _deviceSettings = deviceSettings;
         private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
 
+        private int _ns;
+        public int NS
+        {
+            get
+            {
+
+                return _ns;
+            }
+            set
+            {
+                _ns = value;
+            }
+        }
+
+        private int _nr;
+        public int NR
+        {
+            get
+            {
+
+                return _nr;
+            }
+            set
+            {
+                _nr = value;
+            }
+        }
+
         public Task StartAsync(CancellationToken cancellationToken)
         {
             _cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
-
 
             startSessionTask = Task.Run(() => StartSessionTask(_cancellationTokenSource.Token));
 
@@ -39,7 +66,6 @@ namespace TSISP003.SignControllerService
             {
                 try
                 {
-
                     // 1 - Send the start session
                     await StartSession();
 
@@ -55,7 +81,7 @@ namespace TSISP003.SignControllerService
                             isAcknowledged = packet[0] == SignControllerServiceConfig.ACK;
                         else if (packet[0] == SignControllerServiceConfig.SOH
                                     && Convert.ToInt32(packet[8..10], 16) == SignControllerServiceConfig.MI_PASSWORD_SEED)
-                            passwordSeed = packet[8..10];
+                            passwordSeed = packet[10..12];
                     }
 
                     if (!isAcknowledged || string.IsNullOrEmpty(passwordSeed)) continue;
@@ -73,7 +99,7 @@ namespace TSISP003.SignControllerService
                         // Iterate over both messages, we need to receive ACK and ACK from the protocol
                         if (packet[0] == SignControllerServiceConfig.ACK || packet[0] == SignControllerServiceConfig.NAK)
                             isAcknowledged = packet[0] == SignControllerServiceConfig.ACK;
-                        else if (packet[0] == SignControllerServiceConfig.MI_ACK_MESSAGE)
+                        else if (packet[8..10] == SignControllerServiceConfig.MI_ACK_MESSAGE.ToString("X2"))
                             isAckProtocolReceived = true;
                     }
 
@@ -111,11 +137,13 @@ namespace TSISP003.SignControllerService
         {
             int failedAttempts = 0;
             const int maxAttempts = 3;
-
+            NS = 0;
+            NR = 0;
             while (!cancellationToken.IsCancellationRequested && failedAttempts < maxAttempts)
             {
                 try
                 {
+
                     await HeartbeatPoll();
                     await ReadStream();
 
@@ -125,6 +153,9 @@ namespace TSISP003.SignControllerService
                 {
                     Console.WriteLine($"Failed to read from the socket: {ex.Message}");
                     failedAttempts++;
+                }
+                finally
+                {
                     await Task.Delay(3000, cancellationToken);
                 }
             }
@@ -144,7 +175,6 @@ namespace TSISP003.SignControllerService
                 string response = await _tcpClient.ReadAsync();
                 if (!string.IsNullOrEmpty(response))
                 {
-                    Console.WriteLine("Processing response");
                     ProcessResponses(response);
                 }
             }
@@ -169,6 +199,15 @@ namespace TSISP003.SignControllerService
 
         private void ProcessNonDataPacket(string packet)
         {
+            if (packet[0] == SignControllerServiceConfig.ACK)
+            {
+                NR = int.Parse(packet[1..3]);
+                NS++;
+            }
+            else if (packet[0] == SignControllerServiceConfig.NAK)
+            {
+                // TODO
+            }
             // TODO: get the NS from here
             //Console.WriteLine(Utils.PacketCRC(Encoding.ASCII.GetBytes(packet[0..5])));
             //Console.WriteLine("Non Data Packet: " + packet);
@@ -177,9 +216,8 @@ namespace TSISP003.SignControllerService
         private void DispatchDataPacket(string packet)
         {
             // packet[0]                        -> SOH
-            // packet[1]                        -> NR
-            // packet[2]                        -> NS
-            // packet[4..6]                     -> SOH
+            // packet[1..3]                     -> NR
+            // packet[4..6]                     -> NS
             // packet[7]                        -> STX
             // packet[(packet.Length-5)..^1]    -> CRC
             // packet[8..^5]                    -> Packet Data 
@@ -230,7 +268,7 @@ namespace TSISP003.SignControllerService
         {
             // build body
             string message = SignControllerServiceConfig.SOH // Start of header
-                        + "00" + "00" // NS and NR
+                        + NS.ToString("X2") + NR.ToString("X2") // NS and NR
                         + _deviceSettings.Address // ADDR
                         + SignControllerServiceConfig.STX
                         + SignControllerServiceConfig.MI_HEARTBEAT_POLL.ToString("X2");
@@ -239,6 +277,8 @@ namespace TSISP003.SignControllerService
             message = message
                         + Utils.PacketCRC(Encoding.ASCII.GetBytes(message))
                         + SignControllerServiceConfig.ETX;
+
+            Console.WriteLine($"Sending NS: {NS}, NR: {NR} -> {message}");
 
             await _tcpClient.SendAsync(message);
         }
@@ -268,11 +308,11 @@ namespace TSISP003.SignControllerService
                         + _deviceSettings.Address // ADDR
                         + SignControllerServiceConfig.STX
                         + SignControllerServiceConfig.MI_PASSWORD.ToString("X2")
-                        + Utils.GeneratePassword(passwordSeed, _deviceSettings.PasswordOffset);
+                        + Utils.GeneratePassword(passwordSeed, _deviceSettings.SeedOffset, _deviceSettings.PasswordOffset)[^4..];
 
             // append crc and end of message
-            message = message
-                        + Utils.PacketCRC(Encoding.ASCII.GetBytes(message))
+            string crc = Utils.PacketCRC(Encoding.ASCII.GetBytes(message));
+            message = message + crc
                         + SignControllerServiceConfig.ETX;
 
             await _tcpClient.SendAsync(message);
@@ -379,9 +419,22 @@ namespace TSISP003.SignControllerService
             throw new NotImplementedException();
         }
 
-        public Task SignRequestStoredFrameMessagePlan()
+        public async Task SignRequestStoredFrameMessagePlan()
         {
-            throw new NotImplementedException();
+            // build body
+            string message = SignControllerServiceConfig.SOH // Start of header
+                        + NS.ToString("X2") + NR.ToString("X2") // NS and NR
+                        + _deviceSettings.Address // ADDR
+                        + SignControllerServiceConfig.STX
+                        + SignControllerServiceConfig.MI_SIGN_REQUEST_STORED_FRAME_MESSAGE_PLAN.ToString("X2")
+                        + "00" + "03";
+
+            // append crc and end of message
+            message = message
+                        + Utils.PacketCRC(Encoding.ASCII.GetBytes(message))
+                        + SignControllerServiceConfig.ETX;
+
+            await _tcpClient.SendAsync(message);
         }
 
         public Task SignExtendedStatusRequest()
