@@ -75,44 +75,35 @@ namespace TSISP003.ProtocolUtils
             }
         }
 
-        public static string GeneratePassword(string passwordSeedStr, string seedOffsetStr)
+        public static string GeneratePassword(string passwordSeedStr, string seedOffsetStr, string passwordOffsetStr)
         {
             // Convert hex strings to integers
-            uint passwordSeed = Convert.ToUInt32(passwordSeedStr, 16);
-            uint seedOffset = Convert.ToUInt32(seedOffsetStr, 16);
+            int passwordSeed = Convert.ToInt32(passwordSeedStr, 16);
+            int seedOffset = Convert.ToInt32(seedOffsetStr, 16);
+            int passwordOffset = Convert.ToInt32(passwordOffsetStr, 16);
 
-
-            ushort xordbits, count;
-            uint l_reply;
+            ushort l_reply = (ushort)((passwordSeed + seedOffset) % 256);
             bool bit5, bit7, bit8;
+            ushort xordbits;
 
-            // Initial calculation for l_reply using the seeds
-            l_reply = (passwordSeed + seedOffset) % 256;
-
-            // Loop to generate the password
-            for (count = 1; count <= 16; count++)
+            for (int count = 1; count <= 16; count++)
             {
-                // Determining the boolean values based on l_reply's bits
                 bit5 = (l_reply & 0x20) != 0;
                 bit7 = (l_reply & 0x80) != 0;
                 bit8 = (l_reply & 0x100) != 0;
 
-                // XOR operation
                 if (bit5 ^ bit7 ^ bit8)
                     xordbits = 1;
                 else
                     xordbits = 0;
 
-                // Left shift l_reply and add xordbits
-                l_reply = l_reply << 1;
-                l_reply = l_reply + xordbits;
+                l_reply = (ushort)(l_reply << 1);
+                l_reply = (ushort)(l_reply + xordbits);
             }
 
-            // Adding the password parameter
-            l_reply += 0x5A5A;
+            l_reply = (ushort)(l_reply + passwordOffset);
 
-            // Convert to hex and return
-            return l_reply.ToString("X4");
+            return l_reply.ToString("X4"); // Converts to hex string with 4 characters
         }
 
 
