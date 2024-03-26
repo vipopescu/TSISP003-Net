@@ -1,3 +1,4 @@
+using System.Net.Sockets;
 using System.Text;
 using TSISP003.ProtocolUtils;
 using TSISP003.Settings;
@@ -201,14 +202,31 @@ namespace TSISP003.SignControllerService
             {
                 NR = int.Parse(packet[1..3]);
                 NS++;
+                PrintMessagePacket("Received ACK: " + packet, "<-");
             }
             else if (packet[0] == SignControllerServiceConfig.NAK)
             {
                 // TODO
+                PrintMessagePacket("Received NAK: " + packet, "<-");
             }
             // TODO: get the NS from here
             //Console.WriteLine(Utils.PacketCRC(Encoding.ASCII.GetBytes(packet[0..5])));
             //Console.WriteLine("Non Data Packet: " + packet);
+        }
+
+        private void PrintMessagePacket(string packet, string direction)
+        {
+            packet = packet.Replace("\u0001", "<SOH>");
+            packet = packet.Replace("\u0002", "<STX>");
+            packet = packet.Replace("\u0003", "<ETX>");
+            packet = packet.Replace("\u0004", "<EOT>");
+            packet = packet.Replace("\u0006", "<ACK>");
+            packet = packet.Replace("\u0015", "<NAK>");
+
+            string dateTimeNow = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
+
+            // Output the modified string with the current date and time
+            Console.WriteLine($"[{dateTimeNow}] {direction} {packet}");
         }
 
         private void DispatchDataPacket(string packet)
@@ -276,7 +294,7 @@ namespace TSISP003.SignControllerService
                         + Utils.PacketCRC(Encoding.ASCII.GetBytes(message))
                         + SignControllerServiceConfig.ETX;
 
-            Console.WriteLine($"Sending NS: {NS}, NR: {NR} -> {message}");
+            PrintMessagePacket($"Sending {SignControllerServiceConfig.MI_HEARTBEAT_POLL} {message}", "->");
 
             await _tcpClient.SendAsync(message);
         }
@@ -523,7 +541,18 @@ namespace TSISP003.SignControllerService
 
         public Task ProcessSignStatusReply(string applicationData)
         {
-            throw new NotImplementedException();
+            PrintMessagePacket("Received SignStatusReply: " + applicationData, "<-");
+
+            //applicationData[0..2] Mi code
+            //applicationData[2..4] Online Status
+            //applicationData[4..6] Day
+            //applicationData[6..8] Month
+            //applicationData[0..2] Mi code
+            //applicationData[0..2] Mi code
+            //applicationData[0..2] Mi code
+            //applicationData[0..2] Mi code
+
+            return Task.CompletedTask;
         }
 
         public Task ProcessHARStatusReply(string applicationData)
