@@ -14,12 +14,13 @@ namespace TSISP003.SignControllerService
         private readonly SignControllerConnectionOptions _deviceSettings = deviceSettings;
         private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
 
+
+        // TODO: Implement lock when setting the NS
         private int _ns;
         public int NS
         {
             get
             {
-
                 return _ns;
             }
             set
@@ -28,6 +29,7 @@ namespace TSISP003.SignControllerService
             }
         }
 
+        // TODO: Implement lock when setting the NR
         private int _nr;
         public int NR
         {
@@ -105,15 +107,15 @@ namespace TSISP003.SignControllerService
                     // 5 - If successful, get out
                     sessionStarted = isAcknowledged && isAckProtocolReceived;
                 }
-                catch (System.Net.Sockets.SocketException soex)
+                catch (SocketException soex)
                 {
                     Console.WriteLine($"Starting session failed: {soex.Message}");
                 }
-                catch (System.IO.IOException ioex)
+                catch (IOException ioex)
                 {
                     Console.WriteLine($"Starting session failed: {ioex.Message}");
                 }
-                catch (System.OperationCanceledException opex)
+                catch (OperationCanceledException opex)
                 {
                     Console.WriteLine($"Starting session failed: {opex.Message}");
                 }
@@ -142,7 +144,6 @@ namespace TSISP003.SignControllerService
             {
                 try
                 {
-
                     await HeartbeatPoll();
                     await ReadStream();
 
@@ -272,8 +273,6 @@ namespace TSISP003.SignControllerService
                 Console.WriteLine("Unexpected mi code: " + miCode);
         }
 
-
-
         public Task StopAsync(CancellationToken cancellationToken)
         {
             _cancellationTokenSource.Cancel();
@@ -336,102 +335,122 @@ namespace TSISP003.SignControllerService
 
         public Task EndSession()
         {
+            // TODO
             throw new NotImplementedException();
         }
 
         public Task SystemReset()
         {
+            // TODO
             throw new NotImplementedException();
         }
 
         public Task UpdateTime()
         {
+            // TODO
             throw new NotImplementedException();
         }
 
         public Task SignSetTextFrame()
         {
+            // TODO
             throw new NotImplementedException();
         }
 
         public Task ProcessSignSetTextFrame(string applicationData)
         {
+            // TODO
             throw new NotImplementedException();
         }
 
 
         public Task SignSetGraphicsFrame()
         {
+            // TODO
             throw new NotImplementedException();
         }
 
         public Task ProcessSignSetGraphicsFrame(string applicationData)
         {
+            // TODO
             throw new NotImplementedException();
         }
 
         public Task SignSetHighResolutionGraphicsFrame()
         {
+            // TODO
             throw new NotImplementedException();
         }
 
         public Task SignConfigurationRequest()
         {
+            // TODO
             throw new NotImplementedException();
         }
 
         public Task SignDisplayAtomicFrames()
         {
+            // TODO
             throw new NotImplementedException();
         }
 
         public Task SignSetMessage()
         {
+            // TODO
             throw new NotImplementedException();
         }
 
         public Task SignSetPlan()
         {
+            // TODO
             throw new NotImplementedException();
         }
 
         public Task SignDisplayFrame()
         {
+            // TODO
             throw new NotImplementedException();
         }
 
         public Task SignDisplayMessage()
         {
+            // TODO
             throw new NotImplementedException();
         }
 
         public Task EnablePlan()
         {
+            // TODO
             throw new NotImplementedException();
         }
 
         public Task DisablePlan()
         {
+            // TODO
             throw new NotImplementedException();
         }
 
         public Task RequestEnabledPlans()
         {
+            // TODO
             throw new NotImplementedException();
         }
 
         public Task SignSetDimmingLevel()
         {
+            // TODO
             throw new NotImplementedException();
         }
 
         public Task PowerOnOff()
         {
+            // TODO
             throw new NotImplementedException();
         }
 
         public Task DisableEnableDevice()
         {
+            // TODO
             throw new NotImplementedException();
         }
 
@@ -557,71 +576,85 @@ namespace TSISP003.SignControllerService
 
         public Task ProcessHARStatusReply(string applicationData)
         {
+            // TODO
             throw new NotImplementedException();
         }
 
         public Task ProcessEnvironmentalWeatherStatusReply(string applicationData)
         {
+            // TODO
             throw new NotImplementedException();
         }
 
         public Task ProcessSignConfigurationReply(string applicationData)
         {
+            // TODO
             throw new NotImplementedException();
         }
 
         public Task ProcessReportEnabledPlans(string applicationData)
         {
+            // TODO
             throw new NotImplementedException();
         }
 
         public Task ProcessSignExtendedStatusReply(string applicationData)
         {
+            // TODO
             throw new NotImplementedException();
         }
 
         public Task ProcessFaultLogReply(string applicationData)
         {
+            // TODO
             throw new NotImplementedException();
         }
 
         public Task ProcessHARVoiceDataAck(string applicationData)
         {
+            // TODO
             throw new NotImplementedException();
         }
 
         public Task ProcessHARVoiceDataNak(string applicationData)
         {
+            // TODO
             throw new NotImplementedException();
         }
 
         public Task ProcessEnvironmentalWeatherValuesReply(string applicationData)
         {
+            // TODO
             throw new NotImplementedException();
         }
 
         public Task ProcessEnvironmentalWeatherThresholdDefinitionReply(string applicationData)
         {
+            // TODO
             throw new NotImplementedException();
         }
 
         public Task ProcessEnvironmentalWeatherEventLogReply(string applicationData)
         {
+            // TODO
             throw new NotImplementedException();
         }
 
         public Task ProcessSignSetHighResolutionGraphicsFrame(string applicationData)
         {
+            // TODO
             throw new NotImplementedException();
         }
 
         public Task ProcessSignSetMessage(string applicationData)
         {
+            // TODO
             throw new NotImplementedException();
         }
 
         public Task ProcessSignSetPlan(string applicationData)
         {
+            // TODO
             throw new NotImplementedException();
         }
     }
