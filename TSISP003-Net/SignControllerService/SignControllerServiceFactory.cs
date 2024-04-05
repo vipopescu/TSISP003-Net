@@ -3,62 +3,61 @@ using Microsoft.Extensions.Options;
 using TSISP003.Settings;
 using TSISP003.TCP;
 
-namespace TSISP003.SignControllerService
+namespace TSISP003.SignControllerService;
+
+public class SignControllerServiceFactory : IHostedService
 {
-    public class SignControllerServiceFactory : IHostedService
+    private readonly IOptions<SignControllerServiceOptions> _options;
+    private readonly Dictionary<string, ISignControllerService> _services;
+
+    public SignControllerServiceFactory(IOptions<SignControllerServiceOptions> options)
     {
-        private readonly IOptions<SignControllerServiceOptions> _options;
-        private readonly Dictionary<string, ISignControllerService> _services;
+        _options = options;
+        _services = new Dictionary<string, ISignControllerService>();
 
-        public SignControllerServiceFactory(IOptions<SignControllerServiceOptions> options)
+    }
+
+    private ISignControllerService CreateServiceForDevice(SignControllerConnectionOptions deviceSettings)
+    {
+        return new SignControllerService(new TCPClient(deviceSettings.IpAddress, deviceSettings.Port), deviceSettings);
+    }
+
+    public ISignControllerService GetSignControllerService(string deviceName)
+    {
+        if (_services.ContainsKey(deviceName))
         {
-            _options = options;
-            _services = new Dictionary<string, ISignControllerService>();
-
+            return _services[deviceName];
         }
 
-        private ISignControllerService CreateServiceForDevice(SignControllerConnectionOptions deviceSettings)
-        {
-            return new SignControllerService(new TCPClient(deviceSettings.IpAddress, deviceSettings.Port), deviceSettings);
-        }
+        throw new KeyNotFoundException($"Device with name {deviceName} not found in configuration.");
+    }
 
-        public ISignControllerService GetSignControllerService(string deviceName)
+    public Task StartAsync(CancellationToken cancellationToken)
+    {
+
+        foreach (var deviceName in _options.Value.Devices.Keys)
         {
-            if (_services.ContainsKey(deviceName))
+            var serviceOptions = _options.Value.Devices[deviceName];
+            var service = CreateServiceForDevice(serviceOptions);
+            _services.Add(deviceName, service);
+
+            if (service is IHostedService hostedService)
             {
-                return _services[deviceName];
+                hostedService.StartAsync(cancellationToken);
             }
-
-            throw new KeyNotFoundException($"Device with name {deviceName} not found in configuration.");
         }
+        return Task.CompletedTask;
+    }
 
-        public Task StartAsync(CancellationToken cancellationToken)
+    public Task StopAsync(CancellationToken cancellationToken)
+    {
+        foreach (var service in _services.Values)
         {
-
-            foreach (var deviceName in _options.Value.Devices.Keys)
+            if (service is IHostedService hostedService)
             {
-                var serviceOptions = _options.Value.Devices[deviceName];
-                var service = CreateServiceForDevice(serviceOptions);
-                _services.Add(deviceName, service);
-
-                if (service is IHostedService hostedService)
-                {
-                    hostedService.StartAsync(cancellationToken);
-                }
+                hostedService.StopAsync(cancellationToken);
             }
-            return Task.CompletedTask;
         }
-
-        public Task StopAsync(CancellationToken cancellationToken)
-        {
-            foreach (var service in _services.Values)
-            {
-                if (service is IHostedService hostedService)
-                {
-                    hostedService.StopAsync(cancellationToken);
-                }
-            }
-            return Task.CompletedTask;
-        }
+        return Task.CompletedTask;
     }
 }
