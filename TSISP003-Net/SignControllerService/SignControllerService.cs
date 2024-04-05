@@ -8,8 +8,8 @@ namespace TSISP003.SignControllerService;
 
 public class SignControllerService(TCPClient tcpClient, SignControllerConnectionOptions deviceSettings) : ISignControllerService, IDisposable
 {
-    private Task heartBeatPollTask;
-    private Task startSessionTask;
+    private Task? heartBeatPollTask;
+    private Task? startSessionTask;
     private readonly TCPClient _tcpClient = tcpClient;
     private readonly SignControllerConnectionOptions _deviceSettings = deviceSettings;
     private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
@@ -57,7 +57,7 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
     public void Dispose()
     {
         _cancellationTokenSource.Cancel();
-        heartBeatPollTask.Dispose();
+        heartBeatPollTask?.Dispose();
         throw new NotImplementedException();
     }
 
