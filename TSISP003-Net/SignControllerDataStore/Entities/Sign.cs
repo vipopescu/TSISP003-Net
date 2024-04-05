@@ -1,3 +1,5 @@
+using static TSISP003.SignControllerService.SignControllerServiceConfig;
+
 namespace TSISP003_Net.SignControllerDataStore.Entities;
 
 public class Sign
@@ -11,4 +13,7 @@ public class Sign
     public byte MessageRevision { get; set; }
     public byte PlanID { get; set; }
     public byte PlanRevision { get; set; }
+    public SignType SignType { get; set; }
+    public short SignWidth { get; set; }
+    public short SignHeight { get; set; }
 }

@@ -3,6 +3,7 @@ using System.Text;
 using TSISP003.ProtocolUtils;
 using TSISP003.Settings;
 using TSISP003.TCP;
+using TSISP003_Net.SignControllerDataStore.Entities;
 
 namespace TSISP003.SignControllerService;
 
@@ -13,6 +14,8 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
     private readonly TCPClient _tcpClient = tcpClient;
     private readonly SignControllerConnectionOptions _deviceSettings = deviceSettings;
     private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
+
+    private SignController signController = null;
 
     public bool SignConfigurationReceived { get; set; } = false;
 
@@ -630,33 +633,47 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
     {
         try
         {
-            // TODO: Build controller object
+            signController = new SignController();
 
             byte numberOfGroups = Convert.ToByte(applicationData[22..24], 16);
+            signController.NumberOfGroups = numberOfGroups;
+
             short baseGroup = 22;
-            for (byte i = 0; i < numberOfGroups; i++)
+            for (byte i = 0; i < numberOfGroups; i++) // Iterate over all groups
             {
-                byte groupID = Convert.ToByte(applicationData[baseGroup..(baseGroup + 2)], 16);
+                // Build group with ID
+                SignGroup signGroup = new SignGroup
+                {
+                    GroupID = Convert.ToByte(applicationData[baseGroup..(baseGroup + 2)], 16)
+                };
+
                 byte numberOfSigns = Convert.ToByte(applicationData[(baseGroup + 2)..(baseGroup + 4)], 16);
 
+                // Get all signs for the group
                 short baseSign = (short)(baseGroup + 4);
-                for (int nSign = 1; nSign <= numberOfSigns; nSign++)
+                for (int nSign = 1; nSign <= numberOfSigns; nSign++) // Iterate over all signs
                 {
-                    byte signID = Convert.ToByte(applicationData[baseSign..(baseSign + 2)], 16);
-                    byte signType = Convert.ToByte(applicationData[(baseSign + 2)..(baseSign + 4)], 16);
-                    short signWidth = Convert.ToInt16(applicationData[(baseSign + 4)..(baseSign + 8)], 16);
-                    short signHeight = Convert.ToInt16(applicationData[(baseSign + 8)..(baseSign + 12)], 16);
+                    // Create new sign
+                    Sign sign = new Sign
+                    {
+                        SignID = Convert.ToByte(applicationData[baseSign..(baseSign + 2)], 16),
+                        SignType = (SignControllerServiceConfig.SignType)Convert.ToByte(applicationData[(baseSign + 2)..(baseSign + 4)], 16),
+                        SignWidth = Convert.ToInt16(applicationData[(baseSign + 4)..(baseSign + 8)], 16),
+                        SignHeight = Convert.ToInt16(applicationData[(baseSign + 8)..(baseSign + 12)], 16)
+                    };
+                    signGroup.Signs.Add(sign);
+
                     baseSign = (short)(baseSign + 12);
                 }
 
+                // Get Signature and add to list
                 baseGroup = baseSign;
-
                 byte signatureNumberOfBytes = Convert.ToByte(applicationData[baseGroup..(baseGroup + 2)], 16);
+                signGroup.Signature = applicationData[(baseGroup + 2)..(baseGroup + 2 + signatureNumberOfBytes * 2)];
+                signController.Groups.Add(signGroup);
 
-                string signature = applicationData[(baseGroup + 2)..(baseGroup + 2 + signatureNumberOfBytes * 2)];
-
+                // Continue with the next group
                 baseGroup = (short)(baseGroup + 2 + (signatureNumberOfBytes * 2));
-                // TODO: build group object
             }
 
             SignConfigurationReceived = true;

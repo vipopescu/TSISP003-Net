@@ -6,6 +6,6 @@ public class SignController
     public DateTime DateChange { get; set; }
     public ushort ControllerChecksum { get; set; }
     public byte ControllerErrorCode { get; set; }
-    public byte NumberOfGroup { get; set; }
-    public List<Group> Group { get; set; } = [];
+    public byte NumberOfGroups { get; set; }
+    public List<SignGroup> Groups { get; set; } = [];
 }
