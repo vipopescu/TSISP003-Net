@@ -4,6 +4,21 @@ namespace TSISP003.ProtocolUtils
 {
     public class Utils
     {
+        public static void PrintMessagePacket(string packet, string direction)
+        {
+            packet = packet.Replace("\u0001", "<SOH>");
+            packet = packet.Replace("\u0002", "<STX>");
+            packet = packet.Replace("\u0003", "<ETX>");
+            packet = packet.Replace("\u0004", "<EOT>");
+            packet = packet.Replace("\u0006", "<ACK>");
+            packet = packet.Replace("\u0015", "<NAK>");
+
+            string dateTimeNow = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
+
+            // Output the modified string with the current date and time
+            Console.WriteLine($"[{dateTimeNow}] {direction} {packet}");
+        }
+
         public static ushort CRCGenerator(ushort data, ushort accum)
         {
             const ushort CRC_CCITT = 0x1021;
