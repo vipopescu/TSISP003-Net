@@ -7,7 +7,7 @@ namespace TSISP003.SignControllerService
         Task Password(string passwordSeed);
         Task HeartbeatPoll();
         Task EndSession();
-        Task SystemReset();
+        Task SystemReset(byte groupId, byte resetLevel);
         Task UpdateTime();
         Task SignSetTextFrame();
         Task SignSetGraphicsFrame();

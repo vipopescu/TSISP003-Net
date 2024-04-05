@@ -3,6 +3,25 @@ namespace TSISP003.SignControllerService
 {
     public class SignControllerServiceConfig
     {
+
+        public enum ResetLevel
+        {
+            RESET_LEVEL_ZERO = 0,
+            RESET_LEVEL_ONE = 1,
+            RESET_LEVEL_TWO = 2,
+            RESET_LEVEL_THREE = 3,
+            RESET_LEVEL_FACTORY = 255
+        }
+
+        public enum SignType
+        {
+            SING_TYPE_TEXT = 0,
+            SING_TYPE_GRAPHIC_MONOCOLOR = 1,
+            SING_TYPE_GRAPHIC_MULTICOLOR = 2,
+            SING_TYPE_GRAPHIC_24BIT_COLOR = 3,
+            SING_TYPE_RESERVED = 4
+        }
+
         // Data Presentation Tags
         public const char SOH = '\u0001';
         public const char STX = '\u0002';

@@ -14,6 +14,7 @@ namespace TSISP003.SignControllerService
         private readonly SignControllerConnectionOptions _deviceSettings = deviceSettings;
         private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
 
+        public bool SignConfigurationReceived { get; set; } = false;
 
         // TODO: Implement lock when setting the NS
         private int _ns;
@@ -63,6 +64,8 @@ namespace TSISP003.SignControllerService
         private async void StartSessionTask(CancellationToken cancellationToken)
         {
             bool sessionStarted = false;
+            SignConfigurationReceived = false;
+
             while (!sessionStarted && !cancellationToken.IsCancellationRequested)
             {
                 try
@@ -140,6 +143,14 @@ namespace TSISP003.SignControllerService
             const int maxAttempts = 3;
             NS = 0;
             NR = 0;
+
+            // We request the configuration and 
+            while (!cancellationToken.IsCancellationRequested && !SignConfigurationReceived)
+            {
+                await SignConfigurationRequest();
+                await ReadStream();
+            }
+
             while (!cancellationToken.IsCancellationRequested && failedAttempts < maxAttempts)
             {
                 try
@@ -203,32 +214,15 @@ namespace TSISP003.SignControllerService
             {
                 NR = int.Parse(packet[1..3]);
                 NS++;
-                PrintMessagePacket("Received ACK: " + packet, "<-");
             }
             else if (packet[0] == SignControllerServiceConfig.NAK)
             {
                 // TODO
-                PrintMessagePacket("Received NAK: " + packet, "<-");
             }
 
             // TODO: get the NS from here
             //Console.WriteLine(Utils.PacketCRC(Encoding.ASCII.GetBytes(packet[0..5])));
             //Console.WriteLine("Non Data Packet: " + packet);
-        }
-
-        private void PrintMessagePacket(string packet, string direction)
-        {
-            packet = packet.Replace("\u0001", "<SOH>");
-            packet = packet.Replace("\u0002", "<STX>");
-            packet = packet.Replace("\u0003", "<ETX>");
-            packet = packet.Replace("\u0004", "<EOT>");
-            packet = packet.Replace("\u0006", "<ACK>");
-            packet = packet.Replace("\u0015", "<NAK>");
-
-            string dateTimeNow = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
-
-            // Output the modified string with the current date and time
-            Console.WriteLine($"[{dateTimeNow}] {direction} {packet}");
         }
 
         private void DispatchDataPacket(string packet)
@@ -296,8 +290,6 @@ namespace TSISP003.SignControllerService
                         + Utils.PacketCRC(Encoding.ASCII.GetBytes(message))
                         + SignControllerServiceConfig.ETX;
 
-            PrintMessagePacket($"Sending {SignControllerServiceConfig.MI_HEARTBEAT_POLL} {message}", "->");
-
             await _tcpClient.SendAsync(message);
         }
 
@@ -336,16 +328,51 @@ namespace TSISP003.SignControllerService
             await _tcpClient.SendAsync(message);
         }
 
-        public Task EndSession()
+        /// <summary>
+        /// End the current session
+        /// </summary>
+        /// <returns></returns>
+        /// TODO: We need a logic here to not start again the session if we manually stopped it
+        public async Task EndSession()
         {
-            // TODO
-            throw new NotImplementedException();
+            // build body
+            string message = SignControllerServiceConfig.SOH // Start of header
+                        + NS.ToString("X2") + NR.ToString("X2") // NS and NR
+                        + _deviceSettings.Address // ADDR
+                        + SignControllerServiceConfig.STX
+                        + SignControllerServiceConfig.MI_END_SESSION.ToString("X2");
+
+            // append crc and end of message
+            message = message
+                        + Utils.PacketCRC(Encoding.ASCII.GetBytes(message))
+                        + SignControllerServiceConfig.ETX;
+
+            await _tcpClient.SendAsync(message);
         }
 
-        public Task SystemReset()
+        /// <summary>
+        /// Send system reset command
+        /// </summary>
+        /// <param name="groupId"></param>
+        /// <param name="resetLevel"></param>
+        /// <returns></returns>
+        public async Task SystemReset(byte groupId, byte resetLevel)
         {
-            // TODO
-            throw new NotImplementedException();
+            // Todo: validate data
+
+            // build body
+            string message = SignControllerServiceConfig.SOH // Start of header
+                        + NS.ToString("X2") + NR.ToString("X2") // NS and NR
+                        + _deviceSettings.Address // ADDR
+                        + SignControllerServiceConfig.STX
+                        + SignControllerServiceConfig.MI_END_SESSION.ToString("X2");
+
+            // append crc and end of message
+            message = message
+                        + Utils.PacketCRC(Encoding.ASCII.GetBytes(message))
+                        + SignControllerServiceConfig.ETX;
+
+            await _tcpClient.SendAsync(message);
         }
 
         public Task UpdateTime()
@@ -385,10 +412,21 @@ namespace TSISP003.SignControllerService
             throw new NotImplementedException();
         }
 
-        public Task SignConfigurationRequest()
+        public async Task SignConfigurationRequest()
         {
-            // TODO
-            throw new NotImplementedException();
+            // build body
+            string message = SignControllerServiceConfig.SOH // Start of header
+                        + NS.ToString("X2") + NR.ToString("X2") // NS and NR
+                        + _deviceSettings.Address // ADDR
+                        + SignControllerServiceConfig.STX
+                        + SignControllerServiceConfig.MI_SIGN_CONFIGURATION_REQUEST.ToString("X2");
+
+            // append crc and end of message
+            message = message
+                        + Utils.PacketCRC(Encoding.ASCII.GetBytes(message))
+                        + SignControllerServiceConfig.ETX;
+
+            await _tcpClient.SendAsync(message);
         }
 
         public Task SignDisplayAtomicFrames()
@@ -563,7 +601,6 @@ namespace TSISP003.SignControllerService
 
         public Task ProcessSignStatusReply(string applicationData)
         {
-            PrintMessagePacket("Received SignStatusReply: " + applicationData, "<-");
 
             //applicationData[0..2] Mi code
             //applicationData[2..4] Online Status
@@ -591,8 +628,44 @@ namespace TSISP003.SignControllerService
 
         public Task ProcessSignConfigurationReply(string applicationData)
         {
-            // TODO
-            throw new NotImplementedException();
+            try
+            {
+                // TODO: Build controller object
+
+                byte numberOfGroups = Convert.ToByte(applicationData[22..24], 16);
+                short baseGroup = 22;
+                for (byte i = 0; i < numberOfGroups; i++)
+                {
+                    byte groupID = Convert.ToByte(applicationData[baseGroup..(baseGroup + 2)], 16);
+                    byte numberOfSigns = Convert.ToByte(applicationData[(baseGroup + 2)..(baseGroup + 4)], 16);
+
+                    short baseSign = (short)(baseGroup + 4);
+                    for (int nSign = 1; nSign <= numberOfSigns; nSign++)
+                    {
+                        byte signID = Convert.ToByte(applicationData[baseSign..(baseSign + 2)], 16);
+                        byte signType = Convert.ToByte(applicationData[(baseSign + 2)..(baseSign + 4)], 16);
+                        short signWidth = Convert.ToInt16(applicationData[(baseSign + 4)..(baseSign + 8)], 16);
+                        short signHeight = Convert.ToInt16(applicationData[(baseSign + 8)..(baseSign + 12)], 16);
+                        baseSign = (short)(baseSign + 12);
+                    }
+
+                    baseGroup = baseSign;
+
+                    byte signatureNumberOfBytes = Convert.ToByte(applicationData[baseGroup..(baseGroup + 2)], 16);
+
+                    string signature = applicationData[(baseGroup + 2)..(baseGroup + 2 + signatureNumberOfBytes * 2)];
+
+                    baseGroup = (short)(baseGroup + 2 + (signatureNumberOfBytes * 2));
+                    // TODO: build group object
+                }
+
+                SignConfigurationReceived = true;
+            }
+            catch (System.Exception)
+            {
+                // TODO: Implement logger
+            }
+            return Task.CompletedTask;
         }
 
         public Task ProcessReportEnabledPlans(string applicationData)
@@ -665,6 +738,26 @@ namespace TSISP003.SignControllerService
         {
             // TODO
             throw new NotImplementedException();
+        }
+
+        private bool GroupIDExists(byte groupId)
+        {
+            // TODO: I need to get this from the configuration that I read from the controller.
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// Validate reset level
+        /// </summary>
+        /// <param name="resetLevel"></param>
+        /// <returns></returns>
+        private bool IsValidResetLevel(byte resetLevel)
+        {
+            return resetLevel == (byte)SignControllerServiceConfig.ResetLevel.RESET_LEVEL_ZERO
+                    || resetLevel == (byte)SignControllerServiceConfig.ResetLevel.RESET_LEVEL_ONE
+                    || resetLevel == (byte)SignControllerServiceConfig.ResetLevel.RESET_LEVEL_TWO
+                    || resetLevel == (byte)SignControllerServiceConfig.ResetLevel.RESET_LEVEL_THREE
+                    || resetLevel == (byte)SignControllerServiceConfig.ResetLevel.RESET_LEVEL_FACTORY;
         }
     }
 }
