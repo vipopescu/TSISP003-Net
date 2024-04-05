@@ -59,5 +59,6 @@ namespace TSISP003.SignControllerService
         Task ProcessSignSetHighResolutionGraphicsFrame(string applicationData);
         Task ProcessSignSetMessage(string applicationData);
         Task ProcessSignSetPlan(string applicationData);
+        Task ProcessRejectMessage(string applicationData);
     }
 }

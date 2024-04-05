@@ -210,6 +210,7 @@ namespace TSISP003.SignControllerService
                 // TODO
                 PrintMessagePacket("Received NAK: " + packet, "<-");
             }
+
             // TODO: get the NS from here
             //Console.WriteLine(Utils.PacketCRC(Encoding.ASCII.GetBytes(packet[0..5])));
             //Console.WriteLine("Non Data Packet: " + packet);
@@ -269,6 +270,8 @@ namespace TSISP003.SignControllerService
                 ProcessSignSetMessage(applicationData);
             else if (miCode == SignControllerServiceConfig.MI_SIGN_SET_PLAN)
                 ProcessSignSetMessage(applicationData);
+            else if (miCode == SignControllerServiceConfig.MI_REJECT_MESSAGE)
+                ProcessRejectMessage(applicationData);
             else
                 Console.WriteLine("Unexpected mi code: " + miCode);
         }
@@ -653,6 +656,12 @@ namespace TSISP003.SignControllerService
         }
 
         public Task ProcessSignSetPlan(string applicationData)
+        {
+            // TODO
+            throw new NotImplementedException();
+        }
+
+        public Task ProcessRejectMessage(string applicationData)
         {
             // TODO
             throw new NotImplementedException();
