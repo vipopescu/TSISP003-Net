@@ -7,5 +7,5 @@ public class SignController
     public ushort ControllerChecksum { get; set; }
     public byte ControllerErrorCode { get; set; }
     public byte NumberOfGroups { get; set; }
-    public List<SignGroup> Groups { get; set; } = [];
+    public Dictionary<byte, SignGroup> Groups { get; set; } = [];
 }

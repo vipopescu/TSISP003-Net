@@ -661,7 +661,7 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
                         SignWidth = Convert.ToInt16(applicationData[(baseSign + 4)..(baseSign + 8)], 16),
                         SignHeight = Convert.ToInt16(applicationData[(baseSign + 8)..(baseSign + 12)], 16)
                     };
-                    signGroup.Signs.Add(sign);
+                    signGroup.Signs.Add(sign.SignID, sign);
 
                     baseSign = (short)(baseSign + 12);
                 }
@@ -670,7 +670,7 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
                 baseGroup = baseSign;
                 byte signatureNumberOfBytes = Convert.ToByte(applicationData[baseGroup..(baseGroup + 2)], 16);
                 signGroup.Signature = applicationData[(baseGroup + 2)..(baseGroup + 2 + signatureNumberOfBytes * 2)];
-                signController.Groups.Add(signGroup);
+                signController.Groups.Add(signGroup.GroupID, signGroup);
 
                 // Continue with the next group
                 baseGroup = (short)(baseGroup + 2 + (signatureNumberOfBytes * 2));
