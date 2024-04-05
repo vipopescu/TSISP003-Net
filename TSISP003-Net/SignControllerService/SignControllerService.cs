@@ -1,5 +1,6 @@
 using System.Net.Sockets;
 using System.Text;
+using Microsoft.AspNetCore.Mvc;
 using TSISP003.ProtocolUtils;
 using TSISP003.Settings;
 using TSISP003.TCP;
@@ -147,13 +148,14 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         NS = 0;
         NR = 0;
 
-        // We request the configuration and 
+        // We request the configuration and read it until we receive it
         while (!cancellationToken.IsCancellationRequested && !SignConfigurationReceived)
         {
             await SignConfigurationRequest();
             await ReadStream();
         }
 
+        // We start the hearbeat
         while (!cancellationToken.IsCancellationRequested && failedAttempts < maxAttempts)
         {
             try
@@ -521,9 +523,21 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         throw new NotImplementedException();
     }
 
-    public Task RetrieveFaultLog()
+    public async Task RetrieveFaultLog()
     {
-        throw new NotImplementedException();
+        // build body
+        string message = SignControllerServiceConfig.SOH // Start of header
+                    + NS.ToString("X2") + NR.ToString("X2") // NS and NR
+                    + _deviceSettings.Address // ADDR
+                    + SignControllerServiceConfig.STX
+                    + SignControllerServiceConfig.MI_RETRIEVE_FAULT_LOG.ToString("X2");
+
+        // append crc and end of message
+        message = message
+                    + Utils.PacketCRC(Encoding.ASCII.GetBytes(message))
+                    + SignControllerServiceConfig.ETX;
+
+        await _tcpClient.SendAsync(message);
     }
 
     public Task ResetFaultLog()
@@ -602,19 +616,44 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         throw new NotImplementedException();
     }
 
-    public Task ProcessSignStatusReply(string applicationData)
+    public async Task ProcessSignStatusReply(string applicationData)
     {
+        bool errorCodeChanged = false;
 
-        //applicationData[0..2] Mi code
-        //applicationData[2..4] Online Status
-        //applicationData[4..6] Day
-        //applicationData[6..8] Month
-        //applicationData[0..2] Mi code
-        //applicationData[0..2] Mi code
-        //applicationData[0..2] Mi code
-        //applicationData[0..2] Mi code
+        signController.OnlineStatus = bool.Parse(applicationData[2..4]);
+        signController.DateChange = new DateTime(
+            year: int.Parse(applicationData[8..12]),
+            month: int.Parse(applicationData[6..8]),
+            day: int.Parse(applicationData[4..6]),
+            hour: int.Parse(applicationData[12..14]),
+            minute: int.Parse(applicationData[14..16]),
+            second: int.Parse(applicationData[16..18])
+        );
 
-        return Task.CompletedTask;
+        //applicationData[18..22] Controller Checksum -> We ignore the checksum
+
+        byte errorCode = byte.Parse(applicationData[22..24]);
+        if (errorCode != signController.ControllerErrorCode) errorCodeChanged = true;
+        signController.ControllerErrorCode = errorCode;
+
+        byte numberOfSigns = byte.Parse(applicationData[24..26]);
+
+        byte baseSign = 26;
+        for (int i = 0; i < numberOfSigns; i++)
+        {
+            // applicationData[26..28] - Sign ID
+            // applicationData[28..30] - Sign Error Code
+            // applicationData[30..32] - Sign Enabled Disabled
+            // applicationData[32..34] - Frame ID Displayed
+            // applicationData[34..36] - Frame Revision
+            // applicationData[36..38] - Message ID Displayed
+            // applicationData[38..40] - Message Revision
+            // applicationData[40..42] - Plan ID Displayed
+            // applicationData[42..44] - Plan Revision
+            baseSign += 18;
+        }
+
+        if (errorCodeChanged) await RetrieveFaultLog();
     }
 
     public Task ProcessHARStatusReply(string applicationData)
