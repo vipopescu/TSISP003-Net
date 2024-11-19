@@ -1,17 +1,16 @@
 using Microsoft.AspNetCore.Mvc;
+using TSISP003.SignControllerService;
+using TSISP003_Net;
 
 namespace TSISP003.Controllers;
 
 [ApiController]
 [Route("api")]
-public class SignApiController : ControllerBase
+public class SignApiController(ILogger<SignApiController> logger, SignControllerServiceFactory signControllerServiceFactory) : ControllerBase
 {
-    private readonly ILogger<SignApiController> _logger; // I am unsure whether injecting ILogger here is best practice
+    private readonly ILogger<SignApiController> _logger = logger; // I am unsure whether injecting ILogger here is best practice
 
-    public SignApiController(ILogger<SignApiController> logger)
-    {
-        _logger = logger;
-    }
+    private readonly SignControllerServiceFactory _signControllerServiceFactory = signControllerServiceFactory;
 
     [HttpPost]
     [Route("{device}/SystemReset")]
@@ -41,7 +40,9 @@ public class SignApiController : ControllerBase
     [Route("{device}/SignSetHighResolutionGraphicsFrame")]
     public async Task<IActionResult> SignSetHighResolutionGraphicsFrame(string device)
     {
-        // TODO: Implement
+        // TODO: Implement  
+
+
         return Ok();
     }
 
@@ -49,8 +50,13 @@ public class SignApiController : ControllerBase
     [Route("{device}/SignConfigurationRequest")]
     public async Task<IActionResult> SignConfigurationRequest(string device)
     {
-        // TODO: Implement
-        return Ok();
+        if (!_signControllerServiceFactory.ContainsSignController(device))
+            return NotFound("Device not found");
+
+        var controller = await _signControllerServiceFactory.GetSignControllerService(device)
+            .GetControllerConfigurationAsync();
+
+        return Ok(controller.AsDto());
     }
 
     [HttpPost]

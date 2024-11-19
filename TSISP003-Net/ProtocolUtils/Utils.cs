@@ -4,6 +4,11 @@ namespace TSISP003.ProtocolUtils;
 
 public class Utils
 {
+    /// <summary>
+    /// Prints a message packet to the console
+    /// </summary>
+    /// <param name="packet"></param>
+    /// <param name="direction"></param>
     public static void PrintMessagePacket(string packet, string direction)
     {
         packet = packet.Replace("\u0001", "<SOH>");
@@ -19,6 +24,12 @@ public class Utils
         Console.WriteLine($"[{dateTimeNow}] {direction} {packet}");
     }
 
+    /// <summary>
+    /// Generates a CRC for a packet of bytes
+    /// </summary>
+    /// <param name="data"></param>
+    /// <param name="accum"></param>
+    /// <returns></returns>
     public static ushort CRCGenerator(ushort data, ushort accum)
     {
         const ushort CRC_CCITT = 0x1021;
@@ -35,6 +46,11 @@ public class Utils
         return accum;
     }
 
+    /// <summary>
+    /// Generates a CRC for a packet of bytes
+    /// </summary>
+    /// <param name="packetBytes"></param>
+    /// <returns></returns>
     public static string PacketCRC(byte[] packetBytes)
     {
         ushort accumulator = 0;
@@ -47,6 +63,12 @@ public class Utils
         // Convert the accumulator to a 4-character hexadecimal string
         return accumulator.ToString("X4");
     }
+
+    /// <summary>
+    /// Splits a string into chunks based on the start and end characters
+    /// </summary>
+    /// <param name="input"></param>
+    /// <returns></returns>
     public static IEnumerable<string> GetChunks(string input)
     {
         List<char> startChars = new List<char> { SignControllerServiceConfig.ACK, SignControllerServiceConfig.SOH, SignControllerServiceConfig.NAK };
@@ -90,6 +112,13 @@ public class Utils
         }
     }
 
+    /// <summary>
+    /// Generates a password based on the provided seed values
+    /// </summary>
+    /// <param name="passwordSeedStr"></param>
+    /// <param name="seedOffsetStr"></param>
+    /// <param name="passwordOffsetStr"></param>
+    /// <returns></returns>
     public static string GeneratePassword(string passwordSeedStr, string seedOffsetStr, string passwordOffsetStr)
     {
         // Convert hex strings to integers

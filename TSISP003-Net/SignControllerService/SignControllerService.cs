@@ -1,6 +1,5 @@
 using System.Net.Sockets;
 using System.Text;
-using Microsoft.AspNetCore.Mvc;
 using TSISP003.ProtocolUtils;
 using TSISP003.Settings;
 using TSISP003.TCP;
@@ -15,8 +14,7 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
     private readonly TCPClient _tcpClient = tcpClient;
     private readonly SignControllerConnectionOptions _deviceSettings = deviceSettings;
     private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
-
-    private SignController signController = null;
+    private SignController _signController = null;
 
     public bool SignConfigurationReceived { get; set; } = false;
 
@@ -49,6 +47,11 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         }
     }
 
+    /// <summary>
+    /// Start the session and start the heartbeat poll
+    /// </summary>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
     public Task StartAsync(CancellationToken cancellationToken)
     {
         _cancellationTokenSource = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
@@ -58,13 +61,19 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Dispose the SignControllerService
+    /// </summary>
     public void Dispose()
     {
         _cancellationTokenSource.Cancel();
         heartBeatPollTask?.Dispose();
-        throw new NotImplementedException();
     }
 
+    /// <summary>
+    /// Start the session task
+    /// </summary>
+    /// <param name="cancellationToken"></param>
     private async void StartSessionTask(CancellationToken cancellationToken)
     {
         bool sessionStarted = false;
@@ -140,7 +149,10 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
             heartBeatPollTask = Task.Run(() => HeartBeatPollTask(_cancellationTokenSource.Token));
     }
 
-
+    /// <summary>
+    /// Heartbeat poll task
+    /// </summary>
+    /// <param name="cancellationToken"></param>
     private async void HeartBeatPollTask(CancellationToken cancellationToken)
     {
         int failedAttempts = 0;
@@ -176,6 +188,7 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
             }
         }
 
+        // If we reach the max attempts, we restart the session
         if (!cancellationToken.IsCancellationRequested && failedAttempts >= maxAttempts)
         {
             Console.WriteLine($"Cancelling the pool. Restarting the session...");
@@ -183,7 +196,10 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         }
     }
 
-
+    /// <summary>
+    /// Read the stream and process the responses
+    /// </summary>
+    /// <returns></returns>
     private async Task ReadStream()
     {
         try
@@ -194,17 +210,22 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
                 ProcessResponses(response);
             }
         }
-        catch (Exception ex)
+        catch (Exception)
         {
             // Ignore 
             Thread.Sleep(3000);
         }
     }
 
+    /// <summary>
+    /// Process the responses
+    /// </summary>
+    /// <param name="responses"></param>
     private void ProcessResponses(string responses)
     {
         foreach (var packet in Utils.GetChunks(responses))
         {
+            // Check if it's data or non data packet
             if (packet[0] == SignControllerServiceConfig.ACK || packet[0] == SignControllerServiceConfig.NAK)
                 ProcessNonDataPacket(packet);
             else if (packet[0] == SignControllerServiceConfig.SOH)
@@ -213,6 +234,10 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         }
     }
 
+    /// <summary>
+    /// Process non data packets
+    /// </summary>
+    /// <param name="packet"></param>
     private void ProcessNonDataPacket(string packet)
     {
         if (packet[0] == SignControllerServiceConfig.ACK)
@@ -230,6 +255,10 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         //Console.WriteLine("Non Data Packet: " + packet);
     }
 
+    /// <summary>
+    /// Dispatch data packets
+    /// </summary>
+    /// <param name="packet"></param>
     private void DispatchDataPacket(string packet)
     {
         // packet[0]                        -> SOH
@@ -275,12 +304,21 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
             Console.WriteLine("Unexpected mi code: " + miCode);
     }
 
+    /// <summary>
+    /// Stop the session and the heartbeat poll
+    /// </summary>
+    /// <param name="cancellationToken"></param>
+    /// <returns></returns>
     public Task StopAsync(CancellationToken cancellationToken)
     {
         _cancellationTokenSource.Cancel();
         return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Send a heartbeat poll
+    /// </summary>
+    /// <returns></returns>
     public async Task HeartbeatPoll()
     {
         // build body
@@ -298,6 +336,10 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         await _tcpClient.SendAsync(message);
     }
 
+    /// <summary>
+    /// Start a session
+    /// </summary>
+    /// <returns></returns>
     public async Task StartSession()
     {
         // build body
@@ -315,6 +357,11 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         await _tcpClient.SendAsync(message);
     }
 
+    /// <summary>
+    /// Send the password command
+    /// </summary>
+    /// <param name="passwordSeed"></param>
+    /// <returns></returns>
     public async Task Password(string passwordSeed)
     {
         // build body
@@ -620,8 +667,8 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
     {
         bool errorCodeChanged = false;
 
-        signController.OnlineStatus = bool.Parse(applicationData[2..4]);
-        signController.DateChange = new DateTime(
+        _signController.OnlineStatus = bool.Parse(applicationData[2..4]);
+        _signController.DateChange = new DateTime(
             year: int.Parse(applicationData[8..12]),
             month: int.Parse(applicationData[6..8]),
             day: int.Parse(applicationData[4..6]),
@@ -633,8 +680,8 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         //applicationData[18..22] Controller Checksum -> We ignore the checksum
 
         byte errorCode = byte.Parse(applicationData[22..24]);
-        if (errorCode != signController.ControllerErrorCode) errorCodeChanged = true;
-        signController.ControllerErrorCode = errorCode;
+        if (errorCode != _signController.ControllerErrorCode) errorCodeChanged = true;
+        _signController.ControllerErrorCode = errorCode;
 
         byte numberOfSigns = byte.Parse(applicationData[24..26]);
 
@@ -668,14 +715,19 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         throw new NotImplementedException();
     }
 
+    /// <summary>
+    /// Process the sign configuration reply
+    /// </summary>
+    /// <param name="applicationData"></param>
+    /// <returns></returns>
     public Task ProcessSignConfigurationReply(string applicationData)
     {
         try
         {
-            signController = new SignController();
+            _signController = new SignController();
 
             byte numberOfGroups = Convert.ToByte(applicationData[22..24], 16);
-            signController.NumberOfGroups = numberOfGroups;
+            _signController.NumberOfGroups = numberOfGroups;
 
             short baseGroup = 22;
             for (byte i = 0; i < numberOfGroups; i++) // Iterate over all groups
@@ -709,7 +761,7 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
                 baseGroup = baseSign;
                 byte signatureNumberOfBytes = Convert.ToByte(applicationData[baseGroup..(baseGroup + 2)], 16);
                 signGroup.Signature = applicationData[(baseGroup + 2)..(baseGroup + 2 + signatureNumberOfBytes * 2)];
-                signController.Groups.Add(signGroup.GroupID, signGroup);
+                _signController.Groups.Add(signGroup.GroupID, signGroup);
 
                 // Continue with the next group
                 baseGroup = (short)(baseGroup + 2 + (signatureNumberOfBytes * 2));
@@ -814,5 +866,22 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
                 || resetLevel == (byte)SignControllerServiceConfig.ResetLevel.RESET_LEVEL_TWO
                 || resetLevel == (byte)SignControllerServiceConfig.ResetLevel.RESET_LEVEL_THREE
                 || resetLevel == (byte)SignControllerServiceConfig.ResetLevel.RESET_LEVEL_FACTORY;
+    }
+
+    /// <summary>
+    /// Get the controller configuration
+    /// </summary>
+    /// <returns></returns>
+    /// <exception cref="Exception"></exception>
+    public Task<SignController> GetControllerConfigurationAsync()
+    {
+        try
+        {
+            return Task.FromResult(_signController);
+        }
+        catch (Exception ex)
+        {
+            throw new Exception("Failed to get controller configuration", ex);
+        }
     }
 }

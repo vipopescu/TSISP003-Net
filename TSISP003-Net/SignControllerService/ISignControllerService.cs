@@ -1,8 +1,10 @@
+using TSISP003_Net.SignControllerDataStore.Entities;
 
 namespace TSISP003.SignControllerService;
 
 public interface ISignControllerService : IHostedService
 {
+    Task<SignController> GetControllerConfigurationAsync();
     Task StartSession();
     Task Password(string passwordSeed);
     Task HeartbeatPoll();
