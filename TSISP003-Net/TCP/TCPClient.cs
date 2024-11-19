@@ -47,6 +47,9 @@ public class TCPClient
                 NetworkStream stream = _client.GetStream();
                 byte[] data = Encoding.ASCII.GetBytes(message);
 
+                Console.WriteLine(DateTime.Now.ToString("MM/dd/yyyy HH:mm:ss.fff") + " 1 --> " + DateTime.Now.ToString("MM/dd/yyyy HH:mm:ss")
+                            + " => " + BytesToHexString(data, data.Length));
+
                 await stream.WriteAsync(data, 0, data.Length);
             }
         }
@@ -61,7 +64,7 @@ public class TCPClient
         await _readSemaphore.WaitAsync();
         try
         {
-            CancellationTokenSource cts = new CancellationTokenSource(250);
+            CancellationTokenSource cts = new CancellationTokenSource(500);
 
             if (!_client.Connected)
                 await ConnectAsync();
@@ -72,6 +75,10 @@ public class TCPClient
             {
                 int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, cts.Token);
                 if (bytesRead > 0) ms.Write(buffer, 0, bytesRead);
+
+                Console.WriteLine(DateTime.Now.ToString("MM/dd/yyyy HH:mm:ss.fff") + " 1 --> " + DateTime.Now.ToString("MM/dd/yyyy HH:mm:ss")
+                    + " <= " + BytesToHexString(buffer, bytesRead));
+
                 return Encoding.ASCII.GetString(ms.ToArray());
             }
         }
@@ -79,6 +86,14 @@ public class TCPClient
         {
             _readSemaphore.Release();
         }
+    }
+
+    static string BytesToHexString(byte[] bytes, int length)
+    {
+        StringBuilder hex = new StringBuilder(length * 2);
+        for (int i = 0; i < length; i++)
+            hex.AppendFormat("{0:X2} ", bytes[i]);
+        return hex.ToString().Trim();  // Trim to remove the trailing space
     }
 
 }
