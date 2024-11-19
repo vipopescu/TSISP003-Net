@@ -86,6 +86,8 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
                 // 1 - Send the start session
                 await StartSession();
 
+                Thread.Sleep(1000);
+
                 // 2 - Receive an Ack and the password seed
                 string response = await _tcpClient.ReadAsync();
                 bool isAcknowledged = false;
@@ -106,6 +108,8 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
                 // 3 - Send the password command 
                 await Password(passwordSeed);
 
+                Thread.Sleep(1000);
+
                 // 4 - Receive an ACK and ACK* mi code
                 response = await _tcpClient.ReadAsync();
                 isAcknowledged = false;
@@ -122,6 +126,12 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
 
                 // 5 - If successful, get out
                 sessionStarted = isAcknowledged && isAckProtocolReceived;
+
+                if (sessionStarted)
+                {
+                    Console.WriteLine("Session started successfully");
+                    break;
+                }
             }
             catch (SocketException soex)
             {
@@ -164,6 +174,7 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         while (!cancellationToken.IsCancellationRequested && !SignConfigurationReceived)
         {
             await SignConfigurationRequest();
+            Thread.Sleep(5000);
             await ReadStream();
         }
 
@@ -210,8 +221,9 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
                 ProcessResponses(response);
             }
         }
-        catch (Exception)
+        catch (Exception ex)
         {
+            Console.WriteLine($"Failed to read from the socket: {ex.Message}");
             // Ignore 
             Thread.Sleep(3000);
         }
