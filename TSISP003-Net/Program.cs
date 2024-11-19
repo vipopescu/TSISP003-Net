@@ -14,7 +14,9 @@ internal class Program
 
 
         builder.Services.Configure<SignControllerServiceOptions>(builder.Configuration.GetSection("SignControllerServices"));
-        builder.Services.AddSingleton<IHostedService, SignControllerServiceFactory>();
+        builder.Services.AddSingleton<SignControllerServiceFactory>();
+
+        builder.Services.AddHostedService(provider => provider.GetRequiredService<SignControllerServiceFactory>());
 
 
         builder.Services.AddEndpointsApiExplorer();
@@ -29,7 +31,7 @@ internal class Program
         //     app.UseSwaggerUI();
         // }
 
-        app.UseHttpsRedirection();
+        //app.UseHttpsRedirection();
 
         app.UseAuthorization();
 
