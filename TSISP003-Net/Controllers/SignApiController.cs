@@ -46,7 +46,7 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
         return Ok();
     }
 
-    [HttpPost]
+    [HttpGet]
     [Route("{device}/SignConfigurationRequest")]
     public async Task<IActionResult> SignConfigurationRequest(string device)
     {
