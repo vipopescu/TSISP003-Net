@@ -1,34 +1,42 @@
-namespace TSISP003
+using TSISP003.Settings;
+using TSISP003.SignControllerService;
+
+namespace TSISP003;
+
+internal class Program
 {
-    internal class Program
+    private static void Main(string[] args)
     {
-        private static void Main(string[] args)
-        {
-            var builder = WebApplication.CreateBuilder(args);
+        var builder = WebApplication.CreateBuilder(args);
 
-            // Add services to the container.
+        // Add services to the container.
+        builder.Services.AddControllers();
 
-            builder.Services.AddControllers();
 
-            builder.Services.AddEndpointsApiExplorer();
-            builder.Services.AddSwaggerGen();
+        builder.Services.Configure<SignControllerServiceOptions>(builder.Configuration.GetSection("SignControllerServices"));
+        builder.Services.AddSingleton<SignControllerServiceFactory>();
 
-            var app = builder.Build();
+        builder.Services.AddHostedService(provider => provider.GetRequiredService<SignControllerServiceFactory>());
 
-            // Configure the HTTP request pipeline.
-            if (app.Environment.IsDevelopment())
-            {
-                app.UseSwagger();
-                app.UseSwaggerUI();
-            }
 
-            app.UseHttpsRedirection();
+        builder.Services.AddEndpointsApiExplorer();
+        //builder.Services.AddSwaggerGen();
 
-            app.UseAuthorization();
+        var app = builder.Build();
 
-            app.MapControllers();
+        // Configure the HTTP request pipeline.
+        // if (app.Environment.IsDevelopment())
+        // {
+        //     app.UseSwagger();
+        //     app.UseSwaggerUI();
+        // }
 
-            app.Run();
-        }
+        //app.UseHttpsRedirection();
+
+        app.UseAuthorization();
+
+        app.MapControllers();
+
+        app.Run();
     }
 }
