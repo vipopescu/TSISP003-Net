@@ -173,9 +173,11 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         // We request the configuration and read it until we receive it
         while (!cancellationToken.IsCancellationRequested && !SignConfigurationReceived)
         {
-            await SignConfigurationRequest();
-            Thread.Sleep(5000);
-            await ReadStream();
+            //await SignConfigurationRequest();
+            //Thread.Sleep(5000);
+            //await ReadStream();
+
+            SignConfigurationReceived = true;
         }
 
         // We start the hearbeat
@@ -184,6 +186,7 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
             try
             {
                 await HeartbeatPoll();
+                Thread.Sleep(100);
                 await ReadStream();
 
                 failedAttempts = 0;
@@ -254,7 +257,7 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
     {
         if (packet[0] == SignControllerServiceConfig.ACK)
         {
-            NR = int.Parse(packet[1..3]);
+            NR = int.Parse(packet[1..3], System.Globalization.NumberStyles.HexNumber);
             NS++;
         }
         else if (packet[0] == SignControllerServiceConfig.NAK)
@@ -271,7 +274,7 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
     /// Dispatch data packets
     /// </summary>
     /// <param name="packet"></param>
-    private void DispatchDataPacket(string packet)
+    private async void DispatchDataPacket(string packet)
     {
         // packet[0]                        -> SOH
         // packet[1..3]                     -> NR
@@ -285,35 +288,40 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         int miCode = Convert.ToInt32(packet[8..10], 16);
 
         if (miCode == SignControllerServiceConfig.MI_SIGN_STATUS_REPLY)
-            ProcessSignStatusReply(applicationData);
+            await ProcessSignStatusReply(applicationData);
         else if (miCode == SignControllerServiceConfig.MI_PASSWORD_SEED)
-            ProcessPasswordSeed(applicationData);
+            await ProcessPasswordSeed(applicationData);
         else if (miCode == SignControllerServiceConfig.MI_HAR_STATUS_REPLY)
-            ProcessHARStatusReply(applicationData);
+            await ProcessHARStatusReply(applicationData);
         else if (miCode == SignControllerServiceConfig.MI_ENVIRONMENTAL_WEATHER_STATUS_REPLY)
-            ProcessEnvironmentalWeatherStatusReply(applicationData);
+            await ProcessEnvironmentalWeatherStatusReply(applicationData);
         else if (miCode == SignControllerServiceConfig.MI_SIGN_CONFIGURATION_REPLY)
-            ProcessSignConfigurationReply(applicationData);
+            await ProcessSignConfigurationReply(applicationData);
         else if (miCode == SignControllerServiceConfig.MI_REPORT_ENABLED_PLANS)
-            ProcessReportEnabledPlans(applicationData);
+            await ProcessReportEnabledPlans(applicationData);
         else if (miCode == SignControllerServiceConfig.MI_SIGN_EXTENDED_STATUS_REPLY)
-            ProcessSignExtendedStatusReply(applicationData);
+            await ProcessSignExtendedStatusReply(applicationData);
         else if (miCode == SignControllerServiceConfig.MI_FAULT_LOG_REPLY)
-            ProcessFaultLogReply(applicationData);
+            await ProcessFaultLogReply(applicationData);
         else if (miCode == SignControllerServiceConfig.MI_SIGN_SET_TEXT_FRAME)
-            ProcessSignSetTextFrame(applicationData);
+            await ProcessSignSetTextFrame(applicationData);
         else if (miCode == SignControllerServiceConfig.MI_SIGN_SET_GRAPHIC_FRAME)
-            ProcessSignSetGraphicsFrame(applicationData);
+            await ProcessSignSetGraphicsFrame(applicationData);
         else if (miCode == SignControllerServiceConfig.MI_SIGN_SET_HIGH_RESOLUTION_GRAPHICS_FRAME)
-            ProcessSignSetHighResolutionGraphicsFrame(applicationData);
+            await ProcessSignSetHighResolutionGraphicsFrame(applicationData);
         else if (miCode == SignControllerServiceConfig.MI_SIGN_SET_MESSAGE)
-            ProcessSignSetMessage(applicationData);
+            await ProcessSignSetMessage(applicationData);
         else if (miCode == SignControllerServiceConfig.MI_SIGN_SET_PLAN)
-            ProcessSignSetMessage(applicationData);
+            await ProcessSignSetMessage(applicationData);
         else if (miCode == SignControllerServiceConfig.MI_REJECT_MESSAGE)
-            ProcessRejectMessage(applicationData);
+            await ProcessRejectMessage(applicationData);
         else
             Console.WriteLine("Unexpected mi code: " + miCode);
+
+        int nr = Convert.ToInt32(packet[3..5], 16);
+        NR = nr;
+        NS = nr;
+
     }
 
     /// <summary>
@@ -677,27 +685,33 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
 
     public async Task ProcessSignStatusReply(string applicationData)
     {
+        // applicationData[4..6] - Error Code
+        // applicationData[6..8] - Day
         bool errorCodeChanged = false;
 
-        _signController.OnlineStatus = bool.Parse(applicationData[2..4]);
+        // TODO: remove
+        if (_signController == null) _signController = new SignController();
+
+        // Note: Protocol says 0 = Offline, 1 = Online, but some controllers use 0 = Offline, >1 = Online
+        _signController.OnlineStatus = int.Parse(applicationData[2..4], System.Globalization.NumberStyles.HexNumber) > 0;
         _signController.DateChange = new DateTime(
-            year: int.Parse(applicationData[8..12]),
-            month: int.Parse(applicationData[6..8]),
-            day: int.Parse(applicationData[4..6]),
-            hour: int.Parse(applicationData[12..14]),
-            minute: int.Parse(applicationData[14..16]),
-            second: int.Parse(applicationData[16..18])
+            year: int.Parse(applicationData[10..14], System.Globalization.NumberStyles.HexNumber),
+            month: int.Parse(applicationData[8..10], System.Globalization.NumberStyles.HexNumber),
+            day: int.Parse(applicationData[6..8], System.Globalization.NumberStyles.HexNumber),
+            hour: int.Parse(applicationData[14..16], System.Globalization.NumberStyles.HexNumber),
+            minute: int.Parse(applicationData[16..18], System.Globalization.NumberStyles.HexNumber),
+            second: int.Parse(applicationData[18..20], System.Globalization.NumberStyles.HexNumber)
         );
 
         //applicationData[18..22] Controller Checksum -> We ignore the checksum
 
-        byte errorCode = byte.Parse(applicationData[22..24]);
+        byte errorCode = byte.Parse(applicationData[24..26]);
         if (errorCode != _signController.ControllerErrorCode) errorCodeChanged = true;
         _signController.ControllerErrorCode = errorCode;
 
-        byte numberOfSigns = byte.Parse(applicationData[24..26]);
+        byte numberOfSigns = byte.Parse(applicationData[26..28]);
 
-        byte baseSign = 26;
+        byte baseSign = 28;
         for (int i = 0; i < numberOfSigns; i++)
         {
             // applicationData[26..28] - Sign ID
