@@ -9,6 +9,9 @@ namespace TSISP003.SignControllerService;
 
 public class SignControllerService(TCPClient tcpClient, SignControllerConnectionOptions deviceSettings) : ISignControllerService, IDisposable
 {
+    private TaskCompletionSource<List<FaultLogEntry>>? _faultLogReply;
+
+
     private Task? heartBeatPollTask;
     private Task? startSessionTask;
     private readonly TCPClient _tcpClient = tcpClient;
@@ -295,7 +298,7 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
             await ProcessHARStatusReply(applicationData);
         else if (miCode == SignControllerServiceConfig.MI_ENVIRONMENTAL_WEATHER_STATUS_REPLY)
             await ProcessEnvironmentalWeatherStatusReply(applicationData);
-        else if (miCode == SignControllerServiceConfig.MI_SIGN_CONFIGURATION_REPLY)
+        else if (miCode == SignControllerServiceConfig.MI_SIGN_CONFIGURATION_REPLY || miCode == SignControllerServiceConfig.MI_DISABLE_ENABLE_DEVICE)
             await ProcessSignConfigurationReply(applicationData);
         else if (miCode == SignControllerServiceConfig.MI_REPORT_ENABLED_PLANS)
             await ProcessReportEnabledPlans(applicationData);
@@ -590,8 +593,10 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         throw new NotImplementedException();
     }
 
-    public async Task RetrieveFaultLog()
+    public async Task<List<FaultLogEntry>> RetrieveFaultLog()
     {
+        _faultLogReply = new TaskCompletionSource<List<FaultLogEntry>>(TaskCreationOptions.RunContinuationsAsynchronously);
+
         // build body
         string message = SignControllerServiceConfig.SOH // Start of header
                     + NS.ToString("X2") + NR.ToString("X2") // NS and NR
@@ -605,6 +610,18 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
                     + SignControllerServiceConfig.ETX;
 
         await _tcpClient.SendAsync(message);
+
+        // Wait for either the fault log reply to be received or a timeout after 3 seconds.
+        var delayTask = Task.Delay(TimeSpan.FromSeconds(3));
+
+        var completedTask = await Task.WhenAny(_faultLogReply.Task, delayTask);
+
+        if (completedTask == delayTask)
+        {
+            throw new TimeoutException("Fault log reply timed out.");
+        }
+
+        return await _faultLogReply.Task;
     }
 
     public Task ResetFaultLog()
@@ -814,10 +831,53 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         throw new NotImplementedException();
     }
 
+    /// <summary>
+    /// Process the fault log reply
+    /// </summary>
+    /// <param name="applicationData"></param>
+    /// <returns></returns>
     public Task ProcessFaultLogReply(string applicationData)
     {
-        // TODO
-        throw new NotImplementedException();
+        List<FaultLogEntry> faultLogEntries = new List<FaultLogEntry>();
+
+
+
+        byte numberOfEntries = Convert.ToByte(applicationData[2..4], 16);
+
+        for (byte i = 0; i < numberOfEntries; i++)
+        {
+            byte baseByte = (byte)(4 + i * 22);
+
+
+            byte groupId = Convert.ToByte(applicationData[baseByte..(baseByte + 2)], 16);
+            byte entryNumberOfField = Convert.ToByte(applicationData[(baseByte + 2)..(baseByte + 4)], 16);
+            byte dayOfMonth = Convert.ToByte(applicationData[(baseByte + 4)..(baseByte + 6)], 16);
+            byte month = Convert.ToByte(applicationData[(baseByte + 6)..(baseByte + 8)], 16);
+            short year = Convert.ToInt16(applicationData[(baseByte + 8)..(baseByte + 12)], 16);
+            byte hour = Convert.ToByte(applicationData[(baseByte + 12)..(baseByte + 14)], 16);
+            byte minute = Convert.ToByte(applicationData[(baseByte + 14)..(baseByte + 16)], 16);
+            byte second = Convert.ToByte(applicationData[(baseByte + 16)..(baseByte + 18)], 16);
+            byte errorCode = Convert.ToByte(applicationData[(baseByte + 18)..(baseByte + 20)], 16);
+            bool faultCleared = Convert.ToByte(applicationData[(baseByte + 20)..(baseByte + 22)], 16) == 1;
+
+            faultLogEntries.Add(new FaultLogEntry
+            {
+                Id = groupId,
+                EntryNumber = entryNumberOfField,
+                Day = dayOfMonth,
+                Month = month,
+                Year = year,
+                Hour = hour,
+                Minute = minute,
+                Second = second,
+                ErrorCode = errorCode,
+                IsFaultCleared = faultCleared
+            });
+        }
+
+        _faultLogReply?.TrySetResult(faultLogEntries);
+
+        return Task.CompletedTask;
     }
 
     public Task ProcessHARVoiceDataAck(string applicationData)
@@ -871,7 +931,10 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
     public Task ProcessRejectMessage(string applicationData)
     {
         // TODO
-        throw new NotImplementedException();
+
+        Console.WriteLine("Rejected message");
+        return Task.CompletedTask;
+        //throw new NotImplementedException();
     }
 
     private bool GroupIDExists(byte groupId)

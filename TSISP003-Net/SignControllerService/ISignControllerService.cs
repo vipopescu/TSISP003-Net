@@ -28,7 +28,7 @@ public interface ISignControllerService : IHostedService
     Task DisableEnableDevice();
     Task SignRequestStoredFrameMessagePlan();
     Task SignExtendedStatusRequest();
-    Task RetrieveFaultLog();
+    Task<List<FaultLogEntry>> RetrieveFaultLog();
     Task ResetFaultLog();
     Task HARSetVoiceDataIncomplete();
     Task HARSetVoiceDataComplete();

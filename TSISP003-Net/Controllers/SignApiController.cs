@@ -167,8 +167,31 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
     [Route("{device}/RetrieveFaultLog")]
     public async Task<IActionResult> RetrieveFaultLog(string device)
     {
-        // TODO: Implement
-        return Ok();
+        if (!_signControllerServiceFactory.ContainsSignController(device))
+            return NotFound("Device not found");
+
+        var controllerService = _signControllerServiceFactory.GetSignControllerService(device);
+
+        try
+        {
+
+            // This method awaits the fault log reply, with a timeout of 3 seconds.
+            var faultLogList = await controllerService.RetrieveFaultLog(); // Await the task first
+
+            var faultLogReply = faultLogList.Select(faultLog => faultLog.AsDto()).ToList(); // Then apply Select
+
+            return Ok(faultLogReply);
+        }
+        catch (TimeoutException ex)
+        {
+            _logger.LogWarning(ex, "Fault log reply timed out for device {Device}", device);
+            return StatusCode(StatusCodes.Status408RequestTimeout, "Fault log reply timed out.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving fault log for device {Device}", device);
+            return StatusCode(StatusCodes.Status500InternalServerError, "Error processing fault log.");
+        }
     }
 
     [HttpPost]

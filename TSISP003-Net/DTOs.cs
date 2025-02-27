@@ -67,6 +67,28 @@ public static class DTOs
             )
         };
     }
+
+    /// <summary>
+    /// Convert a FaultLogEntry to a FaultLogEntryDto
+    /// </summary>
+    /// <param name="faultLogEntry"></param>
+    /// <returns></returns>
+    public static FaultLogEntryDto AsDto(this FaultLogEntry faultLogEntry)
+    {
+        return new FaultLogEntryDto
+        {
+            Id = faultLogEntry.Id,
+            EntryNumber = faultLogEntry.EntryNumber,
+            Day = faultLogEntry.Day,
+            Month = faultLogEntry.Month,
+            Year = faultLogEntry.Year,
+            Hour = faultLogEntry.Hour,
+            Minute = faultLogEntry.Minute,
+            Second = faultLogEntry.Second,
+            ErrorCode = faultLogEntry.ErrorCode,
+            IsFaultCleared = faultLogEntry.IsFaultCleared
+        };
+    }
 }
 
 public class SignDto
@@ -100,4 +122,18 @@ public class SignControllerDto
     public byte ControllerErrorCode { get; set; }
     public byte NumberOfGroups { get; set; }
     public Dictionary<byte, SignGroupDto> Groups { get; set; } = [];
+}
+
+public class FaultLogEntryDto
+{
+    public byte Id { get; set; }
+    public byte EntryNumber { get; set; }
+    public byte Day { get; set; }
+    public byte Month { get; set; }
+    public short Year { get; set; }
+    public byte Hour { get; set; }
+    public byte Minute { get; set; }
+    public byte Second { get; set; }
+    public byte ErrorCode { get; set; }
+    public bool IsFaultCleared { get; set; }
 }
