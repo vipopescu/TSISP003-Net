@@ -4,6 +4,7 @@ namespace TSISP003.SignControllerService;
 
 public interface ISignControllerService : IHostedService
 {
+    Task<SignStatusReply> GetStatus();
     Task<SignController> GetControllerConfigurationAsync();
     Task StartSession();
     Task Password(string passwordSeed);
