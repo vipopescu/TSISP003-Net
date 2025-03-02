@@ -1,5 +1,6 @@
 using Microsoft.AspNetCore.Mvc;
 using TSISP003.SignControllerService;
+using TSISP003_Net;
 using TSISP003_Net.Utils;
 
 namespace TSISP003.Controllers;
@@ -162,10 +163,28 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
 
     [HttpPost]
     [Route("{device}/SignRequestStoredFrameMessagePlan")]
-    public async Task<IActionResult> SignRequestStoredFrameMessagePlan(string device)
+    public async Task<IActionResult> SignRequestStoredFrameMessagePlan(string device, [FromBody] SignRequestStoredFrameMessagePlanDto request)
     {
-        // TODO: Implement
-        return Ok();
+        try
+        {
+            if (!_signControllerServiceFactory.ContainsSignController(device))
+                return NotFound("Device not found");
+
+            var controller = await _signControllerServiceFactory.GetSignControllerService(device)
+                .SignRequestStoredFrameMessagePlan((Enums.RequestType)request.TypeRequest, request.RequestID);
+
+            return Ok(controller.AsDto());
+        }
+        catch (TimeoutException ex)
+        {
+            _logger.LogWarning(ex, "Sign Configuration Request timed out for device {Device}", device);
+            return StatusCode(StatusCodes.Status408RequestTimeout, "Sign Configuration Request timed out.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error requesting configuration for device {Device}", device);
+            return StatusCode(StatusCodes.Status500InternalServerError, "Error requesting configuration.");
+        }
     }
 
     [HttpPost]

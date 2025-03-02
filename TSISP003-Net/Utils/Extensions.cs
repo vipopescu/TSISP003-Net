@@ -1,3 +1,4 @@
+using TSISP003.Utils;
 using TSISP003_Net.SignControllerDataStore.Entities;
 
 namespace TSISP003_Net.Utils;
@@ -157,6 +158,28 @@ public static class Extensions
                 kvp => kvp.Key,
                 kvp => kvp.Value.AsDto()
             )
+        };
+    }
+
+    public static SignSetTextFrameDto AsDto(this SignSetTextFrame signSetTextFrame)
+    {
+        string asciiText = "";
+        try
+        {
+            asciiText = Functions.HexToAscii(signSetTextFrame.Text);
+        }
+        catch (System.Exception)
+        {
+
+        }
+        return new SignSetTextFrameDto
+        {
+            FrameID = signSetTextFrame.FrameID,
+            Revision = signSetTextFrame.Revision,
+            Font = signSetTextFrame.Font,
+            Colour = signSetTextFrame.Colour,
+            Conspicuity = signSetTextFrame.Conspicuity,
+            Text = asciiText,
         };
     }
 

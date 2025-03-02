@@ -1,3 +1,5 @@
+using System.ComponentModel.DataAnnotations;
+
 namespace TSISP003_Net;
 
 public class SignDto
@@ -67,4 +69,22 @@ public class SignStatusReplyDto
     public required string ControllerError { get; set; }
     public byte NumberOfSigns { get; set; }
     public Dictionary<byte, SignStatusDto> Signs { get; set; } = [];
+}
+
+public class SignSetTextFrameDto
+{
+    public byte FrameID { get; set; }
+    public byte Revision { get; set; }
+    public byte Font { get; set; }
+    public byte Colour { get; set; }
+    public byte Conspicuity { get; set; }
+    public required string Text { get; set; }
+}
+
+public class SignRequestStoredFrameMessagePlanDto
+{
+    [Range(0, 2, ErrorMessage = "TypeRequest must be 0 (frame), 1 (message), or 2 (plan)")]
+    public byte TypeRequest { get; set; }
+
+    public byte RequestID { get; set; }
 }

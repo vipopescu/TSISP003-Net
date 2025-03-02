@@ -1,8 +1,9 @@
+using System.Text;
 using TSISP003.SignControllerService;
 
-namespace TSISP003.ProtocolUtils;
+namespace TSISP003.Utils;
 
-public class Utils
+public class Functions
 {
     /// <summary>
     /// Prints a message packet to the console
@@ -69,17 +70,24 @@ public class Utils
     /// </summary>
     /// <param name="input"></param>
     /// <returns></returns>
-    public static IEnumerable<string> GetChunks(string input)
+    public static IEnumerable<string> GetChunks(string input, out string remaining)
     {
-        List<char> startChars = new List<char> { SignControllerServiceConfig.ACK, SignControllerServiceConfig.SOH, SignControllerServiceConfig.NAK };
+        List<string> chunks = new List<string>();
+        List<char> startChars = new List<char>
+    {
+        SignControllerServiceConfig.ACK,
+        SignControllerServiceConfig.SOH,
+        SignControllerServiceConfig.NAK
+    };
         char endChar = SignControllerServiceConfig.ETX;
         int startIndex = 0;
+        int lastProcessedIndex = 0;
 
         while (startIndex < input.Length)
         {
             int chunkStart = -1;
 
-            // Find the start of the next chunk
+            // Find the start of the next chunk.
             for (int i = startIndex; i < input.Length; i++)
             {
                 if (startChars.Contains(input[i]))
@@ -88,29 +96,33 @@ public class Utils
                     break;
                 }
             }
-
             if (chunkStart == -1)
             {
-                // No more chunks
+                // No starting character found.
                 break;
             }
 
-            // Find the end of this chunk
+            // Find the end of this chunk.
             int chunkEnd = input.IndexOf(endChar, chunkStart + 1);
             if (chunkEnd == -1)
             {
-                // No end found, assume the rest of the string is the last chunk
-                yield return input.Substring(chunkStart);
+                // Incomplete chunk – leave it in the remaining buffer.
                 break;
             }
             else
             {
-                // Return the chunk, including the start and end characters
-                yield return input.Substring(chunkStart, chunkEnd - chunkStart + 1);
-                startIndex = chunkEnd + 1;
+                // Add the complete chunk.
+                chunks.Add(input.Substring(chunkStart, chunkEnd - chunkStart + 1));
+                lastProcessedIndex = chunkEnd + 1;
+                startIndex = lastProcessedIndex;
             }
         }
+
+        // The rest of the input is incomplete.
+        remaining = input.Substring(lastProcessedIndex);
+        return chunks;
     }
+
 
     /// <summary>
     /// Generates a password based on the provided seed values
@@ -150,5 +162,32 @@ public class Utils
         return l_reply.ToString("X4"); // Converts to hex string with 4 characters
     }
 
+    /// <summary>
+    /// Converts a byte array to a hexadecimal string
+    /// </summary>
+    /// <param name="hex"></param>
+    /// <returns></returns>
+    /// <exception cref="ArgumentNullException"></exception>
+    /// <exception cref="ArgumentException"></exception>
+    public static string HexToAscii(string hex)
+    {
+        if (hex == null)
+            throw new ArgumentNullException(nameof(hex));
+
+        // Ensure the hex string has an even number of characters.
+        if (hex.Length % 2 != 0)
+            throw new ArgumentException("Hex string must have an even length", nameof(hex));
+
+        byte[] bytes = new byte[hex.Length / 2];
+        for (int i = 0; i < bytes.Length; i++)
+        {
+            // Convert each pair of hex characters to a byte.
+            string hexPair = hex.Substring(i * 2, 2);
+            bytes[i] = Convert.ToByte(hexPair, 16);
+        }
+
+        // Convert the byte array to an ASCII string.
+        return Encoding.ASCII.GetString(bytes);
+    }
 
 }

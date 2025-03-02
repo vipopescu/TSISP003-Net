@@ -51,4 +51,9 @@ public class ErrorCodes
         { 0x2A, "Operating on secondary power" },
         { 0x99, "Pre-existing or reoccurring fault exists" }
     };
+
+    public static readonly Dictionary<int, string> ApplicationErrorCodes = new Dictionary<int, string>
+    {
+        { 0x00, "No error" }
+    };
 }
