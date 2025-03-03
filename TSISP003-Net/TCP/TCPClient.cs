@@ -8,14 +8,16 @@ public class TCPClient
     private readonly string _ipAddress;
     private readonly int _port;
     private TcpClient _client;
+    private string _name;
     private SemaphoreSlim _readSemaphore = new SemaphoreSlim(1, 1);
     private SemaphoreSlim _writeSemaphore = new SemaphoreSlim(1, 1);
 
-    public TCPClient(string ipAddress, int port)
+    public TCPClient(string ipAddress, int port, string name)
     {
         _ipAddress = ipAddress;
         _port = port;
         _client = new TcpClient();
+        _name = name;
     }
 
     private async Task ConnectAsync()
@@ -47,7 +49,7 @@ public class TCPClient
                 NetworkStream stream = _client.GetStream();
                 byte[] data = Encoding.ASCII.GetBytes(message);
 
-                Console.WriteLine(DateTime.Now.ToString("MM/dd/yyyy HH:mm:ss.fff") + " 1 --> " + DateTime.Now.ToString("MM/dd/yyyy HH:mm:ss")
+                Console.WriteLine(DateTime.Now.ToString($"{_name} - MM/dd/yyyy HH:mm:ss.fff") + " 1 --> " + DateTime.Now.ToString("MM/dd/yyyy HH:mm:ss")
                             + " => " + BytesToHexString(data, data.Length));
 
                 await stream.WriteAsync(data, 0, data.Length);
@@ -64,7 +66,7 @@ public class TCPClient
         await _readSemaphore.WaitAsync();
         try
         {
-            CancellationTokenSource cts = new CancellationTokenSource(500);
+            CancellationTokenSource cts = new CancellationTokenSource(1000);
 
             if (!_client.Connected)
                 await ConnectAsync();
@@ -76,7 +78,7 @@ public class TCPClient
                 int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, cts.Token);
                 if (bytesRead > 0) ms.Write(buffer, 0, bytesRead);
 
-                Console.WriteLine(DateTime.Now.ToString("MM/dd/yyyy HH:mm:ss.fff") + " 1 --> " + DateTime.Now.ToString("MM/dd/yyyy HH:mm:ss")
+                Console.WriteLine(DateTime.Now.ToString($"{_name} - MM/dd/yyyy HH:mm:ss.fff") + " 1 --> " + DateTime.Now.ToString("MM/dd/yyyy HH:mm:ss")
                     + " <= " + BytesToHexString(buffer, bytesRead));
 
                 return Encoding.ASCII.GetString(ms.ToArray());
@@ -87,6 +89,7 @@ public class TCPClient
             _readSemaphore.Release();
         }
     }
+
 
     static string BytesToHexString(byte[] bytes, int length)
     {

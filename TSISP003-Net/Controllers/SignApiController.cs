@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using TSISP003.SignControllerService;
 using TSISP003_Net;
+using TSISP003_Net.Utils;
 
 namespace TSISP003.Controllers;
 
@@ -50,13 +51,26 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
     [Route("{device}/SignConfigurationRequest")]
     public async Task<IActionResult> SignConfigurationRequest(string device)
     {
-        if (!_signControllerServiceFactory.ContainsSignController(device))
-            return NotFound("Device not found");
+        try
+        {
+            if (!_signControllerServiceFactory.ContainsSignController(device))
+                return NotFound("Device not found");
 
-        var controller = await _signControllerServiceFactory.GetSignControllerService(device)
-            .GetControllerConfigurationAsync();
+            var controller = await _signControllerServiceFactory.GetSignControllerService(device)
+                .GetControllerConfigurationAsync();
 
-        return Ok(controller.AsDto());
+            return Ok(controller.AsDto());
+        }
+        catch (TimeoutException ex)
+        {
+            _logger.LogWarning(ex, "Sign Configuration Request timed out for device {Device}", device);
+            return StatusCode(StatusCodes.Status408RequestTimeout, "Sign Configuration Request timed out.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error requesting configuration for device {Device}", device);
+            return StatusCode(StatusCodes.Status500InternalServerError, "Error requesting configuration.");
+        }
     }
 
     [HttpPost]
@@ -149,10 +163,28 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
 
     [HttpPost]
     [Route("{device}/SignRequestStoredFrameMessagePlan")]
-    public async Task<IActionResult> SignRequestStoredFrameMessagePlan(string device)
+    public async Task<IActionResult> SignRequestStoredFrameMessagePlan(string device, [FromBody] SignRequestStoredFrameMessagePlanDto request)
     {
-        // TODO: Implement
-        return Ok();
+        try
+        {
+            if (!_signControllerServiceFactory.ContainsSignController(device))
+                return NotFound("Device not found");
+
+            var controller = await _signControllerServiceFactory.GetSignControllerService(device)
+                .SignRequestStoredFrameMessagePlan((Enums.RequestType)request.TypeRequest, request.RequestID);
+
+            return Ok(controller.AsDto());
+        }
+        catch (TimeoutException ex)
+        {
+            _logger.LogWarning(ex, "Sign Configuration Request timed out for device {Device}", device);
+            return StatusCode(StatusCodes.Status408RequestTimeout, "Sign Configuration Request timed out.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error requesting configuration for device {Device}", device);
+            return StatusCode(StatusCodes.Status500InternalServerError, "Error requesting configuration.");
+        }
     }
 
     [HttpPost]
@@ -163,12 +195,38 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
         return Ok();
     }
 
-    [HttpPost]
+    [HttpGet]
     [Route("{device}/RetrieveFaultLog")]
     public async Task<IActionResult> RetrieveFaultLog(string device)
     {
-        // TODO: Implement
-        return Ok();
+        try
+        {
+            if (!_signControllerServiceFactory.ContainsSignController(device))
+                return NotFound("Device not found");
+
+            var controllerService = _signControllerServiceFactory.GetSignControllerService(device);
+
+
+
+            // This method awaits the fault log reply, with a timeout of 3 seconds.
+            var faultLogList = await controllerService.RetrieveFaultLog(); // Await the task first
+
+            var faultLogReply = faultLogList.Select(faultLog => faultLog.AsDto())
+                            .OrderBy(faultLog => faultLog.EntryNumber)
+                            .ToList(); // Then apply Select
+
+            return Ok(faultLogReply);
+        }
+        catch (TimeoutException ex)
+        {
+            _logger.LogWarning(ex, "Fault log reply timed out for device {Device}", device);
+            return StatusCode(StatusCodes.Status408RequestTimeout, "Fault log reply timed out.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error retrieving fault log for device {Device}", device);
+            return StatusCode(StatusCodes.Status500InternalServerError, "Error processing fault log.");
+        }
     }
 
     [HttpPost]
@@ -177,5 +235,30 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
     {
         // TODO: Implement
         return Ok();
+    }
+
+    [HttpGet]
+    [Route("{device}/extended/status")]
+    public async Task<IActionResult> StatusRequestExtended(string device)
+    {
+        try
+        {
+            if (!_signControllerServiceFactory.ContainsSignController(device))
+                return NotFound("Device not found");
+
+            var controller = await _signControllerServiceFactory.GetSignControllerService(device).GetStatus();
+
+            return Ok(controller.AsDto());
+        }
+        catch (TimeoutException ex)
+        {
+            _logger.LogWarning(ex, "Sign Status Request timed out for device {Device}", device);
+            return StatusCode(StatusCodes.Status408RequestTimeout, "Sign Status Request timed out.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error requesting status for device {Device}", device);
+            return StatusCode(StatusCodes.Status500InternalServerError, "Error requesting status.");
+        }
     }
 }

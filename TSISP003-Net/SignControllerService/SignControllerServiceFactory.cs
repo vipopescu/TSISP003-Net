@@ -22,9 +22,9 @@ public class SignControllerServiceFactory : IHostedService
     /// </summary>
     /// <param name="deviceSettings"></param>
     /// <returns></returns>
-    private ISignControllerService CreateServiceForDevice(SignControllerConnectionOptions deviceSettings)
+    private ISignControllerService CreateServiceForDevice(SignControllerConnectionOptions deviceSettings, string deviceName)
     {
-        return new SignControllerService(new TCPClient(deviceSettings.IpAddress, deviceSettings.Port), deviceSettings);
+        return new SignControllerService(new TCPClient(deviceSettings.IpAddress, deviceSettings.Port, deviceName), deviceSettings);
     }
 
     /// <summary>
@@ -62,7 +62,7 @@ public class SignControllerServiceFactory : IHostedService
         foreach (var deviceName in _options.Value.Devices.Keys)
         {
             var serviceOptions = _options.Value.Devices[deviceName];
-            var service = CreateServiceForDevice(serviceOptions);
+            var service = CreateServiceForDevice(serviceOptions, deviceName);
             _services.Add(deviceName, service);
 
             // Start service

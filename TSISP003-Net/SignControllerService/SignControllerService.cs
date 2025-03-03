@@ -1,20 +1,26 @@
 using System.Net.Sockets;
 using System.Text;
-using TSISP003.ProtocolUtils;
 using TSISP003.Settings;
 using TSISP003.TCP;
+using TSISP003.Utils;
 using TSISP003_Net.SignControllerDataStore.Entities;
+using TSISP003_Net.Utils;
 
 namespace TSISP003.SignControllerService;
 
 public class SignControllerService(TCPClient tcpClient, SignControllerConnectionOptions deviceSettings) : ISignControllerService, IDisposable
 {
+    private TaskCompletionSource<List<FaultLogEntry>>? _faultLogReplyTaskCompletion;
+
+    private TaskCompletionSource<SignStatusReply>? _signStatusReplyTaskCompletion;
+    private TaskCompletionSource<SignSetTextFrame>? _signSetTextFrameTaskCompletion;
+
     private Task? heartBeatPollTask;
     private Task? startSessionTask;
     private readonly TCPClient _tcpClient = tcpClient;
     private readonly SignControllerConnectionOptions _deviceSettings = deviceSettings;
     private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
-    private SignController _signController = null;
+    private SignStatusReply _signController = null;
 
     public bool SignConfigurationReceived { get; set; } = false;
 
@@ -93,7 +99,7 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
                 bool isAcknowledged = false;
                 string passwordSeed = string.Empty;
 
-                foreach (var packet in Utils.GetChunks(response))
+                foreach (var packet in Functions.GetChunks(response, out _))
                 {
                     // Iterate over both messages, we need to receive ACK and password seed response
                     if (packet[0] == SignControllerServiceConfig.ACK || packet[0] == SignControllerServiceConfig.NAK)
@@ -115,7 +121,7 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
                 isAcknowledged = false;
                 bool isAckProtocolReceived = false;
 
-                foreach (var packet in Utils.GetChunks(response))
+                foreach (var packet in Functions.GetChunks(response, out _))
                 {
                     // Iterate over both messages, we need to receive ACK and ACK from the protocol
                     if (packet[0] == SignControllerServiceConfig.ACK || packet[0] == SignControllerServiceConfig.NAK)
@@ -198,7 +204,7 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
             }
             finally
             {
-                await Task.Delay(3000, cancellationToken);
+                await Task.Delay(1000, cancellationToken);
             }
         }
 
@@ -226,28 +232,40 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Failed to read from the socket: {ex.Message}");
-            // Ignore 
-            Thread.Sleep(3000);
+            // Console.WriteLine($"Failed to read from the socket: {ex.Message}");
+            // // Ignore 
+            // Thread.Sleep(3000);
         }
     }
 
-    /// <summary>
-    /// Process the responses
-    /// </summary>
-    /// <param name="responses"></param>
-    private void ProcessResponses(string responses)
+    // This buffer should persist between invocations.
+    private string _incompleteBuffer = string.Empty;
+
+    public void ProcessResponses(string responses)
     {
-        foreach (var packet in Utils.GetChunks(responses))
+        // Combine previous incomplete data with the new responses.
+        string data = _incompleteBuffer + responses;
+
+        // Extract chunks and get any remaining incomplete part.
+        string remaining;
+        var chunks = Functions.GetChunks(data, out remaining);
+
+        // Process each complete chunk.
+        foreach (var packet in chunks)
         {
-            // Check if it's data or non data packet
+            // Determine the packet type by its starting character.
             if (packet[0] == SignControllerServiceConfig.ACK || packet[0] == SignControllerServiceConfig.NAK)
                 ProcessNonDataPacket(packet);
             else if (packet[0] == SignControllerServiceConfig.SOH)
                 DispatchDataPacket(packet);
-            else Console.WriteLine("Unable to determine type of the packet.");
+            else
+                Console.WriteLine("Unable to determine type of the packet.");
         }
+
+        // Save the incomplete data for the next response.
+        _incompleteBuffer = remaining;
     }
+
 
     /// <summary>
     /// Process non data packets
@@ -266,7 +284,7 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         }
 
         // TODO: get the NS from here
-        //Console.WriteLine(Utils.PacketCRC(Encoding.ASCII.GetBytes(packet[0..5])));
+        //Console.WriteLine(Functions.PacketCRC(Encoding.ASCII.GetBytes(packet[0..5])));
         //Console.WriteLine("Non Data Packet: " + packet);
     }
 
@@ -295,7 +313,7 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
             await ProcessHARStatusReply(applicationData);
         else if (miCode == SignControllerServiceConfig.MI_ENVIRONMENTAL_WEATHER_STATUS_REPLY)
             await ProcessEnvironmentalWeatherStatusReply(applicationData);
-        else if (miCode == SignControllerServiceConfig.MI_SIGN_CONFIGURATION_REPLY)
+        else if (miCode == SignControllerServiceConfig.MI_SIGN_CONFIGURATION_REPLY || miCode == SignControllerServiceConfig.MI_DISABLE_ENABLE_DEVICE)
             await ProcessSignConfigurationReply(applicationData);
         else if (miCode == SignControllerServiceConfig.MI_REPORT_ENABLED_PLANS)
             await ProcessReportEnabledPlans(applicationData);
@@ -341,6 +359,8 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
     /// <returns></returns>
     public async Task HeartbeatPoll()
     {
+        _signStatusReplyTaskCompletion = new TaskCompletionSource<SignStatusReply>(TaskCreationOptions.RunContinuationsAsynchronously);
+
         // build body
         string message = SignControllerServiceConfig.SOH // Start of header
                     + NS.ToString("X2") + NR.ToString("X2") // NS and NR
@@ -350,7 +370,7 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
 
         // append crc and end of message
         message = message
-                    + Utils.PacketCRC(Encoding.ASCII.GetBytes(message))
+                    + Functions.PacketCRC(Encoding.ASCII.GetBytes(message))
                     + SignControllerServiceConfig.ETX;
 
         await _tcpClient.SendAsync(message);
@@ -371,7 +391,7 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
 
         // append crc and end of message
         message = message
-                    + Utils.PacketCRC(Encoding.ASCII.GetBytes(message))
+                    + Functions.PacketCRC(Encoding.ASCII.GetBytes(message))
                     + SignControllerServiceConfig.ETX;
 
         await _tcpClient.SendAsync(message);
@@ -390,10 +410,10 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
                     + _deviceSettings.Address // ADDR
                     + SignControllerServiceConfig.STX
                     + SignControllerServiceConfig.MI_PASSWORD.ToString("X2")
-                    + Utils.GeneratePassword(passwordSeed, _deviceSettings.SeedOffset, _deviceSettings.PasswordOffset)[^4..];
+                    + Functions.GeneratePassword(passwordSeed, _deviceSettings.SeedOffset, _deviceSettings.PasswordOffset)[^4..];
 
         // append crc and end of message
-        string crc = Utils.PacketCRC(Encoding.ASCII.GetBytes(message));
+        string crc = Functions.PacketCRC(Encoding.ASCII.GetBytes(message));
         message = message + crc
                     + SignControllerServiceConfig.ETX;
 
@@ -416,7 +436,7 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
 
         // append crc and end of message
         message = message
-                    + Utils.PacketCRC(Encoding.ASCII.GetBytes(message))
+                    + Functions.PacketCRC(Encoding.ASCII.GetBytes(message))
                     + SignControllerServiceConfig.ETX;
 
         await _tcpClient.SendAsync(message);
@@ -441,7 +461,7 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
 
         // append crc and end of message
         message = message
-                    + Utils.PacketCRC(Encoding.ASCII.GetBytes(message))
+                    + Functions.PacketCRC(Encoding.ASCII.GetBytes(message))
                     + SignControllerServiceConfig.ETX;
 
         await _tcpClient.SendAsync(message);
@@ -461,8 +481,29 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
 
     public Task ProcessSignSetTextFrame(string applicationData)
     {
-        // TODO
-        throw new NotImplementedException();
+        try
+        {
+            SignSetTextFrame signSetTextFrameFeedback = new SignSetTextFrame() { Text = string.Empty };
+
+            signSetTextFrameFeedback.FrameID = Convert.ToByte(applicationData[2..4], 16);
+            signSetTextFrameFeedback.Revision = Convert.ToByte(applicationData[4..6], 16);
+            signSetTextFrameFeedback.Font = Convert.ToByte(applicationData[6..8], 16);
+            signSetTextFrameFeedback.Colour = Convert.ToByte(applicationData[8..10], 16);
+            signSetTextFrameFeedback.Conspicuity = Convert.ToByte(applicationData[10..12], 16);
+            signSetTextFrameFeedback.NumberOfCharsInText = Convert.ToByte(applicationData[12..14], 16);
+            signSetTextFrameFeedback.Text = applicationData[14..(14 + signSetTextFrameFeedback.NumberOfCharsInText)];
+            signSetTextFrameFeedback.CRC = Convert.ToUInt16(applicationData[(14 + signSetTextFrameFeedback.NumberOfCharsInText)..(14 + signSetTextFrameFeedback.NumberOfCharsInText + 4)], 16);
+
+            _signSetTextFrameTaskCompletion?.TrySetResult(signSetTextFrameFeedback);
+
+            return Task.CompletedTask;
+        }
+        catch (System.Exception)
+        {
+
+        }
+
+        return Task.CompletedTask;
     }
 
 
@@ -495,7 +536,7 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
 
         // append crc and end of message
         message = message
-                    + Utils.PacketCRC(Encoding.ASCII.GetBytes(message))
+                    + Functions.PacketCRC(Encoding.ASCII.GetBytes(message))
                     + SignControllerServiceConfig.ETX;
 
         await _tcpClient.SendAsync(message);
@@ -567,22 +608,43 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         throw new NotImplementedException();
     }
 
-    public async Task SignRequestStoredFrameMessagePlan()
+    /// <summary>
+    /// Send a request to the sign controller to store a frame, message or plan
+    /// </summary>
+    /// <param name="requestType"></param>
+    /// <param name="requestID"></param>
+    /// <returns></returns>
+    /// <exception cref="TimeoutException"></exception>
+    public async Task<SignSetTextFrame> SignRequestStoredFrameMessagePlan(Enums.RequestType requestType, byte requestID)
     {
+        _signSetTextFrameTaskCompletion = new TaskCompletionSource<SignSetTextFrame>(TaskCreationOptions.RunContinuationsAsynchronously);
+
         // build body
         string message = SignControllerServiceConfig.SOH // Start of header
                     + NS.ToString("X2") + NR.ToString("X2") // NS and NR
                     + _deviceSettings.Address // ADDR
                     + SignControllerServiceConfig.STX
                     + SignControllerServiceConfig.MI_SIGN_REQUEST_STORED_FRAME_MESSAGE_PLAN.ToString("X2")
-                    + "00" + "03";
+                    + ((byte)requestType).ToString("X2") + requestID.ToString("X2");
 
         // append crc and end of message
         message = message
-                    + Utils.PacketCRC(Encoding.ASCII.GetBytes(message))
+                    + Functions.PacketCRC(Encoding.ASCII.GetBytes(message))
                     + SignControllerServiceConfig.ETX;
 
         await _tcpClient.SendAsync(message);
+
+        // Wait for either the fault log reply to be received or a timeout after 3 seconds.
+        var delayTask = Task.Delay(TimeSpan.FromSeconds(3));
+
+        var completedTask = await Task.WhenAny(_signSetTextFrameTaskCompletion.Task, delayTask);
+
+        if (completedTask == delayTask)
+        {
+            throw new TimeoutException("Fault log reply timed out.");
+        }
+
+        return await _signSetTextFrameTaskCompletion.Task;
     }
 
     public Task SignExtendedStatusRequest()
@@ -590,8 +652,10 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         throw new NotImplementedException();
     }
 
-    public async Task RetrieveFaultLog()
+    public async Task<List<FaultLogEntry>> RetrieveFaultLog()
     {
+        _faultLogReplyTaskCompletion = new TaskCompletionSource<List<FaultLogEntry>>(TaskCreationOptions.RunContinuationsAsynchronously);
+
         // build body
         string message = SignControllerServiceConfig.SOH // Start of header
                     + NS.ToString("X2") + NR.ToString("X2") // NS and NR
@@ -601,10 +665,22 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
 
         // append crc and end of message
         message = message
-                    + Utils.PacketCRC(Encoding.ASCII.GetBytes(message))
+                    + Functions.PacketCRC(Encoding.ASCII.GetBytes(message))
                     + SignControllerServiceConfig.ETX;
 
         await _tcpClient.SendAsync(message);
+
+        // Wait for either the fault log reply to be received or a timeout after 3 seconds.
+        var delayTask = Task.Delay(TimeSpan.FromSeconds(3));
+
+        var completedTask = await Task.WhenAny(_faultLogReplyTaskCompletion.Task, delayTask);
+
+        if (completedTask == delayTask)
+        {
+            throw new TimeoutException("Fault log reply timed out.");
+        }
+
+        return await _faultLogReplyTaskCompletion.Task;
     }
 
     public Task ResetFaultLog()
@@ -685,48 +761,68 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
 
     public async Task ProcessSignStatusReply(string applicationData)
     {
-        // applicationData[4..6] - Error Code
-        // applicationData[6..8] - Day
-        bool errorCodeChanged = false;
-
-        // TODO: remove
-        if (_signController == null) _signController = new SignController();
-
-        // Note: Protocol says 0 = Offline, 1 = Online, but some controllers use 0 = Offline, >1 = Online
-        _signController.OnlineStatus = int.Parse(applicationData[2..4], System.Globalization.NumberStyles.HexNumber) > 0;
-        _signController.DateChange = new DateTime(
-            year: int.Parse(applicationData[10..14], System.Globalization.NumberStyles.HexNumber),
-            month: int.Parse(applicationData[8..10], System.Globalization.NumberStyles.HexNumber),
-            day: int.Parse(applicationData[6..8], System.Globalization.NumberStyles.HexNumber),
-            hour: int.Parse(applicationData[14..16], System.Globalization.NumberStyles.HexNumber),
-            minute: int.Parse(applicationData[16..18], System.Globalization.NumberStyles.HexNumber),
-            second: int.Parse(applicationData[18..20], System.Globalization.NumberStyles.HexNumber)
-        );
-
-        //applicationData[18..22] Controller Checksum -> We ignore the checksum
-
-        byte errorCode = byte.Parse(applicationData[24..26]);
-        if (errorCode != _signController.ControllerErrorCode) errorCodeChanged = true;
-        _signController.ControllerErrorCode = errorCode;
-
-        byte numberOfSigns = byte.Parse(applicationData[26..28]);
-
-        byte baseSign = 28;
-        for (int i = 0; i < numberOfSigns; i++)
+        try
         {
-            // applicationData[26..28] - Sign ID
-            // applicationData[28..30] - Sign Error Code
-            // applicationData[30..32] - Sign Enabled Disabled
-            // applicationData[32..34] - Frame ID Displayed
-            // applicationData[34..36] - Frame Revision
-            // applicationData[36..38] - Message ID Displayed
-            // applicationData[38..40] - Message Revision
-            // applicationData[40..42] - Plan ID Displayed
-            // applicationData[42..44] - Plan Revision
-            baseSign += 18;
-        }
+            //private SignStatusReply _signController = null;
 
-        if (errorCodeChanged) await RetrieveFaultLog();
+            if (_signController == null) _signController = new SignStatusReply();
+
+            // Note: Protocol says 0 = Offline, 1 = Online, but some controllers use 0 = Offline, >1 = Online
+            _signController.OnlineStatus = int.Parse(applicationData[2..4], System.Globalization.NumberStyles.HexNumber) > 0;
+
+            _signController.Day = Convert.ToByte(applicationData[6..8], 16);
+            _signController.Month = Convert.ToByte(applicationData[8..10], 16);
+            _signController.Year = Convert.ToInt16(applicationData[10..14], 16);
+            _signController.Hour = Convert.ToByte(applicationData[14..16], 16);
+            _signController.Minute = Convert.ToByte(applicationData[16..18], 16);
+            _signController.Second = Convert.ToByte(applicationData[18..20], 16);
+            //applicationData[18..22] Controller Checksum -> We ignore the checksum
+
+            byte errorCode = byte.Parse(applicationData[24..26]);
+
+            _signController.ControllerErrorCode = errorCode;
+
+            _signController.NumberOfSigns = byte.Parse(applicationData[26..28]);
+
+            byte baseByte = 0;
+            for (int i = 0; i < _signController.NumberOfSigns; i++)
+            {
+                baseByte = (byte)(28 + i * 18);
+                byte signID = Convert.ToByte(applicationData[baseByte..(baseByte + 2)], 16);
+
+                // Check if the sign is already in the list and add it if not
+                SignStatus signStatus;
+                if (_signController.Signs.ContainsKey(signID))
+                    signStatus = _signController.Signs[signID];
+                else
+                {
+                    signStatus = new SignStatus();
+                    _signController.Signs.Add(signID, signStatus);
+                }
+
+                // Update the sign status
+                signStatus.SignID = Convert.ToByte(applicationData[baseByte..(baseByte + 2)], 16);
+                signStatus.SignErrorCode = Convert.ToByte(applicationData[(baseByte + 2)..(baseByte + 4)], 16);
+                signStatus.SignEnabled = Convert.ToByte(applicationData[(baseByte + 4)..(baseByte + 6)], 16) == 1;
+                signStatus.FrameID = Convert.ToByte(applicationData[(baseByte + 6)..(baseByte + 8)], 16);
+                signStatus.FrameRevision = Convert.ToByte(applicationData[(baseByte + 8)..(baseByte + 10)], 16);
+                signStatus.MessageID = Convert.ToByte(applicationData[(baseByte + 10)..(baseByte + 12)], 16);
+                signStatus.MessageRevision = Convert.ToByte(applicationData[(baseByte + 12)..(baseByte + 14)], 16);
+                signStatus.PlanID = Convert.ToByte(applicationData[(baseByte + 14)..(baseByte + 16)], 16);
+                signStatus.PlanRevision = Convert.ToByte(applicationData[(baseByte + 16)..(baseByte + 18)], 16);
+            }
+
+            // if (errorCodeChanged) await RetrieveFaultLog();
+
+        }
+        catch (System.Exception)
+        {
+            Console.WriteLine("Failed to process sign status reply");
+        }
+        finally
+        {
+            _signStatusReplyTaskCompletion?.TrySetResult(_signController);
+        }
     }
 
     public Task ProcessHARStatusReply(string applicationData)
@@ -750,54 +846,59 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
     {
         try
         {
-            _signController = new SignController();
+            // _signController = new SignController();
 
-            byte numberOfGroups = Convert.ToByte(applicationData[22..24], 16);
-            _signController.NumberOfGroups = numberOfGroups;
+            // byte numberOfGroups = Convert.ToByte(applicationData[22..24], 16);
+            // _signController.NumberOfGroups = numberOfGroups;
 
-            short baseGroup = 22;
-            for (byte i = 0; i < numberOfGroups; i++) // Iterate over all groups
-            {
-                // Build group with ID
-                SignGroup signGroup = new SignGroup
-                {
-                    GroupID = Convert.ToByte(applicationData[baseGroup..(baseGroup + 2)], 16)
-                };
+            // short baseGroup = 22;
+            // for (byte i = 0; i < numberOfGroups; i++) // Iterate over all groups
+            // {
+            //     // Build group with ID
+            //     SignGroup signGroup = new SignGroup
+            //     {
+            //         GroupID = Convert.ToByte(applicationData[baseGroup..(baseGroup + 2)], 16)
+            //     };
 
-                byte numberOfSigns = Convert.ToByte(applicationData[(baseGroup + 2)..(baseGroup + 4)], 16);
+            //     byte numberOfSigns = Convert.ToByte(applicationData[(baseGroup + 2)..(baseGroup + 4)], 16);
 
-                // Get all signs for the group
-                short baseSign = (short)(baseGroup + 4);
-                for (int nSign = 1; nSign <= numberOfSigns; nSign++) // Iterate over all signs
-                {
-                    // Create new sign
-                    Sign sign = new Sign
-                    {
-                        SignID = Convert.ToByte(applicationData[baseSign..(baseSign + 2)], 16),
-                        SignType = (SignControllerServiceConfig.SignType)Convert.ToByte(applicationData[(baseSign + 2)..(baseSign + 4)], 16),
-                        SignWidth = Convert.ToInt16(applicationData[(baseSign + 4)..(baseSign + 8)], 16),
-                        SignHeight = Convert.ToInt16(applicationData[(baseSign + 8)..(baseSign + 12)], 16)
-                    };
-                    signGroup.Signs.Add(sign.SignID, sign);
+            //     // Get all signs for the group
+            //     short baseSign = (short)(baseGroup + 4);
+            //     for (int nSign = 1; nSign <= numberOfSigns; nSign++) // Iterate over all signs
+            //     {
+            //         // Create new sign
+            //         Sign sign = new Sign
+            //         {
+            //             SignID = Convert.ToByte(applicationData[baseSign..(baseSign + 2)], 16),
+            //             SignType = (SignControllerServiceConfig.SignType)Convert.ToByte(applicationData[(baseSign + 2)..(baseSign + 4)], 16),
+            //             SignWidth = Convert.ToInt16(applicationData[(baseSign + 4)..(baseSign + 8)], 16),
+            //             SignHeight = Convert.ToInt16(applicationData[(baseSign + 8)..(baseSign + 12)], 16)
+            //         };
+            //         signGroup.Signs.Add(sign.SignID, sign);
 
-                    baseSign = (short)(baseSign + 12);
-                }
+            //         baseSign = (short)(baseSign + 12);
+            //     }
 
-                // Get Signature and add to list
-                baseGroup = baseSign;
-                byte signatureNumberOfBytes = Convert.ToByte(applicationData[baseGroup..(baseGroup + 2)], 16);
-                signGroup.Signature = applicationData[(baseGroup + 2)..(baseGroup + 2 + signatureNumberOfBytes * 2)];
-                _signController.Groups.Add(signGroup.GroupID, signGroup);
+            //     // Get Signature and add to list
+            //     baseGroup = baseSign;
+            //     byte signatureNumberOfBytes = Convert.ToByte(applicationData[baseGroup..(baseGroup + 2)], 16);
+            //     signGroup.Signature = applicationData[(baseGroup + 2)..(baseGroup + 2 + signatureNumberOfBytes * 2)];
+            //     _signController.Groups.Add(signGroup.GroupID, signGroup);
 
-                // Continue with the next group
-                baseGroup = (short)(baseGroup + 2 + (signatureNumberOfBytes * 2));
-            }
+            //     // Continue with the next group
+            //     baseGroup = (short)(baseGroup + 2 + (signatureNumberOfBytes * 2));
+            // }
 
-            SignConfigurationReceived = true;
+            // SignConfigurationReceived = true;
+
         }
         catch (System.Exception)
         {
             // TODO: Implement logger
+        }
+        finally
+        {
+            _signStatusReplyTaskCompletion?.TrySetResult(_signController);
         }
         return Task.CompletedTask;
     }
@@ -814,10 +915,51 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         throw new NotImplementedException();
     }
 
+    /// <summary>
+    /// Process the fault log reply
+    /// </summary>
+    /// <param name="applicationData"></param>
+    /// <returns></returns>
     public Task ProcessFaultLogReply(string applicationData)
     {
-        // TODO
-        throw new NotImplementedException();
+        List<FaultLogEntry> faultLogEntries = new List<FaultLogEntry>();
+
+        byte numberOfEntries = Convert.ToByte(applicationData[2..4], 16);
+
+        for (byte i = 0; i < numberOfEntries; i++)
+        {
+            byte baseByte = (byte)(4 + i * 22);
+
+
+            byte groupId = Convert.ToByte(applicationData[baseByte..(baseByte + 2)], 16);
+            byte entryNumberOfField = Convert.ToByte(applicationData[(baseByte + 2)..(baseByte + 4)], 16);
+            byte dayOfMonth = Convert.ToByte(applicationData[(baseByte + 4)..(baseByte + 6)], 16);
+            byte month = Convert.ToByte(applicationData[(baseByte + 6)..(baseByte + 8)], 16);
+            short year = Convert.ToInt16(applicationData[(baseByte + 8)..(baseByte + 12)], 16);
+            byte hour = Convert.ToByte(applicationData[(baseByte + 12)..(baseByte + 14)], 16);
+            byte minute = Convert.ToByte(applicationData[(baseByte + 14)..(baseByte + 16)], 16);
+            byte second = Convert.ToByte(applicationData[(baseByte + 16)..(baseByte + 18)], 16);
+            byte errorCode = Convert.ToByte(applicationData[(baseByte + 18)..(baseByte + 20)], 16);
+            bool faultCleared = Convert.ToByte(applicationData[(baseByte + 20)..(baseByte + 22)], 16) == 1;
+
+            faultLogEntries.Add(new FaultLogEntry
+            {
+                Id = groupId,
+                EntryNumber = entryNumberOfField,
+                Day = dayOfMonth,
+                Month = month,
+                Year = year,
+                Hour = hour,
+                Minute = minute,
+                Second = second,
+                ErrorCode = errorCode,
+                IsFaultCleared = faultCleared
+            });
+        }
+
+        _faultLogReplyTaskCompletion?.TrySetResult(faultLogEntries);
+
+        return Task.CompletedTask;
     }
 
     public Task ProcessHARVoiceDataAck(string applicationData)
@@ -871,7 +1013,10 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
     public Task ProcessRejectMessage(string applicationData)
     {
         // TODO
-        throw new NotImplementedException();
+
+        Console.WriteLine("Rejected message");
+        return Task.CompletedTask;
+        //throw new NotImplementedException();
     }
 
     private bool GroupIDExists(byte groupId)
@@ -903,11 +1048,21 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
     {
         try
         {
-            return Task.FromResult(_signController);
+            // To reimplememt
+            return null;
         }
         catch (Exception ex)
         {
             throw new Exception("Failed to get controller configuration", ex);
         }
+    }
+
+    /// <summary>
+    /// Get the status of the controller
+    /// </summary>
+    /// <returns></returns>
+    public Task<SignStatusReply> GetStatus()
+    {
+        return Task.FromResult(_signController);
     }
 }

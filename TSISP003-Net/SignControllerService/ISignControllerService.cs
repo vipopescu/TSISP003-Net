@@ -1,9 +1,11 @@
 using TSISP003_Net.SignControllerDataStore.Entities;
+using static TSISP003_Net.Utils.Enums;
 
 namespace TSISP003.SignControllerService;
 
 public interface ISignControllerService : IHostedService
 {
+    Task<SignStatusReply> GetStatus();
     Task<SignController> GetControllerConfigurationAsync();
     Task StartSession();
     Task Password(string passwordSeed);
@@ -26,9 +28,9 @@ public interface ISignControllerService : IHostedService
     Task SignSetDimmingLevel();
     Task PowerOnOff();
     Task DisableEnableDevice();
-    Task SignRequestStoredFrameMessagePlan();
+    Task<SignSetTextFrame> SignRequestStoredFrameMessagePlan(RequestType requestType, byte requestID);
     Task SignExtendedStatusRequest();
-    Task RetrieveFaultLog();
+    Task<List<FaultLogEntry>> RetrieveFaultLog();
     Task ResetFaultLog();
     Task HARSetVoiceDataIncomplete();
     Task HARSetVoiceDataComplete();
