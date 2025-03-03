@@ -22,3 +22,10 @@ The application is configured via an `appsettings.json` file. Below is an exampl
     }
   }
 }
+```
+
+This example configures a device (TMS01) with its network settings and protocol parameters, including password and seed offsets required for the TSI-SP-003 communications protocol.
+
+For the complete protocol specification, please refer to the [TSI-SP-003 Protocol Specification](https://standards.transport.nsw.gov.au/search-standard-specific/?id=TBA%20-%200004122:2022).
+
+> **Note:** This project is a work in progress. Additional features and improvements are under active development.
