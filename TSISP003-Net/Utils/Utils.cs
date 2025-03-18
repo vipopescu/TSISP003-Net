@@ -65,6 +65,19 @@ public class Functions
         return accumulator.ToString("X4");
     }
 
+    public static ushort PacketCRCushort(byte[] packetBytes)
+    {
+        ushort accumulator = 0;
+
+        foreach (byte b in packetBytes)
+        {
+            accumulator = CRCGenerator(b, accumulator); // Process each byte in the packet
+        }
+
+        // Convert the accumulator to a 4-character hexadecimal string
+        return accumulator;
+    }
+
     /// <summary>
     /// Splits a string into chunks based on the start and end characters
     /// </summary>
@@ -189,5 +202,27 @@ public class Functions
         // Convert the byte array to an ASCII string.
         return Encoding.ASCII.GetString(bytes);
     }
+
+    /// <summary>
+    /// Converts an ASCII string to a hexadecimal string.
+    /// </summary>
+    /// <param name="ascii">The ASCII string to convert.</param>
+    /// <returns>The hexadecimal representation of the ASCII string.</returns>
+    /// <exception cref="ArgumentNullException"></exception>
+    public static string AsciiToHex(string ascii)
+    {
+        if (ascii == null)
+            throw new ArgumentNullException(nameof(ascii));
+
+        StringBuilder hex = new StringBuilder(ascii.Length * 2);
+        foreach (char c in ascii)
+        {
+            // Convert each ASCII character to its hexadecimal representation.
+            hex.AppendFormat("{0:X2}", (byte)c);
+        }
+
+        return hex.ToString();
+    }
+
 
 }
