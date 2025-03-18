@@ -1,3 +1,4 @@
+using System.Text;
 using TSISP003.Utils;
 using TSISP003_Net.SignControllerDataStore.Entities;
 
@@ -108,6 +109,15 @@ public static class Extensions
     }
 
 
+    public static RejectReplyDto AsDto(this RejectReply rejectReply)
+    {
+        return new RejectReplyDto
+        {
+            ApplicationErrorCode = rejectReply.ApplicationErrorCode,
+            ApplicationErrorDescription = ErrorCodes.ApplicationErrorCodes.GetValueOrDefault(rejectReply.ApplicationErrorCode, "Unknown error code")
+        };
+    }
+
     public static SignStatusDto AsDto(this SignStatus signStatus)
     {
         return new SignStatusDto
@@ -180,6 +190,31 @@ public static class Extensions
             Colour = signSetTextFrame.Colour,
             Conspicuity = signSetTextFrame.Conspicuity,
             Text = asciiText,
+        };
+    }
+
+    public static SignSetTextFrame AsEntity(this SignSetTextFrameDto signSetTextFrameDto)
+    {
+        string hexText = "";
+        try
+        {
+            hexText = Functions.AsciiToHex(signSetTextFrameDto.Text);
+        }
+        catch (Exception)
+        {
+
+        }
+
+        return new SignSetTextFrame
+        {
+            FrameID = signSetTextFrameDto.FrameID,
+            Revision = signSetTextFrameDto.Revision,
+            Font = signSetTextFrameDto.Font,
+            Colour = signSetTextFrameDto.Colour,
+            Conspicuity = signSetTextFrameDto.Conspicuity,
+            Text = hexText,
+            NumberOfCharsInText = (byte)hexText.Length,
+            CRC = Functions.PacketCRCushort(Encoding.ASCII.GetBytes(hexText))
         };
     }
 
