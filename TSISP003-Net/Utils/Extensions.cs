@@ -213,7 +213,7 @@ public static class Extensions
             Colour = signSetTextFrameDto.Colour,
             Conspicuity = signSetTextFrameDto.Conspicuity,
             Text = hexText,
-            NumberOfCharsInText = (byte)hexText.Length,
+            NumberOfCharsInText = (byte)(hexText.Length / 2),
             CRC = Functions.PacketCRCushort(Encoding.ASCII.GetBytes(hexText))
         };
     }
