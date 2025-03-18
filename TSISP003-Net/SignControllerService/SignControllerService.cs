@@ -11,9 +11,9 @@ namespace TSISP003.SignControllerService;
 public class SignControllerService(TCPClient tcpClient, SignControllerConnectionOptions deviceSettings) : ISignControllerService, IDisposable
 {
     private TaskCompletionSource<List<FaultLogEntry>>? _faultLogReplyTaskCompletion;
-
     private TaskCompletionSource<SignStatusReply>? _signStatusReplyTaskCompletion;
     private TaskCompletionSource<SignSetTextFrame>? _signSetTextFrameTaskCompletion;
+    private TaskCompletionSource<RejectReply>? _rejectReplyCompletion;
 
     private Task? heartBeatPollTask;
     private Task? startSessionTask;
@@ -618,6 +618,7 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
     public async Task<SignSetTextFrame> SignRequestStoredFrameMessagePlan(Enums.RequestType requestType, byte requestID)
     {
         _signSetTextFrameTaskCompletion = new TaskCompletionSource<SignSetTextFrame>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _rejectReplyCompletion = new TaskCompletionSource<RejectReply>(TaskCreationOptions.RunContinuationsAsynchronously);
 
         // build body
         string message = SignControllerServiceConfig.SOH // Start of header
@@ -637,11 +638,17 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         // Wait for either the fault log reply to be received or a timeout after 3 seconds.
         var delayTask = Task.Delay(TimeSpan.FromSeconds(3));
 
-        var completedTask = await Task.WhenAny(_signSetTextFrameTaskCompletion.Task, delayTask);
+        var completedTask = await Task.WhenAny(_signSetTextFrameTaskCompletion.Task, _rejectReplyCompletion.Task, delayTask);
 
         if (completedTask == delayTask)
         {
             throw new TimeoutException("Fault log reply timed out.");
+        }
+
+        if (completedTask == _rejectReplyCompletion.Task)
+        {
+            RejectReply rejectReply = await _rejectReplyCompletion.Task;
+            throw new SignRequestRejectedException(rejectReply);
         }
 
         return await _signSetTextFrameTaskCompletion.Task;
@@ -1010,13 +1017,20 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         throw new NotImplementedException();
     }
 
+    /// <summary>
+    /// Process the reject message
+    /// </summary>
+    /// <param name="applicationData"></param>
+    /// <returns></returns>
     public Task ProcessRejectMessage(string applicationData)
     {
-        // TODO
+        _rejectReplyCompletion?.TrySetResult(new RejectReply
+        {
+            RejectedMiCode = Convert.ToByte(applicationData[2..4], 16),
+            ApplicationErrorCode = Convert.ToByte(applicationData[4..6], 16)
+        });
 
-        Console.WriteLine("Rejected message");
         return Task.CompletedTask;
-        //throw new NotImplementedException();
     }
 
     private bool GroupIDExists(byte groupId)

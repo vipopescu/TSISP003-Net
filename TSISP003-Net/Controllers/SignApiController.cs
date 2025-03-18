@@ -180,6 +180,11 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
             _logger.LogWarning(ex, "Sign Configuration Request timed out for device {Device}", device);
             return StatusCode(StatusCodes.Status408RequestTimeout, "Sign Configuration Request timed out.");
         }
+        catch (SignRequestRejectedException ex)
+        {
+            Console.WriteLine($"Request rejected: {ex.RejectReply.ApplicationErrorCode}");
+            return StatusCode(StatusCodes.Status400BadRequest, ex.RejectReply.AsDto());
+        }
         catch (Exception ex)
         {
             _logger.LogError(ex, "Error requesting configuration for device {Device}", device);
