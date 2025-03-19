@@ -1,6 +1,6 @@
 namespace TSISP003_Net.SignControllerDataStore.Entities;
 
-public class SignSetTextFrame
+public class SignSetTextFrame : ISignResponse
 {
     public byte FrameID { get; set; }
     public byte Revision { get; set; }

@@ -13,7 +13,9 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
     private TaskCompletionSource<List<FaultLogEntry>>? _faultLogReplyTaskCompletion;
     private TaskCompletionSource<SignStatusReply>? _signStatusReplyTaskCompletion;
     private TaskCompletionSource<SignSetTextFrame>? _signSetTextFrameTaskCompletion;
+    private TaskCompletionSource<SignSetMessage>? _signSetMessageTaskCompletion;
     private TaskCompletionSource<RejectReply>? _rejectReplyCompletion;
+    private TaskCompletionSource<AckReply>? _ackReplyCompletion;
 
     private Task? heartBeatPollTask;
     private Task? startSessionTask;
@@ -330,9 +332,11 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         else if (miCode == SignControllerServiceConfig.MI_SIGN_SET_MESSAGE)
             await ProcessSignSetMessage(applicationData);
         else if (miCode == SignControllerServiceConfig.MI_SIGN_SET_PLAN)
-            await ProcessSignSetMessage(applicationData);
+            await ProcessSignSetPlan(applicationData);
         else if (miCode == SignControllerServiceConfig.MI_REJECT_MESSAGE)
             await ProcessRejectMessage(applicationData);
+        else if (miCode == SignControllerServiceConfig.MI_ACK_MESSAGE)
+            await ProcessAckMessage(applicationData);
         else
             Console.WriteLine("Unexpected mi code: " + miCode);
 
@@ -605,10 +609,44 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         throw new NotImplementedException();
     }
 
-    public Task SignDisplayMessage()
+    public async Task<AckReply> SignDisplayMessage(SignDisplayMessage request)
     {
-        // TODO
-        throw new NotImplementedException();
+        _ackReplyCompletion = new TaskCompletionSource<AckReply>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _rejectReplyCompletion = new TaskCompletionSource<RejectReply>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        // build body
+        string header = SignControllerServiceConfig.SOH // Start of header
+                    + NS.ToString("X2") + NR.ToString("X2") // NS and NR
+                    + _deviceSettings.Address // ADDR
+                    + SignControllerServiceConfig.STX;
+
+        string message = header + SignControllerServiceConfig.MI_SIGN_DISPLAY_MESSAGE.ToString("X2")
+                   + request.GroupID.ToString("X2") + request.MessageID.ToString("X2");
+
+        // append crc and end of message
+        message = message
+                    + Functions.PacketCRC(Encoding.ASCII.GetBytes(message))
+                    + SignControllerServiceConfig.ETX;
+
+        await _tcpClient.SendAsync(message);
+
+        // Wait for either the reply to be received or a timeout after 3 seconds.
+        var delayTask = Task.Delay(TimeSpan.FromSeconds(3));
+
+        var completedTask = await Task.WhenAny(_ackReplyCompletion.Task, _rejectReplyCompletion.Task, delayTask);
+
+        if (completedTask == delayTask)
+        {
+            throw new TimeoutException("Sign status reply timed out.");
+        }
+
+        if (completedTask == _rejectReplyCompletion.Task)
+        {
+            RejectReply rejectReply = await _rejectReplyCompletion.Task;
+            throw new SignRequestRejectedException(rejectReply);
+        }
+
+        return await _ackReplyCompletion.Task;
     }
 
     public Task EnablePlan()
@@ -654,10 +692,11 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
     /// <param name="requestID"></param>
     /// <returns></returns>
     /// <exception cref="TimeoutException"></exception>
-    public async Task<SignSetTextFrame> SignRequestStoredFrameMessagePlan(Enums.RequestType requestType, byte requestID)
+    public async Task<ISignResponse> SignRequestStoredFrameMessagePlan(Enums.RequestType requestType, byte requestID)
     {
         _signSetTextFrameTaskCompletion = new TaskCompletionSource<SignSetTextFrame>(TaskCreationOptions.RunContinuationsAsynchronously);
         _rejectReplyCompletion = new TaskCompletionSource<RejectReply>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _signSetMessageTaskCompletion = new TaskCompletionSource<SignSetMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
 
         // build body
         string message = SignControllerServiceConfig.SOH // Start of header
@@ -677,7 +716,7 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         // Wait for either the fault log reply to be received or a timeout after 3 seconds.
         var delayTask = Task.Delay(TimeSpan.FromSeconds(3));
 
-        var completedTask = await Task.WhenAny(_signSetTextFrameTaskCompletion.Task, _rejectReplyCompletion.Task, delayTask);
+        var completedTask = await Task.WhenAny(_signSetTextFrameTaskCompletion.Task, _signSetMessageTaskCompletion.Task, _rejectReplyCompletion.Task, delayTask);
 
         if (completedTask == delayTask)
         {
@@ -690,7 +729,17 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
             throw new SignRequestRejectedException(rejectReply);
         }
 
-        return await _signSetTextFrameTaskCompletion.Task;
+        if (completedTask == _signSetMessageTaskCompletion.Task)
+        {
+            return await _signSetMessageTaskCompletion.Task;
+        }
+
+        if (completedTask == _signSetTextFrameTaskCompletion.Task)
+        {
+            return await _signSetTextFrameTaskCompletion.Task;
+        }
+
+        throw new InvalidOperationException("Unexpected execution path.");
     }
 
     public Task SignExtendedStatusRequest()
@@ -1044,10 +1093,43 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         throw new NotImplementedException();
     }
 
+    /// <summary>
+    /// Process the sign set message
+    /// </summary>
+    /// <param name="applicationData"></param>
+    /// <returns></returns>
     public Task ProcessSignSetMessage(string applicationData)
     {
-        // TODO
-        throw new NotImplementedException();
+        try
+        {
+            SignSetMessage signSetMessageFeedback = new SignSetMessage();
+
+            signSetMessageFeedback.MessageID = Convert.ToByte(applicationData[2..4], 16);
+            signSetMessageFeedback.Revision = Convert.ToByte(applicationData[4..6], 16);
+            signSetMessageFeedback.TransitionTimeBetweenFrames = Convert.ToByte(applicationData[6..8], 16);
+            signSetMessageFeedback.Frame1ID = Convert.ToByte(applicationData[8..10], 16);
+            signSetMessageFeedback.Frame1Time = Convert.ToByte(applicationData[10..12], 16);
+            signSetMessageFeedback.Frame2ID = Convert.ToByte(applicationData[12..14], 16);
+            signSetMessageFeedback.Frame2Time = Convert.ToByte(applicationData[14..16], 16);
+            signSetMessageFeedback.Frame3ID = Convert.ToByte(applicationData[16..18], 16);
+            signSetMessageFeedback.Frame3Time = Convert.ToByte(applicationData[18..20], 16);
+            signSetMessageFeedback.Frame4ID = Convert.ToByte(applicationData[20..22], 16);
+            signSetMessageFeedback.Frame4Time = Convert.ToByte(applicationData[22..24], 16);
+            signSetMessageFeedback.Frame5ID = Convert.ToByte(applicationData[24..26], 16);
+            signSetMessageFeedback.Frame5Time = Convert.ToByte(applicationData[26..28], 16);
+            signSetMessageFeedback.Frame6ID = Convert.ToByte(applicationData[28..30], 16);
+            signSetMessageFeedback.Frame6Time = Convert.ToByte(applicationData[30..32], 16);
+
+            _signSetMessageTaskCompletion?.TrySetResult(signSetMessageFeedback);
+
+            return Task.CompletedTask;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Failed to process sign set message: " + ex.Message);
+        }
+
+        return Task.CompletedTask;
     }
 
     public Task ProcessSignSetPlan(string applicationData)
@@ -1069,6 +1151,17 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
             ApplicationErrorCode = Convert.ToByte(applicationData[4..6], 16)
         });
 
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Process the ack message
+    /// </summary>
+    /// <param name="applicationData"></param>
+    /// <returns></returns>
+    public Task ProcessAckMessage(string applicationData)
+    {
+        _ackReplyCompletion?.TrySetResult(new AckReply());
         return Task.CompletedTask;
     }
 

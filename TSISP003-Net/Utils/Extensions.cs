@@ -193,6 +193,28 @@ public static class Extensions
         };
     }
 
+    public static SignSetMessageDto AsDto(this SignSetMessage signSetMessage)
+    {
+        return new SignSetMessageDto
+        {
+            MessageID = signSetMessage.MessageID,
+            Revision = signSetMessage.Revision,
+            TransitionTimeBetweenFrames = signSetMessage.TransitionTimeBetweenFrames,
+            Frame1ID = signSetMessage.Frame1ID,
+            Frame1Time = signSetMessage.Frame1Time,
+            Frame2ID = signSetMessage.Frame2ID,
+            Frame2Time = signSetMessage.Frame2Time,
+            Frame3ID = signSetMessage.Frame3ID,
+            Frame3Time = signSetMessage.Frame3Time,
+            Frame4ID = signSetMessage.Frame4ID,
+            Frame4Time = signSetMessage.Frame4Time,
+            Frame5ID = signSetMessage.Frame5ID,
+            Frame5Time = signSetMessage.Frame5Time,
+            Frame6ID = signSetMessage.Frame6ID,
+            Frame6Time = signSetMessage.Frame6Time,
+        };
+    }
+
     public static SignSetTextFrame AsEntity(this SignSetTextFrameDto signSetTextFrameDto)
     {
         string hexText = "";
@@ -216,6 +238,34 @@ public static class Extensions
             NumberOfCharsInText = (byte)(hexText.Length / 2),
             CRC = Functions.PacketCRCushort(Encoding.ASCII.GetBytes(hexText))
         };
+    }
+
+    public static SignDisplayMessageDto AsDto(this SignDisplayMessage signDisplayMessage)
+    {
+        return new SignDisplayMessageDto
+        {
+            GroupID = signDisplayMessage.GroupID,
+            MessageID = signDisplayMessage.MessageID
+        };
+    }
+
+    public static SignDisplayMessage AsEntity(this SignDisplayMessageDto signDisplayMessageDto)
+    {
+        return new SignDisplayMessage
+        {
+            GroupID = signDisplayMessageDto.GroupID,
+            MessageID = signDisplayMessageDto.MessageID
+        };
+    }
+
+    public static AckReplyDto AsDto(this AckReply ackReply)
+    {
+        return new AckReplyDto();
+    }
+
+    public static AckReply AsEntity(this AckReplyDto ackReplyDto)
+    {
+        return new AckReply();
     }
 
 }

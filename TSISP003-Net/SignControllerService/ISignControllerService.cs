@@ -21,14 +21,14 @@ public interface ISignControllerService : IHostedService
     Task SignSetMessage();
     Task SignSetPlan();
     Task SignDisplayFrame();
-    Task SignDisplayMessage();
+    Task<AckReply> SignDisplayMessage(SignDisplayMessage request);
     Task EnablePlan();
     Task DisablePlan();
     Task RequestEnabledPlans();
     Task SignSetDimmingLevel();
     Task PowerOnOff();
     Task DisableEnableDevice();
-    Task<SignSetTextFrame> SignRequestStoredFrameMessagePlan(RequestType requestType, byte requestID);
+    Task<ISignResponse> SignRequestStoredFrameMessagePlan(RequestType requestType, byte requestID);
     Task SignExtendedStatusRequest();
     Task<List<FaultLogEntry>> RetrieveFaultLog();
     Task ResetFaultLog();
@@ -64,4 +64,5 @@ public interface ISignControllerService : IHostedService
     Task ProcessSignSetMessage(string applicationData);
     Task ProcessSignSetPlan(string applicationData);
     Task ProcessRejectMessage(string applicationData);
+    Task ProcessAckMessage(string applicationData);
 }

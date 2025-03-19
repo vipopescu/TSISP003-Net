@@ -1,6 +1,7 @@
 using Microsoft.AspNetCore.Mvc;
 using TSISP003.SignControllerService;
 using TSISP003_Net;
+using TSISP003_Net.SignControllerDataStore.Entities;
 using TSISP003_Net.Utils;
 
 namespace TSISP003.Controllers;
@@ -130,10 +131,33 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
 
     [HttpPost]
     [Route("{device}/SignDisplayMessage")]
-    public async Task<IActionResult> SignDisplayMessage(string device)
+    public async Task<IActionResult> SignDisplayMessage(string device, [FromBody] SignDisplayMessageDto request)
     {
-        // TODO: Implement
-        return Ok();
+        try
+        {
+            if (!_signControllerServiceFactory.ContainsSignController(device))
+                return NotFound("Device not found");
+
+            var ackResponse = await _signControllerServiceFactory.GetSignControllerService(device)
+                .SignDisplayMessage(request.AsEntity());
+
+            return Ok();
+        }
+        catch (TimeoutException ex)
+        {
+            _logger.LogWarning(ex, "Sign Display Message timed out for device {Device}", device);
+            return StatusCode(StatusCodes.Status408RequestTimeout, "Sign Display Message timed out.");
+        }
+        catch (SignRequestRejectedException ex)
+        {
+            Console.WriteLine($"Request rejected: {ex.RejectReply.ApplicationErrorCode}");
+            return StatusCode(StatusCodes.Status400BadRequest, ex.RejectReply.AsDto());
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Sign Display Message - Error for device {Device}", device);
+            return StatusCode(StatusCodes.Status500InternalServerError, "Sign Display Message - Error");
+        }
     }
 
     [HttpPost]
@@ -193,10 +217,19 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
             if (!_signControllerServiceFactory.ContainsSignController(device))
                 return NotFound("Device not found");
 
-            var controller = await _signControllerServiceFactory.GetSignControllerService(device)
+            var controllerResponse = await _signControllerServiceFactory.GetSignControllerService(device)
                 .SignRequestStoredFrameMessagePlan((Enums.RequestType)request.TypeRequest, request.RequestID);
 
-            return Ok(controller.AsDto());
+            if (controllerResponse is SignSetMessage signSetMessage)
+            {
+                return Ok(signSetMessage.AsDto());
+            }
+            else if (controllerResponse is SignSetTextFrame signSetTextFrame)
+            {
+                return Ok(signSetTextFrame.AsDto());
+            }
+
+            return StatusCode(StatusCodes.Status500InternalServerError, "Unexpected response type.");
         }
         catch (TimeoutException ex)
         {

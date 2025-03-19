@@ -1,6 +1,6 @@
 namespace TSISP003_Net.SignControllerDataStore.Entities;
 
-public class SignSetMessage
+public class SignSetMessage : ISignResponse
 {
     public byte MessageID { get; set; }
     public byte Revision { get; set; }
