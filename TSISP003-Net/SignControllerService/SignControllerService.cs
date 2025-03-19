@@ -591,10 +591,51 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         throw new NotImplementedException();
     }
 
-    public Task SignSetMessage()
+    public async Task<SignStatusReply> SignSetMessage(SignSetMessage request)
     {
-        // TODO
-        throw new NotImplementedException();
+        _signStatusReplyTaskCompletion = new TaskCompletionSource<SignStatusReply>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _rejectReplyCompletion = new TaskCompletionSource<RejectReply>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        // build body
+        string header = SignControllerServiceConfig.SOH // Start of header
+                    + NS.ToString("X2") + NR.ToString("X2") // NS and NR
+                    + _deviceSettings.Address // ADDR
+                    + SignControllerServiceConfig.STX;
+
+        string message = header + SignControllerServiceConfig.MI_SIGN_SET_MESSAGE.ToString("X2")
+                   + request.MessageID.ToString("X2") + request.Revision.ToString("X2")
+                     + request.TransitionTimeBetweenFrames.ToString("X2")
+                        + request.Frame1ID.ToString("X2") + request.Frame1Time.ToString("X2")
+                        + request.Frame2ID.ToString("X2") + request.Frame2Time.ToString("X2")
+                        + request.Frame3ID.ToString("X2") + request.Frame3Time.ToString("X2")
+                        + request.Frame4ID.ToString("X2") + request.Frame4Time.ToString("X2")
+                        + request.Frame5ID.ToString("X2") + request.Frame5Time.ToString("X2")
+                        + request.Frame6ID.ToString("X2") + request.Frame6Time.ToString("X2");
+
+        // append crc and end of message
+        message = message
+                    + Functions.PacketCRC(Encoding.ASCII.GetBytes(message))
+                    + SignControllerServiceConfig.ETX;
+
+        await _tcpClient.SendAsync(message);
+
+        // Wait for either the fault log reply to be received or a timeout after 3 seconds.
+        var delayTask = Task.Delay(TimeSpan.FromSeconds(3));
+
+        var completedTask = await Task.WhenAny(_signStatusReplyTaskCompletion.Task, _rejectReplyCompletion.Task, delayTask);
+
+        if (completedTask == delayTask)
+        {
+            throw new TimeoutException("Sign status reply timed out.");
+        }
+
+        if (completedTask == _rejectReplyCompletion.Task)
+        {
+            RejectReply rejectReply = await _rejectReplyCompletion.Task;
+            throw new SignRequestRejectedException(rejectReply);
+        }
+
+        return await _signStatusReplyTaskCompletion.Task;
     }
 
     public Task SignSetPlan()
@@ -1107,18 +1148,47 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
             signSetMessageFeedback.MessageID = Convert.ToByte(applicationData[2..4], 16);
             signSetMessageFeedback.Revision = Convert.ToByte(applicationData[4..6], 16);
             signSetMessageFeedback.TransitionTimeBetweenFrames = Convert.ToByte(applicationData[6..8], 16);
-            signSetMessageFeedback.Frame1ID = Convert.ToByte(applicationData[8..10], 16);
-            signSetMessageFeedback.Frame1Time = Convert.ToByte(applicationData[10..12], 16);
-            signSetMessageFeedback.Frame2ID = Convert.ToByte(applicationData[12..14], 16);
-            signSetMessageFeedback.Frame2Time = Convert.ToByte(applicationData[14..16], 16);
-            signSetMessageFeedback.Frame3ID = Convert.ToByte(applicationData[16..18], 16);
-            signSetMessageFeedback.Frame3Time = Convert.ToByte(applicationData[18..20], 16);
-            signSetMessageFeedback.Frame4ID = Convert.ToByte(applicationData[20..22], 16);
-            signSetMessageFeedback.Frame4Time = Convert.ToByte(applicationData[22..24], 16);
-            signSetMessageFeedback.Frame5ID = Convert.ToByte(applicationData[24..26], 16);
-            signSetMessageFeedback.Frame5Time = Convert.ToByte(applicationData[26..28], 16);
-            signSetMessageFeedback.Frame6ID = Convert.ToByte(applicationData[28..30], 16);
-            signSetMessageFeedback.Frame6Time = Convert.ToByte(applicationData[30..32], 16);
+            
+            int index = 8;
+            for (int i = 1; i <= 6; i++) // Loop through frames 1 to 6
+            {
+                byte frameID = Convert.ToByte(applicationData[index..(index + 2)], 16);
+                if (frameID == 0) break; // Stop processing if FrameID is 0
+
+                byte frameTime = Convert.ToByte(applicationData[(index + 2)..(index + 4)], 16);
+
+                // Assign values dynamically
+                switch (i)
+                {
+                    case 1:
+                        signSetMessageFeedback.Frame1ID = frameID;
+                        signSetMessageFeedback.Frame1Time = frameTime;
+                        break;
+                    case 2:
+                        signSetMessageFeedback.Frame2ID = frameID;
+                        signSetMessageFeedback.Frame2Time = frameTime;
+                        break;
+                    case 3:
+                        signSetMessageFeedback.Frame3ID = frameID;
+                        signSetMessageFeedback.Frame3Time = frameTime;
+                        break;
+                    case 4:
+                        signSetMessageFeedback.Frame4ID = frameID;
+                        signSetMessageFeedback.Frame4Time = frameTime;
+                        break;
+                    case 5:
+                        signSetMessageFeedback.Frame5ID = frameID;
+                        signSetMessageFeedback.Frame5Time = frameTime;
+                        break;
+                    case 6:
+                        signSetMessageFeedback.Frame6ID = frameID;
+                        signSetMessageFeedback.Frame6Time = frameTime;
+                        break;
+                }
+
+                index += 4; // Move to the next frame
+                if (index >= applicationData.Length) break; // Prevent index out of range
+            }
 
             _signSetMessageTaskCompletion?.TrySetResult(signSetMessageFeedback);
 

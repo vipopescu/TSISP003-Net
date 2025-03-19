@@ -107,10 +107,33 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
 
     [HttpPost]
     [Route("{device}/SignSetMessage")]
-    public async Task<IActionResult> SignSetMessage(string device)
+    public async Task<IActionResult> SignSetMessage(string device, [FromBody] SignSetMessageDto request)
     {
-        // TODO: Implement
-        return Ok();
+        try
+        {
+            if (!_signControllerServiceFactory.ContainsSignController(device))
+                return NotFound("Device not found");
+
+            var ackResponse = await _signControllerServiceFactory.GetSignControllerService(device)
+                .SignSetMessage(request.AsEntity());
+
+            return Ok();
+        }
+        catch (TimeoutException ex)
+        {
+            _logger.LogWarning(ex, "Sign Display Message timed out for device {Device}", device);
+            return StatusCode(StatusCodes.Status408RequestTimeout, "Sign Display Message timed out.");
+        }
+        catch (SignRequestRejectedException ex)
+        {
+            Console.WriteLine($"Request rejected: {ex.RejectReply.ApplicationErrorCode}");
+            return StatusCode(StatusCodes.Status400BadRequest, ex.RejectReply.AsDto());
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Sign Display Message - Error for device {Device}", device);
+            return StatusCode(StatusCodes.Status500InternalServerError, "Sign Display Message - Error");
+        }
     }
 
     [HttpPost]

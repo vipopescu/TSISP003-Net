@@ -215,6 +215,28 @@ public static class Extensions
         };
     }
 
+    public static SignSetMessage AsEntity(this SignSetMessageDto signSetMessageDto)
+    {
+        return new SignSetMessage
+        {
+            MessageID = signSetMessageDto.MessageID,
+            Revision = signSetMessageDto.Revision,
+            TransitionTimeBetweenFrames = signSetMessageDto.TransitionTimeBetweenFrames,
+            Frame1ID = signSetMessageDto.Frame1ID,
+            Frame1Time = signSetMessageDto.Frame1Time,
+            Frame2ID = signSetMessageDto.Frame2ID,
+            Frame2Time = signSetMessageDto.Frame2Time,
+            Frame3ID = signSetMessageDto.Frame3ID,
+            Frame3Time = signSetMessageDto.Frame3Time,
+            Frame4ID = signSetMessageDto.Frame4ID,
+            Frame4Time = signSetMessageDto.Frame4Time,
+            Frame5ID = signSetMessageDto.Frame5ID,
+            Frame5Time = signSetMessageDto.Frame5Time,
+            Frame6ID = signSetMessageDto.Frame6ID,
+            Frame6Time = signSetMessageDto.Frame6Time,
+        };
+    }
+
     public static SignSetTextFrame AsEntity(this SignSetTextFrameDto signSetTextFrameDto)
     {
         string hexText = "";

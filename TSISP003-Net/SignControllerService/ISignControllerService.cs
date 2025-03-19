@@ -18,7 +18,7 @@ public interface ISignControllerService : IHostedService
     Task SignSetHighResolutionGraphicsFrame();
     Task SignConfigurationRequest();
     Task SignDisplayAtomicFrames();
-    Task SignSetMessage();
+    Task<SignStatusReply> SignSetMessage(SignSetMessage request);
     Task SignSetPlan();
     Task SignDisplayFrame();
     Task<AckReply> SignDisplayMessage(SignDisplayMessage request);
