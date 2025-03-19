@@ -345,4 +345,28 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
             return StatusCode(StatusCodes.Status500InternalServerError, "Error requesting status.");
         }
     }
+
+    [HttpPost]
+    [Route("{device}/extended/request")]
+    public async Task<IActionResult> ExtendedRequestMessage(string device, [FromBody] ExtendedRequestMessage extendedRequestMessage)
+    {
+        try
+        {
+            if (!_signControllerServiceFactory.ContainsSignController(device))
+                return NotFound("Device not found");
+
+            await Task.CompletedTask;
+            return Ok();
+        }
+        catch (TimeoutException ex)
+        {
+            _logger.LogWarning(ex, "Sign Status Request timed out for device {Device}", device);
+            return StatusCode(StatusCodes.Status408RequestTimeout, "Sign Status Request timed out.");
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error requesting status for device {Device}", device);
+            return StatusCode(StatusCodes.Status500InternalServerError, "Error requesting status.");
+        }
+    }
 }

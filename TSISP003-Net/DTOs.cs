@@ -100,6 +100,23 @@ public class SignSetMessageDto
     public byte Frame6Time { get; set; }
 }
 
+public class ExtendedRequestMessage
+{
+    public byte TransitionTimeBetweenFrames { get; set; }
+    public SignSetTextFrameDto? Frame1 { get; set; }
+    public byte Frame1Time { get; set; }
+    public SignSetTextFrameDto? Frame2 { get; set; }
+    public byte Frame2Time { get; set; }
+    public SignSetTextFrameDto? Frame3 { get; set; }
+    public byte Frame3Time { get; set; }
+    public SignSetTextFrameDto? Frame4 { get; set; }
+    public byte Frame4Time { get; set; }
+    public SignSetTextFrameDto? Frame5 { get; set; }
+    public byte Frame5Time { get; set; }
+    public SignSetTextFrameDto? Frame6 { get; set; }
+    public byte Frame6Time { get; set; }
+}
+
 public class SignDisplayMessageDto
 {
     public byte GroupID { get; set; }
