@@ -359,8 +359,6 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
     /// <returns></returns>
     public async Task HeartbeatPoll()
     {
-        _signStatusReplyTaskCompletion = new TaskCompletionSource<SignStatusReply>(TaskCreationOptions.RunContinuationsAsynchronously);
-
         // build body
         string message = SignControllerServiceConfig.SOH // Start of header
                     + NS.ToString("X2") + NR.ToString("X2") // NS and NR
@@ -490,7 +488,9 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
                    + request.Conspicuity.ToString("X2") + request.NumberOfCharsInText.ToString("X2")
                    + request.Text;
 
-        var message = header + applicationMessage + Functions.PacketCRC(Encoding.ASCII.GetBytes(applicationMessage));
+        applicationMessage = applicationMessage + Functions.PacketCRC(Encoding.ASCII.GetBytes(Functions.HexToAscii(applicationMessage)));
+
+        var message = header + applicationMessage;
 
         // append crc and end of message
         message = message
@@ -530,8 +530,8 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
             signSetTextFrameFeedback.Colour = Convert.ToByte(applicationData[8..10], 16);
             signSetTextFrameFeedback.Conspicuity = Convert.ToByte(applicationData[10..12], 16);
             signSetTextFrameFeedback.NumberOfCharsInText = Convert.ToByte(applicationData[12..14], 16);
-            signSetTextFrameFeedback.Text = applicationData[14..(14 + signSetTextFrameFeedback.NumberOfCharsInText)];
-            signSetTextFrameFeedback.CRC = Convert.ToUInt16(applicationData[(14 + signSetTextFrameFeedback.NumberOfCharsInText)..(14 + signSetTextFrameFeedback.NumberOfCharsInText + 4)], 16);
+            signSetTextFrameFeedback.Text = applicationData[14..(14 + signSetTextFrameFeedback.NumberOfCharsInText * 2)];
+            signSetTextFrameFeedback.CRC = Convert.ToUInt16(applicationData[(14 + (signSetTextFrameFeedback.NumberOfCharsInText * 2))..(14 + (signSetTextFrameFeedback.NumberOfCharsInText * 2) + 4)], 16);
 
             _signSetTextFrameTaskCompletion?.TrySetResult(signSetTextFrameFeedback);
 
@@ -1118,6 +1118,4 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
     {
         return Task.FromResult(_signController);
     }
-
-
 }
