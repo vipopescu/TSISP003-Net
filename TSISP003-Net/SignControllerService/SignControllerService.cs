@@ -359,8 +359,6 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
     /// <returns></returns>
     public async Task HeartbeatPoll()
     {
-        _signStatusReplyTaskCompletion = new TaskCompletionSource<SignStatusReply>(TaskCreationOptions.RunContinuationsAsynchronously);
-
         // build body
         string message = SignControllerServiceConfig.SOH // Start of header
                     + NS.ToString("X2") + NR.ToString("X2") // NS and NR
@@ -473,10 +471,51 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         throw new NotImplementedException();
     }
 
-    public Task SignSetTextFrame()
+    public async Task<SignStatusReply> SignSetTextFrame(SignSetTextFrame request)
     {
-        // TODO
-        throw new NotImplementedException();
+        _signStatusReplyTaskCompletion = new TaskCompletionSource<SignStatusReply>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _rejectReplyCompletion = new TaskCompletionSource<RejectReply>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        // build body
+        string header = SignControllerServiceConfig.SOH // Start of header
+                    + NS.ToString("X2") + NR.ToString("X2") // NS and NR
+                    + _deviceSettings.Address // ADDR
+                    + SignControllerServiceConfig.STX;
+
+        string applicationMessage = SignControllerServiceConfig.MI_SIGN_SET_TEXT_FRAME.ToString("X2")
+                   + request.FrameID.ToString("X2") + request.Revision.ToString("X2")
+                   + request.Font.ToString("X2") + request.Colour.ToString("X2")
+                   + request.Conspicuity.ToString("X2") + request.NumberOfCharsInText.ToString("X2")
+                   + request.Text;
+
+        applicationMessage = applicationMessage + Functions.PacketCRC(Encoding.ASCII.GetBytes(Functions.HexToAscii(applicationMessage)));
+
+        var message = header + applicationMessage;
+
+        // append crc and end of message
+        message = message
+                    + Functions.PacketCRC(Encoding.ASCII.GetBytes(message))
+                    + SignControllerServiceConfig.ETX;
+
+        await _tcpClient.SendAsync(message);
+
+        // Wait for either the fault log reply to be received or a timeout after 3 seconds.
+        var delayTask = Task.Delay(TimeSpan.FromSeconds(3));
+
+        var completedTask = await Task.WhenAny(_signStatusReplyTaskCompletion.Task, _rejectReplyCompletion.Task, delayTask);
+
+        if (completedTask == delayTask)
+        {
+            throw new TimeoutException("Sign status reply timed out.");
+        }
+
+        if (completedTask == _rejectReplyCompletion.Task)
+        {
+            RejectReply rejectReply = await _rejectReplyCompletion.Task;
+            throw new SignRequestRejectedException(rejectReply);
+        }
+
+        return await _signStatusReplyTaskCompletion.Task;
     }
 
     public Task ProcessSignSetTextFrame(string applicationData)
@@ -491,8 +530,8 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
             signSetTextFrameFeedback.Colour = Convert.ToByte(applicationData[8..10], 16);
             signSetTextFrameFeedback.Conspicuity = Convert.ToByte(applicationData[10..12], 16);
             signSetTextFrameFeedback.NumberOfCharsInText = Convert.ToByte(applicationData[12..14], 16);
-            signSetTextFrameFeedback.Text = applicationData[14..(14 + signSetTextFrameFeedback.NumberOfCharsInText)];
-            signSetTextFrameFeedback.CRC = Convert.ToUInt16(applicationData[(14 + signSetTextFrameFeedback.NumberOfCharsInText)..(14 + signSetTextFrameFeedback.NumberOfCharsInText + 4)], 16);
+            signSetTextFrameFeedback.Text = applicationData[14..(14 + signSetTextFrameFeedback.NumberOfCharsInText * 2)];
+            signSetTextFrameFeedback.CRC = Convert.ToUInt16(applicationData[(14 + (signSetTextFrameFeedback.NumberOfCharsInText * 2))..(14 + (signSetTextFrameFeedback.NumberOfCharsInText * 2) + 4)], 16);
 
             _signSetTextFrameTaskCompletion?.TrySetResult(signSetTextFrameFeedback);
 

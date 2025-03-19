@@ -13,7 +13,7 @@ public interface ISignControllerService : IHostedService
     Task EndSession();
     Task SystemReset(byte groupId, byte resetLevel);
     Task UpdateTime();
-    Task SignSetTextFrame();
+    Task<SignStatusReply> SignSetTextFrame(SignSetTextFrame request);
     Task SignSetGraphicsFrame();
     Task SignSetHighResolutionGraphicsFrame();
     Task SignConfigurationRequest();

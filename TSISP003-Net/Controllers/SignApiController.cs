@@ -23,10 +23,33 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
 
     [HttpPost]
     [Route("{device}/SignSetTextFrame")]
-    public async Task<IActionResult> SignSetTextFrame(string device)
+    public async Task<IActionResult> SignSetTextFrame(string device, [FromBody] SignSetTextFrameDto request)
     {
-        // TODO: Implement
-        return Ok();
+        try
+        {
+            if (!_signControllerServiceFactory.ContainsSignController(device))
+                return NotFound("Device not found");
+
+            var controller = await _signControllerServiceFactory.GetSignControllerService(device)
+                .SignSetTextFrame(request.AsEntity());
+
+            return Ok(controller.AsDto());
+        }
+        catch (TimeoutException ex)
+        {
+            _logger.LogWarning(ex, "Sign Configuration Request timed out for device {Device}", device);
+            return StatusCode(StatusCodes.Status408RequestTimeout, "Sign Configuration Request timed out.");
+        }
+        catch (SignRequestRejectedException ex)
+        {
+            _logger.LogError($"Request rejected: {ex.RejectReply.ApplicationErrorCode}");
+            return StatusCode(StatusCodes.Status400BadRequest, ex.RejectReply.AsDto());
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error requesting configuration for device {Device}", device);
+            return StatusCode(StatusCodes.Status500InternalServerError, "Error requesting configuration.");
+        }
     }
 
     [HttpPost]
