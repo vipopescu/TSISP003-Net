@@ -3,6 +3,7 @@ using System.Text;
 using TSISP003.Settings;
 using TSISP003.TCP;
 using TSISP003.Utils;
+using TSISP003_Net;
 using TSISP003_Net.SignControllerDataStore.Entities;
 using TSISP003_Net.Utils;
 
@@ -226,17 +227,21 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
     {
         try
         {
-            string response = await _tcpClient.ReadAsync();
-            if (!string.IsNullOrEmpty(response))
+            string response;
+            // Continue reading until ReadAsync returns null
+            while ((response = await _tcpClient.ReadAsync()) != null)
             {
-                ProcessResponses(response);
+                if (!string.IsNullOrEmpty(response))
+                {
+                    ProcessResponses(response);
+                }
             }
         }
         catch (Exception ex)
         {
-            // Console.WriteLine($"Failed to read from the socket: {ex.Message}");
-            // // Ignore 
-            // Thread.Sleep(3000);
+            // Handle exceptions as needed
+            //Console.WriteLine($"Failed to read from the socket: {ex.Message}");
+            // Optionally, add error handling or retries here
         }
     }
 
@@ -603,14 +608,14 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
                     + SignControllerServiceConfig.STX;
 
         string message = header + SignControllerServiceConfig.MI_SIGN_SET_MESSAGE.ToString("X2")
-                   + request.MessageID.ToString("X2") + request.Revision.ToString("X2")
-                     + request.TransitionTimeBetweenFrames.ToString("X2")
-                        + request.Frame1ID.ToString("X2") + request.Frame1Time.ToString("X2")
-                        + request.Frame2ID.ToString("X2") + request.Frame2Time.ToString("X2")
-                        + request.Frame3ID.ToString("X2") + request.Frame3Time.ToString("X2")
-                        + request.Frame4ID.ToString("X2") + request.Frame4Time.ToString("X2")
-                        + request.Frame5ID.ToString("X2") + request.Frame5Time.ToString("X2")
-                        + request.Frame6ID.ToString("X2") + request.Frame6Time.ToString("X2");
+            + request.MessageID.ToString("X2") + request.Revision.ToString("X2")
+            + request.TransitionTimeBetweenFrames.ToString("X2")
+                + request.Frame1ID.ToString("X2") + request.Frame1Time.ToString("X2")
+                + request.Frame2ID.ToString("X2") + request.Frame2Time.ToString("X2")
+                + request.Frame3ID.ToString("X2") + request.Frame3Time.ToString("X2")
+                + request.Frame4ID.ToString("X2") + request.Frame4Time.ToString("X2")
+                + request.Frame5ID.ToString("X2") + request.Frame5Time.ToString("X2")
+                + request.Frame6ID.ToString("X2") + request.Frame6Time.ToString("X2");
 
         // append crc and end of message
         message = message
@@ -1148,7 +1153,7 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
             signSetMessageFeedback.MessageID = Convert.ToByte(applicationData[2..4], 16);
             signSetMessageFeedback.Revision = Convert.ToByte(applicationData[4..6], 16);
             signSetMessageFeedback.TransitionTimeBetweenFrames = Convert.ToByte(applicationData[6..8], 16);
-            
+
             int index = 8;
             for (int i = 1; i <= 6; i++) // Loop through frames 1 to 6
             {
@@ -1280,5 +1285,161 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
     public Task<SignStatusReply> GetStatus()
     {
         return Task.FromResult(_signController);
+    }
+
+    /// <summary>
+    /// Extended request message
+    /// </summary>
+    /// <param name="request"></param>
+    /// <returns></returns>
+    /// <exception cref="NotImplementedException"></exception>
+    public async Task<bool> ExtendedRequestMessage(ExtendedRequestMessageDto request)
+    {
+        bool result = false;
+        byte currentId = 80;
+        try
+        {
+            SignSetMessage signSetMessage = new SignSetMessage
+            {
+                MessageID = currentId
+            };
+
+            if (request.Frame1 != null)
+            {
+                signSetMessage.Frame1Time = (byte)(request.Frame1Time * 10);
+
+                SignSetTextFrame signSetTextFrame1 = new SignSetTextFrame
+                {
+                    FrameID = currentId++,
+                    Revision = 0,
+                    Font = request.Frame1.Font,
+                    Colour = request.Frame1.Colour,
+                    Conspicuity = request.Frame1.Conspicuity,
+                    NumberOfCharsInText = (byte)request.Frame1.Text.Length,
+                    Text = request.Frame1.Text
+                };
+
+                signSetMessage.Frame1ID = signSetTextFrame1.FrameID;
+
+                await SignSetTextFrame(signSetTextFrame1);
+            }
+
+            if (request.Frame2 != null)
+            {
+                signSetMessage.Frame2Time = (byte)(request.Frame2Time * 10);
+
+                SignSetTextFrame signSetTextFrame2 = new SignSetTextFrame
+                {
+                    FrameID = currentId++,
+                    Revision = 0,
+                    Font = request.Frame2.Font,
+                    Colour = request.Frame2.Colour,
+                    Conspicuity = request.Frame2.Conspicuity,
+                    NumberOfCharsInText = (byte)request.Frame2.Text.Length,
+                    Text = request.Frame2.Text
+                };
+
+                signSetMessage.Frame2ID = signSetTextFrame2.FrameID;
+
+                await SignSetTextFrame(signSetTextFrame2);
+            }
+
+            if (request.Frame3 != null)
+            {
+                signSetMessage.Frame3Time = (byte)(request.Frame3Time * 10);
+
+                SignSetTextFrame signSetTextFrame3 = new SignSetTextFrame
+                {
+                    FrameID = currentId++,
+                    Revision = 0,
+                    Font = request.Frame3.Font,
+                    Colour = request.Frame3.Colour,
+                    Conspicuity = request.Frame3.Conspicuity,
+                    NumberOfCharsInText = (byte)request.Frame3.Text.Length,
+                    Text = request.Frame3.Text
+                };
+
+                signSetMessage.Frame3ID = signSetTextFrame3.FrameID;
+
+                await SignSetTextFrame(signSetTextFrame3);
+            }
+
+            if (request.Frame4 != null)
+            {
+                signSetMessage.Frame4Time = (byte)(request.Frame4Time * 10);
+
+                SignSetTextFrame signSetTextFrame4 = new SignSetTextFrame
+                {
+                    FrameID = currentId++,
+                    Revision = 0,
+                    Font = request.Frame4.Font,
+                    Colour = request.Frame4.Colour,
+                    Conspicuity = request.Frame4.Conspicuity,
+                    NumberOfCharsInText = (byte)request.Frame4.Text.Length,
+                    Text = request.Frame4.Text
+                };
+
+                signSetMessage.Frame4ID = signSetTextFrame4.FrameID;
+
+                await SignSetTextFrame(signSetTextFrame4);
+            }
+
+            if (request.Frame5 != null)
+            {
+                signSetMessage.Frame5Time = (byte)(request.Frame5Time * 10);
+
+                SignSetTextFrame signSetTextFrame5 = new SignSetTextFrame
+                {
+                    FrameID = currentId++,
+                    Revision = 0,
+                    Font = request.Frame5.Font,
+                    Colour = request.Frame5.Colour,
+                    Conspicuity = request.Frame5.Conspicuity,
+                    NumberOfCharsInText = (byte)request.Frame5.Text.Length,
+                    Text = request.Frame5.Text
+                };
+
+                signSetMessage.Frame5ID = signSetTextFrame5.FrameID;
+
+                await SignSetTextFrame(signSetTextFrame5);
+            }
+
+            if (request.Frame6 != null)
+            {
+                signSetMessage.Frame6Time = (byte)(request.Frame6Time * 10);
+
+                SignSetTextFrame signSetTextFrame6 = new SignSetTextFrame
+                {
+                    FrameID = currentId++,
+                    Revision = 0,
+                    Font = request.Frame6.Font,
+                    Colour = request.Frame6.Colour,
+                    Conspicuity = request.Frame6.Conspicuity,
+                    NumberOfCharsInText = (byte)request.Frame6.Text.Length,
+                    Text = request.Frame6.Text
+                };
+
+                signSetMessage.Frame6ID = signSetTextFrame6.FrameID;
+
+                await SignSetTextFrame(signSetTextFrame6);
+            }
+
+            await SignSetMessage(signSetMessage);
+
+            await SignDisplayMessage(new SignDisplayMessage
+            {
+                // TODO: parametrize
+                GroupID = 1,
+                MessageID = signSetMessage.MessageID
+            });
+
+            result = true;
+        }
+
+        catch (System.Exception ex)
+        {
+            Console.WriteLine("Failed to process extended request message: " + ex.Message);
+        }
+        return result;
     }
 }

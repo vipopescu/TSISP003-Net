@@ -290,4 +290,20 @@ public static class Extensions
         return new AckReply();
     }
 
+
+    public static SignSetTextFrame AsSignSetTextFrame(this ExtendedTextFrameDto extendedTextFrameDto, byte frameid, byte revision)
+    {
+        string hexText = Functions.AsciiToHex(extendedTextFrameDto.Text);
+        return new SignSetTextFrame
+        {
+            FrameID = frameid,
+            Revision = revision,
+            Font = extendedTextFrameDto.Font,
+            Colour = extendedTextFrameDto.Colour,
+            Conspicuity = extendedTextFrameDto.Conspicuity,
+            Text = hexText,
+            NumberOfCharsInText = (byte)(extendedTextFrameDto.Text.Length)
+        };
+    }
+
 }
