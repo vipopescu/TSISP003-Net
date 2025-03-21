@@ -280,6 +280,44 @@ public static class Extensions
         };
     }
 
+    public static SignDisplayAtomicFrameDto AsDto(this SignDisplayAtomicFrame signDisplayAtomicFrame)
+    {
+        return new SignDisplayAtomicFrameDto
+        {
+            GroupID = signDisplayAtomicFrame.GroupID,
+            NumbeOfSigns = signDisplayAtomicFrame.NumbeOfSigns,
+            Frames = signDisplayAtomicFrame.Frames.Select(frame => frame.AsDto()).ToList()
+        };
+    }
+
+    public static SignDisplayAtomicFrame AsEntity(this SignDisplayAtomicFrameDto signDisplayAtomicFrameDto)
+    {
+        return new SignDisplayAtomicFrame
+        {
+            GroupID = signDisplayAtomicFrameDto.GroupID,
+            NumbeOfSigns = signDisplayAtomicFrameDto.NumbeOfSigns,
+            Frames = signDisplayAtomicFrameDto.Frames.Select(frame => frame.AsEntity()).ToList()
+        };
+    }
+
+    public static SignDisplayFrame AsEntity(this SignDisplayFrameDto signDisplayFrameDto)
+    {
+        return new SignDisplayFrame
+        {
+            SignID = signDisplayFrameDto.SignID,
+            FrameID = signDisplayFrameDto.FrameID
+        };
+    }
+
+    public static SignDisplayFrameDto AsDto(this SignDisplayFrame signDisplayFrame)
+    {
+        return new SignDisplayFrameDto
+        {
+            SignID = signDisplayFrame.SignID,
+            FrameID = signDisplayFrame.FrameID
+        };
+    }
+
     public static AckReplyDto AsDto(this AckReply ackReply)
     {
         return new AckReplyDto();

@@ -85,6 +85,10 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
     /// <param name="cancellationToken"></param>
     private async void StartSessionTask(CancellationToken cancellationToken)
     {
+
+
+
+
         bool sessionStarted = false;
         SignConfigurationReceived = false;
 
@@ -590,10 +594,57 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         await _tcpClient.SendAsync(message);
     }
 
-    public Task SignDisplayAtomicFrames()
+    /// <summary>
+    /// Send a request to the sign controller to display atomic frames
+    /// </summary>
+    /// <param name="request"></param>
+    /// <returns></returns>
+    /// <exception cref="TimeoutException"></exception>
+    /// <exception cref="SignRequestRejectedException"></exception>
+    public async Task<AckReply> SignDisplayAtomicFrames(SignDisplayAtomicFrame request)
     {
-        // TODO
-        throw new NotImplementedException();
+
+        _ackReplyCompletion = new TaskCompletionSource<AckReply>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _rejectReplyCompletion = new TaskCompletionSource<RejectReply>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        // build body
+        string header = SignControllerServiceConfig.SOH // Start of header
+                    + NS.ToString("X2") + NR.ToString("X2") // NS and NR
+                    + _deviceSettings.Address // ADDR
+                    + SignControllerServiceConfig.STX;
+
+        string message = header + SignControllerServiceConfig.MI_SIGN_DISPLAY_ATOMIC_FRAMES.ToString("X2")
+            + request.GroupID.ToString("X2") + request.NumbeOfSigns.ToString("X2");
+
+        foreach (var frame in request.Frames)
+        {
+            message += frame.SignID.ToString("X2") + frame.FrameID.ToString("X2");
+        }
+
+        // append crc and end of message
+        message = message
+                    + Functions.PacketCRC(Encoding.ASCII.GetBytes(message))
+                    + SignControllerServiceConfig.ETX;
+
+        await _tcpClient.SendAsync(message);
+
+        // Wait for either the fault log reply to be received or a timeout after 3 seconds.
+        var delayTask = Task.Delay(TimeSpan.FromSeconds(3));
+
+        var completedTask = await Task.WhenAny(_ackReplyCompletion.Task, _rejectReplyCompletion.Task, delayTask);
+
+        if (completedTask == delayTask)
+        {
+            throw new TimeoutException("Sign status reply timed out.");
+        }
+
+        if (completedTask == _rejectReplyCompletion.Task)
+        {
+            RejectReply rejectReply = await _rejectReplyCompletion.Task;
+            throw new SignRequestRejectedException(rejectReply);
+        }
+
+        return await _ackReplyCompletion.Task;
     }
 
     public async Task<SignStatusReply> SignSetMessage(SignSetMessage request)
@@ -649,7 +700,7 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         throw new NotImplementedException();
     }
 
-    public Task SignDisplayFrame()
+    public async Task<AckReply> SignDisplayFrame(SignDisplayFrame request)
     {
         // TODO
         throw new NotImplementedException();

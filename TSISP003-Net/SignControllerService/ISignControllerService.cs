@@ -18,10 +18,10 @@ public interface ISignControllerService : IHostedService
     Task SignSetGraphicsFrame();
     Task SignSetHighResolutionGraphicsFrame();
     Task SignConfigurationRequest();
-    Task SignDisplayAtomicFrames();
+    Task<AckReply> SignDisplayAtomicFrames(SignDisplayAtomicFrame request);
     Task<SignStatusReply> SignSetMessage(SignSetMessage request);
     Task SignSetPlan();
-    Task SignDisplayFrame();
+    Task<AckReply> SignDisplayFrame(SignDisplayFrame request);
     Task<AckReply> SignDisplayMessage(SignDisplayMessage request);
     Task EnablePlan();
     Task DisablePlan();
