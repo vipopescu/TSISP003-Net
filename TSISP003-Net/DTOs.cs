@@ -157,6 +157,12 @@ public class SignRequestStoredFrameMessagePlanDto
     public byte RequestID { get; set; }
 }
 
+public class PowerOnOffCommandDto
+{
+    public byte GroupID { get; set; }
+    public bool PoweredOn { get; set; }
+}
+
 public class RejectReplyDto
 {
     public byte ApplicationErrorCode { get; set; }

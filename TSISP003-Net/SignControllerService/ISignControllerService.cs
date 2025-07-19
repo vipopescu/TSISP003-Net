@@ -27,7 +27,7 @@ public interface ISignControllerService : IHostedService
     Task DisablePlan();
     Task RequestEnabledPlans();
     Task SignSetDimmingLevel();
-    Task PowerOnOff();
+    Task<AckReply> PowerOnOff(byte groupId, bool powerOn);
     Task DisableEnableDevice();
     Task<ISignResponse> SignRequestStoredFrameMessagePlan(RequestType requestType, byte requestID);
     Task SignExtendedStatusRequest();
