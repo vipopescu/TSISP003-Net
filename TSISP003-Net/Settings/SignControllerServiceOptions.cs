@@ -1,4 +1,4 @@
-namespace TSISP003.Settings;
+namespace TSISP003_Net.Settings;
 
 public class SignControllerServiceOptions
 {

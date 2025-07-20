@@ -1,7 +1,7 @@
 using System.Net.Sockets;
 using System.Text;
 
-namespace TSISP003.TCP;
+namespace TSISP003_Net.TCP;
 
 public class TCPClient
 {

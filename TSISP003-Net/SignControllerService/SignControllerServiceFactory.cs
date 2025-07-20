@@ -1,9 +1,9 @@
 
 using Microsoft.Extensions.Options;
-using TSISP003.Settings;
-using TSISP003.TCP;
+using TSISP003_Net.Settings;
+using TSISP003_Net.TCP;
 
-namespace TSISP003.SignControllerService;
+namespace TSISP003_Net.SignControllerService;
 
 public class SignControllerServiceFactory : IHostedService
 {

@@ -1,11 +1,11 @@
 using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
-using TSISP003.SignControllerService;
+using TSISP003_Net.SignControllerService;
 using TSISP003_Net;
 using TSISP003_Net.SignControllerDataStore.Entities;
 using TSISP003_Net.Utils;
 
-namespace TSISP003.Controllers;
+namespace TSISP003_Net.Controllers;
 
 [ApiController]
 [Route("api")]

@@ -1,8 +1,7 @@
-using TSISP003_Net;
 using TSISP003_Net.SignControllerDataStore.Entities;
 using static TSISP003_Net.Utils.Enums;
 
-namespace TSISP003.SignControllerService;
+namespace TSISP003_Net.SignControllerService;
 
 public interface ISignControllerService : IHostedService
 {

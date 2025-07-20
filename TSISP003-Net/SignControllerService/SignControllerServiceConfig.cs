@@ -1,5 +1,5 @@
 
-namespace TSISP003.SignControllerService;
+namespace TSISP003_Net.SignControllerService;
 
 public class SignControllerServiceConfig
 {

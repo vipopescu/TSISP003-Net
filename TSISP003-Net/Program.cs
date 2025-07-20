@@ -1,7 +1,7 @@
-using TSISP003.Settings;
-using TSISP003.SignControllerService;
+using TSISP003_Net.Settings;
+using TSISP003_Net.SignControllerService;
 
-namespace TSISP003;
+namespace TSISP003_Net;
 
 internal class Program
 {

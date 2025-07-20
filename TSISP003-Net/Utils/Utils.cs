@@ -1,7 +1,7 @@
 using System.Text;
-using TSISP003.SignControllerService;
+using TSISP003_Net.SignControllerService;
 
-namespace TSISP003.Utils;
+namespace TSISP003_Net.Utils;
 
 public class Functions
 {

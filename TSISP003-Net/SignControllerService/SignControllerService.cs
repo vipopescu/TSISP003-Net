@@ -1,13 +1,12 @@
 using System.Net.Sockets;
 using System.Text;
-using TSISP003.Settings;
-using TSISP003.TCP;
-using TSISP003.Utils;
-using TSISP003_Net;
-using TSISP003_Net.SignControllerDataStore.Entities;
+using TSISP003_Net.Settings;
+using TSISP003_Net.TCP;
 using TSISP003_Net.Utils;
+using TSISP003_Net.SignControllerService;
+using TSISP003_Net.SignControllerDataStore.Entities;
 
-namespace TSISP003.SignControllerService;
+namespace TSISP003_Net.SignControllerService;
 
 public class SignControllerService(TCPClient tcpClient, SignControllerConnectionOptions deviceSettings) : ISignControllerService, IDisposable
 {
