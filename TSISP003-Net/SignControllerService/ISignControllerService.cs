@@ -3,6 +3,9 @@ using static TSISP003_Net.Utils.Enums;
 
 namespace TSISP003_Net.SignControllerService;
 
+/// <summary>
+/// Defines operations for communicating with a sign controller device.
+/// </summary>
 public interface ISignControllerService : IHostedService
 {
     Task<SignStatusReply> GetStatus();

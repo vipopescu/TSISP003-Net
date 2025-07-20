@@ -7,6 +7,9 @@ using TSISP003_Net.Utils;
 
 namespace TSISP003_Net.Controllers;
 
+/// <summary>
+/// HTTP API controller for sign management operations.
+/// </summary>
 [ApiController]
 [Route("api")]
 public class SignApiController(ILogger<SignApiController> logger, SignControllerServiceFactory signControllerServiceFactory) : ControllerBase
@@ -15,6 +18,9 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
 
     private readonly SignControllerServiceFactory _signControllerServiceFactory = signControllerServiceFactory;
 
+    /// <summary>
+    /// Resets the system for the specified device.
+    /// </summary>
     [HttpPost]
     [Route("{device}/SystemReset")]
     public async Task<IActionResult> SystemReset(string device)
@@ -23,6 +29,9 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
         return Ok();
     }
 
+    /// <summary>
+    /// Sends a text frame to the specified device.
+    /// </summary>
     [HttpPost]
     [Route("{device}/SignSetTextFrame")]
     public async Task<IActionResult> SignSetTextFrame(string device, [FromBody] SignSetTextFrameDto request)

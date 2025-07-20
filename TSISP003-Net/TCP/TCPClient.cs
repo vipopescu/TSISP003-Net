@@ -6,6 +6,9 @@ using System.Text;
 
 namespace TSISP003_Net.TCP;
 
+/// <summary>
+/// Provides a TCP client with retry and timeout logic for reliable send/receive.
+/// </summary>
 public class TCPClient : IDisposable
 {
     private readonly string _ipAddress;
@@ -45,6 +48,9 @@ public class TCPClient : IDisposable
         }
     }
 
+    /// <summary>
+    /// Closes the active TCP connection, if any.
+    /// </summary>
     public void Disconnect()
     {
         if (_client != null)
@@ -55,6 +61,10 @@ public class TCPClient : IDisposable
         }
     }
 
+    /// <summary>
+    /// Sends the specified message over TCP, with automatic retry on failure.
+    /// </summary>
+    /// <param name="message">ASCII message to send.</param>
     public async Task SendAsync(string message)
     {
         await _writeSemaphore.WaitAsync();
@@ -89,6 +99,10 @@ public class TCPClient : IDisposable
         }
     }
 
+    /// <summary>
+    /// Reads data from the TCP stream, retrying on transient errors. Returns null on timeout or disconnect.
+    /// </summary>
+    /// <returns>Received ASCII string, or null if no data.</returns>
     public async Task<string?> ReadAsync()
     {
         await _readSemaphore.WaitAsync();
@@ -141,6 +155,9 @@ public class TCPClient : IDisposable
         return hex.ToString().Trim();  // Trim to remove the trailing space
     }
 
+    /// <summary>
+    /// Releases internal resources and closes the TCP connection.
+    /// </summary>
     public void Dispose()
     {
         Disconnect();

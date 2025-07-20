@@ -3,6 +3,10 @@ using Microsoft.Extensions.Options;
 using TSISP003_Net.Settings;
 using TSISP003_Net.TCP;
 
+
+/// <summary>
+/// Factory that creates and manages SignControllerService instances for each configured sign device.
+/// </summary>
 namespace TSISP003_Net.SignControllerService;
 
 public class SignControllerServiceFactory : IHostedService
