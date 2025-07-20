@@ -1,38 +1,57 @@
+using System;
+using System.Threading;
+using System.Threading.Tasks;
 using System.Net.Sockets;
 using System.Text;
 
 namespace TSISP003_Net.TCP;
 
-public class TCPClient
+public class TCPClient : IDisposable
 {
     private readonly string _ipAddress;
     private readonly int _port;
-    private TcpClient _client;
-    private string _name;
-    private SemaphoreSlim _readSemaphore = new SemaphoreSlim(1, 1);
-    private SemaphoreSlim _writeSemaphore = new SemaphoreSlim(1, 1);
+    private TcpClient? _client;
+    private readonly string _name;
+    private readonly SemaphoreSlim _readSemaphore = new(1, 1);
+    private readonly SemaphoreSlim _writeSemaphore = new(1, 1);
+
+    private const int MaxRetries = 3;
+    private static readonly TimeSpan RetryDelay = TimeSpan.FromSeconds(1);
+    private static readonly TimeSpan ReadTimeout = TimeSpan.FromSeconds(1);
 
     public TCPClient(string ipAddress, int port, string name)
     {
         _ipAddress = ipAddress;
         _port = port;
-        _client = new TcpClient();
+        _client = null;
         _name = name;
     }
 
     private async Task ConnectAsync()
     {
         Disconnect();
-        if (_client == null) _client = new TcpClient();
-        await _client.ConnectAsync(_ipAddress, _port);
+        for (var attempt = 1; ; attempt++)
+        {
+            _client = new TcpClient();
+            try
+            {
+                await _client.ConnectAsync(_ipAddress, _port);
+                return;
+            }
+            catch (SocketException) when (attempt < MaxRetries)
+            {
+                await Task.Delay(RetryDelay);
+            }
+        }
     }
 
     public void Disconnect()
     {
         if (_client != null)
         {
-            _client.Close();
-            _client = null;
+            try { _client.Close(); }
+            catch { }
+            finally { _client = null; }
         }
     }
 
@@ -41,18 +60,27 @@ public class TCPClient
         await _writeSemaphore.WaitAsync();
         try
         {
-            if (_client == null || !_client.Connected)
-                await ConnectAsync();
-
-            if (_client.Connected)
+            var data = Encoding.ASCII.GetBytes(message);
+            for (var attempt = 1; attempt <= MaxRetries; attempt++)
             {
-                NetworkStream stream = _client.GetStream();
-                byte[] data = Encoding.ASCII.GetBytes(message);
+                if (_client == null || !_client.Connected)
+                    await ConnectAsync();
 
-                Console.WriteLine(DateTime.Now.ToString($"{_name} - MM/dd/yyyy HH:mm:ss.fff") + " 1 --> " + DateTime.Now.ToString("MM/dd/yyyy HH:mm:ss")
-                            + " => " + BytesToHexString(data, data.Length));
+                if (_client?.Connected != true)
+                    continue;
 
-                await stream.WriteAsync(data, 0, data.Length);
+                try
+                {
+                    var stream = _client.GetStream();
+                    Console.WriteLine($"{DateTime.Now:MM/dd/yyyy HH:mm:ss.fff} {_name} => {BytesToHexString(data, data.Length)}");
+                    await stream.WriteAsync(data, 0, data.Length);
+                    return;
+                }
+                catch (IOException) when (attempt < MaxRetries)
+                {
+                    Disconnect();
+                    await Task.Delay(RetryDelay);
+                }
             }
         }
         finally
@@ -61,28 +89,42 @@ public class TCPClient
         }
     }
 
-    public async Task<string> ReadAsync()
+    public async Task<string?> ReadAsync()
     {
         await _readSemaphore.WaitAsync();
         try
         {
-            CancellationTokenSource cts = new CancellationTokenSource(1000);
-
-            if (!_client.Connected)
-                await ConnectAsync();
-
-            NetworkStream stream = _client.GetStream();
-            byte[] buffer = new byte[4096];
-            using (MemoryStream ms = new MemoryStream())
+            var buffer = new byte[4096];
+            for (var attempt = 1; attempt <= MaxRetries; attempt++)
             {
-                int bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, cts.Token);
-                if (bytesRead > 0) ms.Write(buffer, 0, bytesRead);
+                if (_client == null || !_client.Connected)
+                    await ConnectAsync();
 
-                Console.WriteLine(DateTime.Now.ToString($"{_name} - MM/dd/yyyy HH:mm:ss.fff") + " 1 --> " + DateTime.Now.ToString("MM/dd/yyyy HH:mm:ss")
-                    + " <= " + BytesToHexString(buffer, bytesRead));
+                if (_client?.Connected != true)
+                    continue;
 
-                return Encoding.ASCII.GetString(ms.ToArray());
+                try
+                {
+                    using var cts = new CancellationTokenSource(ReadTimeout);
+                    var stream = _client.GetStream();
+                    var bytesRead = await stream.ReadAsync(buffer, 0, buffer.Length, cts.Token);
+                    if (bytesRead <= 0)
+                        return null;
+
+                    Console.WriteLine($"{DateTime.Now:MM/dd/yyyy HH:mm:ss.fff} {_name} <= {BytesToHexString(buffer, bytesRead)}");
+                    return Encoding.ASCII.GetString(buffer, 0, bytesRead);
+                }
+                catch (OperationCanceledException) when (attempt < MaxRetries)
+                {
+                    // timeout, retry
+                }
+                catch (IOException) when (attempt < MaxRetries)
+                {
+                    Disconnect();
+                    await Task.Delay(RetryDelay);
+                }
             }
+            return null;
         }
         finally
         {
@@ -91,7 +133,7 @@ public class TCPClient
     }
 
 
-    static string BytesToHexString(byte[] bytes, int length)
+    private static string BytesToHexString(byte[] bytes, int length)
     {
         StringBuilder hex = new StringBuilder(length * 2);
         for (int i = 0; i < length; i++)
@@ -99,4 +141,10 @@ public class TCPClient
         return hex.ToString().Trim();  // Trim to remove the trailing space
     }
 
+    public void Dispose()
+    {
+        Disconnect();
+        _readSemaphore.Dispose();
+        _writeSemaphore.Dispose();
+    }
 }
