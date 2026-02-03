@@ -1,4 +1,4 @@
-using TSISP003.SignControllerDataStore.Entities;
+using TSISP003_Net.SignControllerDataStore.Entities;
 
 namespace TSISP003_Net.SignControllerDataStore.Entities;
 

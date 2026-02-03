@@ -81,10 +81,90 @@ public class SignSetTextFrameDto
     public required string Text { get; set; }
 }
 
+public class SignSetMessageDto
+{
+    public byte MessageID { get; set; }
+    public byte Revision { get; set; }
+    public byte TransitionTimeBetweenFrames { get; set; }
+    public byte Frame1ID { get; set; }
+    public byte Frame1Time { get; set; }
+    public byte Frame2ID { get; set; }
+    public byte Frame2Time { get; set; }
+    public byte Frame3ID { get; set; }
+    public byte Frame3Time { get; set; }
+    public byte Frame4ID { get; set; }
+    public byte Frame4Time { get; set; }
+    public byte Frame5ID { get; set; }
+    public byte Frame5Time { get; set; }
+    public byte Frame6ID { get; set; }
+    public byte Frame6Time { get; set; }
+}
+
+public class ExtendedRequestMessageDto
+{
+    public byte TransitionTimeBetweenFrames { get; set; }
+    public ExtendedTextFrameDto? Frame1 { get; set; }
+    public byte Frame1Time { get; set; }
+    public ExtendedTextFrameDto? Frame2 { get; set; }
+    public byte Frame2Time { get; set; }
+    public ExtendedTextFrameDto? Frame3 { get; set; }
+    public byte Frame3Time { get; set; }
+    public ExtendedTextFrameDto? Frame4 { get; set; }
+    public byte Frame4Time { get; set; }
+    public ExtendedTextFrameDto? Frame5 { get; set; }
+    public byte Frame5Time { get; set; }
+    public ExtendedTextFrameDto? Frame6 { get; set; }
+    public byte Frame6Time { get; set; }
+}
+
+public class ExtendedTextFrameDto
+{
+    public byte Font { get; set; }
+    public byte Colour { get; set; }
+    public byte Conspicuity { get; set; }
+    public required string Text { get; set; }
+}
+
+public class SignDisplayMessageDto
+{
+    public byte GroupID { get; set; }
+    public byte MessageID { get; set; }
+}
+
+public class SignDisplayFrameDto
+{
+    public byte SignID { get; set; }
+    public byte FrameID { get; set; }
+}
+
+public class SignDisplayAtomicFrameDto
+{
+    public byte GroupID { get; set; }
+    public byte NumbeOfSigns { get; set; }
+    public List<SignDisplayFrameDto> Frames { get; set; } = new();
+}
+
+
+public class AckReplyDto
+{
+}
+
 public class SignRequestStoredFrameMessagePlanDto
 {
     [Range(0, 2, ErrorMessage = "TypeRequest must be 0 (frame), 1 (message), or 2 (plan)")]
     public byte TypeRequest { get; set; }
 
     public byte RequestID { get; set; }
+}
+
+public class PowerOnOffCommandDto
+{
+    public byte GroupID { get; set; }
+    public bool PoweredOn { get; set; }
+}
+
+public class RejectReplyDto
+{
+    public byte ApplicationErrorCode { get; set; }
+    public string? ApplicationErrorDescription { get; set; }
 }

@@ -1,8 +1,11 @@
 using TSISP003_Net.SignControllerDataStore.Entities;
 using static TSISP003_Net.Utils.Enums;
 
-namespace TSISP003.SignControllerService;
+namespace TSISP003_Net.SignControllerService;
 
+/// <summary>
+/// Defines operations for communicating with a sign controller device.
+/// </summary>
 public interface ISignControllerService : IHostedService
 {
     Task<SignStatusReply> GetStatus();
@@ -13,22 +16,22 @@ public interface ISignControllerService : IHostedService
     Task EndSession();
     Task SystemReset(byte groupId, byte resetLevel);
     Task UpdateTime();
-    Task SignSetTextFrame();
+    Task<SignStatusReply> SignSetTextFrame(SignSetTextFrame request);
     Task SignSetGraphicsFrame();
     Task SignSetHighResolutionGraphicsFrame();
     Task SignConfigurationRequest();
-    Task SignDisplayAtomicFrames();
-    Task SignSetMessage();
+    Task<AckReply> SignDisplayAtomicFrames(SignDisplayAtomicFrame request);
+    Task<SignStatusReply> SignSetMessage(SignSetMessage request);
     Task SignSetPlan();
-    Task SignDisplayFrame();
-    Task SignDisplayMessage();
+    Task<AckReply> SignDisplayFrame(SignDisplayFrame request);
+    Task<AckReply> SignDisplayMessage(SignDisplayMessage request);
     Task EnablePlan();
     Task DisablePlan();
     Task RequestEnabledPlans();
     Task SignSetDimmingLevel();
-    Task PowerOnOff();
+    Task<AckReply> PowerOnOff(byte groupId, bool powerOn);
     Task DisableEnableDevice();
-    Task<SignSetTextFrame> SignRequestStoredFrameMessagePlan(RequestType requestType, byte requestID);
+    Task<ISignResponse> SignRequestStoredFrameMessagePlan(RequestType requestType, byte requestID);
     Task SignExtendedStatusRequest();
     Task<List<FaultLogEntry>> RetrieveFaultLog();
     Task ResetFaultLog();
@@ -64,4 +67,6 @@ public interface ISignControllerService : IHostedService
     Task ProcessSignSetMessage(string applicationData);
     Task ProcessSignSetPlan(string applicationData);
     Task ProcessRejectMessage(string applicationData);
+    Task ProcessAckMessage(string applicationData);
+    Task<bool> ExtendedRequestMessage(ExtendedRequestMessageDto request);
 }

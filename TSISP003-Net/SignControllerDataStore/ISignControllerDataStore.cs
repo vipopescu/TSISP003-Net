@@ -1,6 +1,6 @@
 using TSISP003_Net.SignControllerDataStore.Entities;
 
-namespace TSISP003.SignControllerDataStore;
+namespace TSISP003_Net.SignControllerDataStore;
 
 public interface ISignControllerDataStore
 {

@@ -54,6 +54,44 @@ public class ErrorCodes
 
     public static readonly Dictionary<int, string> ApplicationErrorCodes = new Dictionary<int, string>
     {
-        { 0x00, "No error" }
+        { 0x00, "No error" },
+        { 0x01, "Device controller off-line" },
+        { 0x02, "Syntax error in command" },
+        { 0x03, "Length error in command - Application message is too long or too short" },
+        { 0x04, "Data checksum error" },
+        { 0x05, "Text with non ASCII characters" },
+        { 0x06, "Frame too large for sign - The number of characters sent exceeds the number of characters capable of being displayed by the sign in that font; or the length of the graphics frame exceeds the graphics frame capabilities of the sign." },
+        { 0x07, "Unknown MI Code" },
+        { 0x08, "MI Code not supported by device controller" },
+        { 0x09, "Power is OFF" },
+        { 0x0A, "Undefined device number" },
+        { 0x0B, "Font not supported" },
+        { 0x0C, "Colour not supported" },
+        { 0x0D, "Overlaps/overlays not supported" },
+        { 0x0E, "Dimming level not supported" },
+        { 0x0F, "Frame, message, plan, voice or strategy currently active" },
+        { 0x10, "Facility Switch override" },
+        { 0x11, "Conspicuity device definition not supported by device controller" },
+        { 0x12, "Transition time not supported" },
+        { 0x13, "Frame, message or plan undefined" },
+        { 0x14, "Plan not enabled" },
+        { 0x15, "Plan enabled" },
+        { 0x16, "Size mismatch - The number of pixel rows or the number of pixel columns required by the message do not match the respective pixel row/column display capabilities of the sign." },
+        { 0x17, "Frame too small - The number of characters sent equals 0; or the length of a graphics frame equals 0; or the length of the graphics frame is less than the graphics frame display capabilities of the sign." },
+        { 0x18, "HAR strategy stopped by master" },
+        { 0x19, "HAR voice or strategy undefined" },
+        { 0x1A, "HAR error in strategy definition" },
+        { 0x1B, "HAR voice data error" },
+        { 0x1C, "HAR voice format not supported by device controller" },
+        { 0x1D, "HAR hardware error" },
+        { 0x1E, "Time expired" },
+        { 0x1F, "Colour depth not supported" },
+        { 0x20, "Incomplete colour frame definition" },
+        { 0x21, "Incorrect password" },
+        { 0x22, "Interlocking reject (invalid settings)" },
+        { 0x23, "Interlocking reject (missing signs)" },
+        { 0x24, "Interlocking not active" },
+        { 0x25, "Interlocking active" }
     };
+
 }

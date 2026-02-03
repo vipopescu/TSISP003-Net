@@ -1,4 +1,4 @@
-namespace TSISP003.SignControllerDataStore.Entities;
+namespace TSISP003_Net.SignControllerDataStore.Entities;
 
 public class Frame
 {

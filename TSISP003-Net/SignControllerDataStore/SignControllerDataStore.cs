@@ -1,7 +1,7 @@
 using System.Collections.Concurrent;
 using TSISP003_Net.SignControllerDataStore.Entities;
 
-namespace TSISP003.SignControllerDataStore;
+namespace TSISP003_Net.SignControllerDataStore;
 
 public class SignControllerDataStore : ISignControllerDataStore
 {
