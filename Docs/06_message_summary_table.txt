@@ -1,0 +1,791 @@
+3.6.4
+
+Page 93 of 110 pages
+
+Summary of Message Information Codes
+The following table gives a summary of the Message Information (MI)
+codes:
+Message Name
+
+MI Code
+(Hex)
+
+Reject Message
+
+00
+
+VMS,VSLS,ISLUS,HAR,Environmental/
+Weather
+
+Acknowledge (*ACK)
+
+01
+
+VMS,VSLS,ISLUS,HAR,Environmental/
+Weather
+
+Start Session
+
+02
+
+VMS,VSLS,ISLUS,HAR,Environmental/
+Weather
+
+Password Seed
+
+03
+
+VMS,VSLS,ISLUS,HAR,Environmental/
+Weather
+
+Password
+
+04
+
+VMS,VSLS,ISLUS,HAR,Environmental/
+Weather
+
+Heartbeat Poll
+
+05
+
+VMS,VSLS,ISLUS,HAR,Environmental/
+Weather
+
+Sign Status Reply
+
+06
+
+VMS,VSLS,ISLUS
+
+End Session
+
+07
+
+VMS,VSLS,ISLUS,HAR,Environmental/
+Weather
+
+System Reset
+
+08
+
+VMS,VSLS,ISLUS,HAR,Environmental/
+Weather
+
+Update Time
+
+09
+
+VMS,VSLS,ISLUS,HAR,Environmental/
+Weather
+
+Sign Set Text Frame
+
+0A
+
+VMS,VSLS,ISLUS
+
+Sign Set Graphics Frame
+
+0B
+
+VMS,VSLS,ISLUS
+
+Sign Set Message
+
+0C
+
+VMS,VSLS,ISLUS
+
+Sign Set Plan
+
+0D
+
+VMS,VSLS,ISLUS
+
+Sign Display Frame
+
+0E
+
+VMS,VSLS,ISLUS
+
+Sign Display Message
+
+0F
+
+VMS,VSLS,ISLUS
+
+Enable Plan
+
+10
+
+VMS,VSLS,ISLUS,HAR
+
+Disable Plan
+
+11
+
+VMS,VSLS,ISLUS,HAR
+
+Request Enabled Plans
+
+12
+
+VMS,VSLS,ISLUS,HAR
+
+Report Enabled Plans
+
+13
+
+VMS,VSLS,ISLUS,HAR
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Applicable Device Types
+
+Specification TSI-SP-003, Issue 5.0
+Message Name
+
+Page 94 of 110 pages
+MI Code
+(Hex)
+
+Applicable Device Types
+
+Sign Set Dimming Level
+
+14
+
+VMS,VSLS,ISLUS
+
+Power ON/OFF
+
+15
+
+VMS,VSLS,ISLUS,HAR,Environmental/
+Weather
+
+Disable/Enable Device
+
+16
+
+VMS,VSLS,ISLUS,HAR,Environmental/
+Weather
+
+Sign Request Stored
+Frame/Message/Plan
+
+17
+
+VMS,VSLS,ISLUS
+
+Retrieve Fault Log
+
+18
+
+VMS,VSLS,ISLUS,HAR,Environmental/
+Weather
+
+Fault Log Reply
+
+19
+
+VMS,VSLS,ISLUS,HAR,Environmental/
+Weather
+
+Reset Fault Log
+
+1A
+
+VMS,VSLS,ISLUS,HAR,Environmental/
+Weather
+
+Sign Extended Status
+Request
+
+1B
+
+VMS,VSLS,ISLUS
+
+Sign Extended Status
+Reply
+
+1C
+
+VMS,VSLS,ISLUS
+
+Sign Set High Resolution
+Graphics Frame
+
+1D
+
+VMS,VSLS,ISLUS
+
+Sign Configuration
+Request
+
+21
+
+VMS,VSLS,ISLUS
+
+Sign Configuration Reply
+
+22
+
+VMS,VSLS,ISLUS
+
+Sign Display Atomic
+Frames
+
+2B
+
+VMS,VSLS,ISLUS
+
+HAR Status Reply
+
+40
+
+HAR
+
+HAR Set Voice Data
+(Incomplete)
+
+41
+
+HAR
+
+HAR Set Voice Data
+(Complete)
+
+42
+
+HAR
+
+HAR Set Strategy
+
+43
+
+HAR
+
+HAR Activate Strategy
+
+44
+
+HAR
+
+HAR Set Plan
+
+45
+
+HAR
+
+HAR Request Stored
+Voice/Strategy/Plan
+
+46
+
+HAR
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+Message Name
+
+Page 95 of 110 pages
+MI Code
+(Hex)
+
+Applicable Device Types
+
+HAR Set Voice Data ACK
+
+47
+
+HAR
+
+HAR Set Voice Data NAK
+
+48
+
+HAR
+
+Environmental/Weather
+Status Reply
+
+80
+
+Environmental/Weather
+
+Request
+Environmental/Weather
+Values
+
+81
+
+Environmental/Weather
+
+Environmental/Weather
+Values
+
+82
+
+Environmental/Weather
+
+Environmental/Weather
+Threshold Definition
+
+83
+
+Environmental/Weather
+
+Request Threshold
+Definition
+
+84
+
+Environmental/Weather
+
+Request
+Environmental/Weather
+Event Log
+
+85
+
+Environmental/Weather
+
+Environmental/Weather
+Event Log Reply
+
+86
+
+Environmental/Weather
+
+Reset
+Environmental/Weather
+Event Log
+
+87
+
+Environmental/Weather
+
+[Reserved MI codes]
+
+C0 to DF
+
+[Allocated to other use]
+
+Manufacturer Specific
+Messages
+
+F0 to FF
+
+VMS,VSLS,ISLUS,HAR,Environmental/
+Weather
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+3.6.5
+
+Page 96 of 110 pages
+
+Summary of Commands and Responses
+The following table shows the expected response from the device
+controller to each master command:
+Message Name
+
+MI
+
+Expected Response
+
+MI
+
+Start Session
+
+02
+
+Password Seed
+
+03
+
+Password
+
+04
+
+*ACK
+
+01
+
+Heartbeat Poll
+
+05
+
+Sign Status Reply
+HAR Status Reply
+Environmental/Weather Status
+Reply, as relevant
+
+06
+40
+
+End Session
+
+07
+
+*ACK
+
+01
+
+System Reset
+
+08
+
+*ACK
+
+01
+
+Update Time
+
+09
+
+*ACK
+
+01
+
+Sign Set Text Frame
+
+0A
+
+Sign Status Reply
+
+06
+
+Sign Set Graphics Frame
+
+0B
+
+Sign Status Reply
+
+06
+
+Sign Set High Resolution
+Graphics Frame
+
+1D
+
+Sign Status Reply
+
+06
+
+Sign Configuration Request
+
+21
+
+Sign Configuration Reply
+
+22
+
+Sign Display Atomic Frames
+
+2B
+
+Sign Status Reply
+
+06
+
+Sign Set Message
+
+0C
+
+Sign Status Reply
+
+06
+
+Sign Set Plan
+
+0D
+
+Sign Status Reply
+
+06
+
+Sign Display Frame
+
+0E
+
+*ACK
+
+01
+
+Sign Display Message
+
+0F
+
+*ACK
+
+01
+
+Enable Plan
+
+10
+
+*ACK
+
+01
+
+Disable Plan
+
+11
+
+*ACK
+
+01
+
+Request Enabled Plans
+
+12
+
+Report Enabled Plans
+
+13
+
+Sign Set Dimming Level
+
+14
+
+*ACK
+
+01
+
+Power ON/OFF
+
+15
+
+*ACK
+
+01
+
+Disable/Enable Device
+
+16
+
+*ACK
+
+01
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 97 of 110 pages
+
+Message Name
+
+MI
+
+Expected Response
+
+MI
+
+Sign Request Stored
+Frame/Message/Plan
+
+17
+
+Sign Set Text Frame, Sign Set
+Graphics Frame, Sign Set
+High Resolution Graphics
+Frame, Sign Set Message or
+Sign Set Plan, as relevant
+
+0A
+0B
+1D
+0C
+0D
+
+Sign Extended Status Request
+
+1B
+
+Sign Extended Status Reply
+
+1C
+
+Retrieve Fault Log
+
+18
+
+Fault Log Reply
+
+19
+
+Reset Fault Log
+
+1A
+
+*ACK
+
+01
+
+HAR Set Voice Data
+(InComplete)
+
+41
+
+HAR Voice Data ACK,
+HAR Voice Data NAK, as
+relevant
+
+47
+48
+
+HAR Set Voice Data (Complete)
+
+42
+
+HAR Status Reply,
+HAR Voice Data NAK, as
+relevant
+
+40
+48
+
+HAR Set Strategy
+
+43
+
+HAR Status Reply
+
+40
+
+HAR Activate Strategy
+
+44
+
+*ACK
+
+01
+
+HAR Set Plan
+
+45
+
+HAR Status Reply
+
+40
+
+HAR Request Stored
+Voice/Strategy/Plan
+
+46
+
+HAR Set Strategy, HAR Set
+Voice Data (Incomplete &
+Complete), HAR Set Plan,
+HAR Voice Data NAK, as
+relevant
+
+43
+41
+42
+45
+48
+
+Request
+Environmental/Weather Values
+
+81
+
+Environmental/Weather
+Values
+
+82
+
+Environmental/Weather
+Threshold Definition
+
+83
+
+Environmental/Weather Status
+Reply
+
+80
+
+Request Threshold Definition
+
+84
+
+Environmental/Weather
+Threshold Definition
+
+83
+
+Request
+Environmental/Weather Event
+Log
+
+85
+
+Environmental/Weather Event
+Log Reply
+
+86
+
+Reset Environmental/Weather
+Event Log
+
+87
+
+*ACK
+
+01
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+3.6.6
+
+Page 98 of 110 pages
+
+Example of Application Layer Exchange
+The following table shows an application layer exchange example:
+Master to Slave
+
+Slave to Master
+
+Comment
+
+Start Session
+Password Seed
+Password
+*ACK
+
+Link Established
+
+Heartbeat Poll
+Status Reply
+Extended Status Request
+Extended Status Reply
+End Session
+*ACK
+
+Disconnect Data Link
+
+Heartbeat Poll
+Status Reply
+Extended Status Request
+Reject
+
+********
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+No Link Established
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 99 of 110 pages
+

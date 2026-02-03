@@ -1,0 +1,2326 @@
+3.6.3.1
+
+Reject
+Direction: Controller to Master
+Message Size: 3 bytes
+Description: A REJECT reply is sent whenever a device controller is
+unable to carry-out a command or when a corrupted application
+message is received. A REJECT message is effectively an
+application layer NAK. The 'application error code' contains a number
+which identifies the error. A list of application error codes is given in
+appendix C.
+When the master receives a REJECT message the application
+software responds according to the application error code. If an
+unrecoverable error occurs at the device controller, the application
+software running on the master should ensure that the
+communications don't lock-up. This can be done by limiting the
+number of application message retries.
+Example: If a device controller which is not 'on-line' is sent a
+message other than an HEARTBEAT POLL command, the device
+controller responds with a REJECT message with the MI Code of the
+rejected message and the application error code 01 (indicating 'offline').
+Content:
+Position
+
+Bytes
+
+Value
+
+Description
+
+1
+
+1
+
+MI Code
+
+00h
+
+2
+
+1
+
+BYTE
+
+Rejected MI Code
+
+3
+
+1
+
+BYTE
+
+Application error code (see appendix C)
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+3.6.3.2
+
+Page 29 of 110 pages
+
+Acknowledge (*ACK)
+Direction: Controller to Master
+Message Size: 2 bytes
+Description: Certain messages are acknowledged at the application
+layer by containing the MI code of the message being acknowledged.
+See 3.6.5 for a complete list of messages acknowledged in this way.
+Content:
+
+3.6.3.3
+
+Position
+
+Bytes
+
+Value
+
+Description
+
+1
+
+1
+
+MI Code
+
+01h
+
+2
+
+1
+
+BYTE
+
+Acknowledged MI Code
+
+Start Session
+Direction: Master to Controller
+Message Size: 1 byte
+Description: The START SESSION command is used to open a
+session in the device controller.
+Content:
+Position
+
+Bytes
+
+Value
+
+Description
+
+1
+
+1
+
+MI Code
+
+02h
+
+Comments:
+•
+
+3.6.3.4
+
+A Start Session command received while online shall cause the
+existing session to be closed before opening the new session.
+
+Password Seed
+Direction: Controller to Master
+Message Size: 2 bytes
+Description: The PASSWORD SEED reply is sent by the device
+controller as a reply to the START SESSION Command.
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 30 of 110 pages
+
+Content:
+
+3.6.3.5
+
+Position
+
+Bytes
+
+Value
+
+Description
+
+1
+
+1
+
+MI Code
+
+03h
+
+2
+
+1
+
+BYTE
+
+Randomly generated number
+
+Password
+Direction: Master to Controller
+Message Size: 3 bytes
+Description: The PASSWORD command contains a 16 bit number
+calculated from the password seed. A correct password establishes a
+communication session between the master and the device
+controller.
+Content:
+
+3.6.3.6
+
+Position
+
+Bytes
+
+Value
+
+Description
+
+1
+
+1
+
+MI Code
+
+04h
+
+2
+
+2
+
+WORD
+
+Password
+
+Heartbeat Poll
+Direction: Master to Controller
+Message Size: 1 byte
+Description: The HEARTBEAT POLL command is sent by the master,
+periodically, to all the slaves on the link. The HEARTBEAT POLL is
+the only message sent to device controllers which are 'off-line' as well
+as to those which are 'on-line'.
+Content:
+Position
+
+Bytes
+
+Value
+
+Description
+
+1
+
+1
+
+MI Code
+
+05h
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+3.6.3.7
+
+Page 31 of 110 pages
+
+Sign Status Reply
+Direction: Sign Controller to Master
+Message Size: Variable
+Description: The SIGN STATUS REPLY message is sent by the sign
+controller to the master as a response to a HEARTBEAT POLL
+Command. The SIGN STATUS REPLY Message contains the basic
+status information of the sign controller and the signs attached to it.
+Content:
+Position
+
+Bytes
+
+Value
+
+Description
+
+1
+
+1
+
+MI Code
+
+06h
+
+2
+
+1
+
+BYTE
+
+'off-line'/'on-Line' status (0/1)
+
+3
+
+1
+
+BYTE
+
+application error code (see Appendix C)
+
+4
+
+1
+
+BYTE
+
+day (1-31)
+
+5
+
+1
+
+BYTE
+
+month (1-12)
+
+6
+
+2
+
+WORD
+
+year (1-9999)
+
+8
+
+1
+
+BYTE
+
+hours (0-23)
+
+9
+
+1
+
+BYTE
+
+minutes (0-59)
+
+10
+
+1
+
+BYTE
+
+seconds (0-59)
+
+11
+
+2
+
+WORD
+
+controller hardware checksum
+
+13
+
+1
+
+BYTE
+
+controller error code (see Appendix C)
+
+14
+
+1
+
+BYTE
+
+number of signs attached to the sign
+controller.
+
+15
+
+1
+
+BYTE
+
+*sign ID
+
+16
+
+1
+
+BYTE
+
+*sign error code (see Appendix C)
+
+17
+
+1
+
+BYTE
+
+*sign disabled/enabled (0/1)
+
+18
+
+1
+
+BYTE
+
+*frame ID displayed (0 if no frame is
+displayed)
+
+19
+
+1
+
+BYTE
+
+*revision - identifies the modification level
+of the frame
+
+20
+
+1
+
+BYTE
+
+*message ID displayed (0 if no message is
+displayed)
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 32 of 110 pages
+
+Position
+
+Bytes
+
+Value
+
+Description
+
+21
+
+1
+
+BYTE
+
+*revision - identifies the modification level
+of the message
+
+22
+
+1
+
+BYTE
+
+*plan ID displayed (0 if no plan is
+displayed)
+
+23
+
+1
+
+BYTE
+
+*revision - identifies the modification level
+of the plan
+
+*field may be repeated depending on the number of signs attached to
+the sign controller.
+Comments:
+
+3.6.3.8
+
+•
+
+The application error code field indicates the current application
+error. If no error exists, this field is set to zero.
+
+•
+
+The controller and sign error code fields indicate the current error
+(fault) present in the controller or sign. When a change in fault
+status occurs (fault occurrence or clearance), the error code field
+shall be updated to trigger the retrieval of the fault log by the
+master. If no error (fault) exists, this field is set to zero, and
+indicates to the master that all faults are cleared for the
+respective controller or sign. If other faults are still active, the
+error code field shall be set to one of those error codes. If the
+error code cannot be set to a different value, FF Hex shall be
+used.
+
+•
+
+The controller hardware checksum is used to check the sign
+controller’s memory. The master uses this to verify that the sign
+controller’s memory locations have not changed. Set Frame, Set
+Message and Set Plan return a Status Reply as these commands
+affect the sign controller hardware checksum. Note that in some
+instances the System Reset command affects the hardware
+checksum. In these instances, the master must send a Heartbeat
+Poll to obtain the new hardware checksum.
+
+End Session
+Direction: Master to Controller
+Message Size: 1 byte
+Description: The END SESSION command is used to close a session
+in the device controller. Once the session is terminated, the only
+messages exchanged between the master and the controller are
+HEARTBEAT POLL and the device specific STATUS REPLY.
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 33 of 110 pages
+
+Content:
+
+3.6.3.9
+
+Position
+
+Bytes
+
+Value
+
+Description
+
+1
+
+1
+
+MI Code
+
+07h
+
+System Reset
+Direction: Master to Controller
+Message Size: 3 byte
+Description: The SYSTEM RESET command is used to reset the
+device controller.
+Content:
+Position
+
+Bytes
+
+Value
+
+Description
+
+1
+
+1
+
+MI Code
+
+08h
+
+2
+
+1
+
+BYTE
+
+group ID - zero for device controller or
+non-zero for a specific device or group of
+devices
+
+3
+
+1
+
+BYTE
+
+reset level
+
+Comments
+For Signs:
+•
+
+A reset level of zero shall blank the display, turn off the
+conspicuity devices (if on), set to automatic dimming mode, deactivate any active frame or message and enable the sign group.
+Where the group ID is zero, these actions shall be applied to all
+attached signs.
+
+•
+
+A reset level of one shall perform all the actions associated with a
+reset level zero in addition to disabling all plans. Where the group
+ID is zero, these actions shall be applied to all attached signs.
+
+•
+
+A reset level of two shall perform all the actions associated with a
+reset level one in addition to resetting all faults and the fault log.
+Reset level two only applies to a group ID of zero.
+
+•
+
+A reset level of three shall perform all the actions associated with
+a reset level two in addition to clearing of all frames, messages
+and plans. Reset level three only applies to a group ID of zero.
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+•
+
+Page 34 of 110 pages
+
+A reset level of 255 shall perform all the actions associated with a
+reset level three in addition to restoring to factory settings.
+Factory settings shall include the seed offset, password offset,
+baud rate, parity, etc but not the device address. Reset level 255
+only applies to a group ID of zero. Reset level 255 shall not
+cause the device controller to change to the off-line state.
+
+For Environmental/Weather Stations:
+NOTE:
+
+The group ID is always zero for all reset levels for
+environmental/weather stations.
+
+•
+
+A reset level of zero is not used.
+
+•
+
+A reset level of one is not used.
+
+•
+
+A reset level of two shall perform all the actions associated with a
+reset level one in addition to resetting all faults and the fault log.
+
+•
+
+A reset level of three shall perform all the actions associated with
+a reset level two in addition to clearing of all
+environmental/weather thresholds and the environmental/weather
+event log.
+
+•
+
+A reset level of 255 shall perform all the actions associated with a
+reset level three in addition to restoring to factory settings.
+Factory settings shall include the seed offset, password offset,
+baud rate, parity, etc but not the device address. Reset level 255
+shall not cause the device controller to change to the off-line
+state.
+
+For HAR:
+NOTE:
+
+The group ID is always zero for all reset levels for HAR.
+
+•
+
+A reset level of zero shall stop the broadcast, de-activate any
+active strategy and enable the HAR.
+
+•
+
+A reset level of one is not used.
+
+•
+
+A reset level of two shall perform all the actions associated with a
+reset level one in addition to resetting all faults and the fault log.
+
+•
+
+A reset level of three shall perform all the actions associated with
+a reset level two in addition to clearing of all voice data files and
+strategies.
+
+•
+
+A reset level of 255 shall perform all the actions associated with a
+reset level three in addition to restoring to factory settings.
+Factory settings shall include the seed offset, password offset,
+baud rate, parity, etc but not the device address. Reset level 255
+shall not cause the device controller to change to the off-line
+state.
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+3.6.3.10
+
+Page 35 of 110 pages
+
+Update Time
+Direction: Master to Controller
+Message Size: 8 bytes
+Description: The UPDATE TIME command is used to update the real
+time clock in the device controller. In a multi-drop arrangement, the
+UPDATE TIME Message is typically broadcast (sent using the
+broadcast address) to all the slaves in the link.
+Content:
+
+3.6.3.11
+
+Position
+
+Bytes
+
+Value
+
+Description
+
+1
+
+1
+
+MI Code
+
+09h
+
+2
+
+1
+
+BYTE
+
+Day (1-31)
+
+3
+
+1
+
+BYTE
+
+Month (1-12)
+
+4
+
+2
+
+WORD
+
+Year (1-9999)
+
+6
+
+1
+
+BYTE
+
+Hours (0-23)
+
+7
+
+1
+
+BYTE
+
+Minutes (0-59)
+
+8
+
+1
+
+BYTE
+
+Seconds (0-59)
+
+Sign Set Text Frame
+Direction: Master to Sign Controller and Sign Controller to Master
+(bidirectional)
+Message Size: Variable
+Description: The SIGN SET TEXT FRAME message is used to store
+a frame in the memory of the sign controller. The number of frames
+that can be stored in the controller's memory and the maximum size
+of the frames vary according to the sign. The protocol allows a
+maximum of 255 pre-set frames, where:
+•
+
+Frame number 00 Hex cannot be set and always means to
+reinstate the display from the current active plan or blank the sign
+if no plan is active.
+
+•
+
+Frames 01 up to FF Hex can be pre-set using the SIGN SET
+TEXT FRAME Command.
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 36 of 110 pages
+
+This message is also used by the controller to report stored text
+frames.
+Content:
+Position
+
+Bytes
+
+Value
+
+Description
+
+1
+
+1
+
+MI Code
+
+0Ah
+
+2
+
+1
+
+BYTE
+
+frame ID - identifies the frame as it is
+stored in the sign controller's memory
+
+3
+
+1
+
+BYTE
+
+revision - identifies the modification
+level of the frame
+
+4
+
+1
+
+BYTE
+
+font
+
+5
+
+1
+
+BYTE
+
+colour
+
+6
+
+1
+
+BYTE
+
+conspicuity devices
+
+7
+
+1
+
+BYTE
+
+number of alphanumeric characters in
+frame
+
+8
+
+variable
+
+BYTE
+
+text frame
+
+…
+
+2
+
+WORD
+
+message CRC - calculated for all the
+bytes in the application message
+
+Comments
+•
+
+Manufacturers may define other fonts by contacting RMS. Font
+zero is reserved for the sign’s default character font. The codes
+for fonts are as follows:
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Font
+
+Value
+
+Default
+
+0
+
+Fixed Width (Text)
+
+1
+
+Proportional
+
+2
+
+Bold
+
+3
+
+Double Height
+
+4
+
+Full Height
+
+5
+
+Specification TSI-SP-003, Issue 5.0
+
+•
+
+Page 37 of 110 pages
+
+The codes for colour are as follows:
+Colour
+
+Value
+
+Colour
+
+Value
+
+Default
+
+0
+
+Blue
+
+5
+
+Red
+
+1
+
+Magenta
+
+6
+
+Yellow
+
+2
+
+White
+
+7
+
+Green
+
+3
+
+Orange
+
+8
+
+Cyan
+
+4
+
+Amber
+
+9
+
+•
+
+A colour of zero means the sign’s default colour.
+
+•
+
+The conspicuity devices (warning lanterns) are four lanterns, one
+placed in each corner of the sign. The speed annulus is the red
+ring around the speed limit numerals.
+
+•
+
+The codes for the conspicuity devices are as follows:
+Conspicuity
+Devices
+
+Value
+
+Speed
+Annulus
+
+Value
+
+Off
+
+xxxxx000
+
+Off
+
+xxx00xxx
+
+Up/Down
+
+xxxxx001
+
+Flashing
+
+xxx01xxx
+
+Left/Right
+
+xxxxx010
+
+On
+
+xxx10xxx
+
+Wig/Wag
+
+xxxxx011
+
+All Flash
+
+xxxxx100
+
+All On
+
+xxxxx101
+
+•
+
+If the sign operator wishes to display 'free text' on a sign, the
+application software running on the master machine will send the
+sign controller a SIGN SET TEXT FRAME Command followed by
+a SIGN DISPLAY FRAME Command. To support 'free text', the
+sign controller shall allocate a number of frame and message IDs
+which are reserved for free text.
+
+•
+
+The controller shall respond with this message when responding
+to a Sign Request Stored Frame/Message/Plan command from
+the master.
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+3.6.3.12
+
+Page 38 of 110 pages
+
+Sign Set Graphics Frame
+Direction: Master to Sign Controller and Sign Controller to Master
+(bidirectional)
+Message Size: Variable
+Description: The SIGN SET GRAPHICS FRAME message is used to
+store a graphics frame in the memory of the sign controller. The
+number of frames that can be stored in the controller's memory and
+the size of the frames vary according to the sign. The protocol allows
+a maximum of 255 frames, where:
+•
+
+Frame number 00 Hex cannot be set and always means to
+reinstate the display from the current active plan or blank the sign
+if no plan is active.
+
+•
+
+Frames 01 up to FF Hex can be pre-set using the SIGN SET
+GRAPHICS FRAME Command.
+
+Signs capable of displaying graphics are treated as a matrix of pixels
+where each pixel either has two possible. The graphics message sent
+to the sign controller specifies for each pixel whether it is OFF or
+what colour to display if it is ON.
+This message is also used by the controller to report stored graphics
+frames.
+Content:
+Position
+
+Bytes
+
+Value
+
+Description
+
+1
+
+1
+
+MI Code
+
+0Bh
+
+2
+
+1
+
+BYTE
+
+frame ID - identifies the frame as it is
+stored in the sign controller's memory
+
+3
+
+1
+
+BYTE
+
+revision - identifies the modification
+level of the frame
+
+4
+
+1
+
+BYTE
+
+number of rows of pixels in sign
+
+5
+
+1
+
+BYTE
+
+number of columns of pixels in sign
+
+6
+
+1
+
+BYTE
+
+colour
+
+7
+
+1
+
+BYTE
+
+conspicuity devices
+
+8
+
+2
+
+WORD
+
+length of graphics frame in bytes
+
+10
+
+variable
+
+BYTE
+
+graphics frame
+
+…
+
+2
+
+WORD
+
+message CRC - calculated for all the
+bytes in the application message
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 39 of 110 pages
+
+Example:
+The example display below is a 32 X 56 pixel matrix:
+
+Pixel 56
+
+Pixel 1
+
+32 Rows
+
+….
+.
+.
+
+..
+
+….
+Pixel 1737
+
+.
+56 Columns
+
+Pixel 1792
+
+Comments:
+•
+
+The codes for colour are as follows:
+Colour
+
+Value
+
+Description
+
+Default
+
+00h
+
+Monochrome with
+1-bit colour depth
+
+Red
+
+01h
+
+Monochrome with
+1-bit colour depth
+
+Yellow
+
+02h
+
+Monochrome with
+1-bit colour depth
+
+Green
+
+03h
+
+Monochrome with
+1-bit colour depth
+
+Cyan
+
+04h
+
+Monochrome with
+1-bit colour depth
+
+Blue
+
+05h
+
+Monochrome with
+1-bit colour depth
+
+Magenta
+
+06h
+
+Monochrome with
+1-bit colour depth
+
+White
+
+07h
+
+Monochrome with
+1-bit colour depth
+
+Orange
+
+08h
+
+Monochrome with
+1-bit colour depth
+
+Amber
+
+09h
+
+Monochrome with
+1-bit colour depth
+
+Multiple
+colours
+
+0Dh
+
+Multiple colours for
+images
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 40 of 110 pages
+
+•
+
+A colour of zero means the sign’s default colour.
+
+•
+
+For monochrome signs and signs with 1-bit colour depth (i.e.
+operating with the colour values 00h to 09h), using the above
+example display, the graphics frame is transmitted as follows:
+Byte 1: [Pixel 8, Pixel 7, Pixel 6, Pixel 5, Pixel 4, Pixel 3, Pixel 2,
+Pixel 1]
+Byte 2: [Pixel 16, Pixel 15, Pixel 14, Pixel 13, Pixel 12, Pixel 11,
+Pixel 10, Pixel 9]
+.....
+Byte 223: [Pixel 1784, Pixel 1783, Pixel 1782, Pixel 1781, Pixel
+1780, Pixel 1779, Pixel 1778, Pixel 1777,]
+Byte 224: [Pixel 1792, Pixel 1791, Pixel 1790, Pixel 1789, Pixel
+1788, Pixel 1787, Pixel 1786, Pixel 1785]
+
+•
+
+Where signs are required to display ‘multiple colours’ for images
+(i.e. operating with the colour value 0Dh), the codes for colour are
+as follows:
+Colour
+
+Value in Nibble
+
+Pixel off
+
+0h
+
+Red
+
+1h
+
+Yellow
+
+2h
+
+Green
+
+3h
+
+Cyan
+
+4h
+
+Blue
+
+5h
+
+Magenta
+
+6h
+
+White
+
+7h
+
+Orange
+
+8h
+
+Amber
+
+9h
+
+Using the above example display, the graphics frame is
+transmitted as follows:
+Byte 1:
+
+[Pixel 2,
+
+Pixel 1];
+
+Byte 2:
+
+[Pixel 4,
+
+Pixel 3];
+
+…..
+Byte 896:
+
+[Pixel 1792, Pixel 1791].
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 41 of 110 pages
+
+•
+
+A sign not capable of supporting the commanded colour
+operation shall respond so accordingly to the Master.
+
+•
+
+For monochrome signs, where the pixel matrix is not a multiple of
+eight pixels, the last byte of the graphics frame shall have any
+remaining bits set to zero, such that the number of bits in the
+graphics frame is a multiple of eight.
+There is no requirement for the number of pixels in a row, or the
+number of pixels in a column to be a multiple of eight.
+
+•
+
+The conspicuity devices (warning lanterns) are four lanterns, one
+placed in each corner of the sign. The speed annulus is the red
+ring around the speed limit numerals.
+
+•
+
+The codes for the conspicuity devices are as follows:
+
+•
+
+3.6.3.13
+
+Conspicuity
+Devices
+
+Value
+
+Speed
+Annulus
+
+Value
+
+Off
+
+xxxxx000
+
+Off
+
+xxx00xxx
+
+Up/Down
+
+xxxxx001
+
+Flashing
+
+xxx01xxx
+
+Left/Right
+
+xxxxx010
+
+On
+
+xxx10xxx
+
+Wig/Wag
+
+xxxxx011
+
+All Flash
+
+xxxxx100
+
+All On
+
+xxxxx101
+
+The controller shall respond with this message when responding
+to a SIGN REQUEST STORED FRAME/MESSAGE/PLAN
+command from the master.
+
+Sign Set Message
+Direction: Master to Sign Controller and Sign Controller to Master
+(bidirectional)
+Message Size: Variable, up to 16 bytes
+Description: The SIGN SET MESSAGE is used to store a sequence
+of up to 6 frames in the memory of the sign controller. The protocol
+allows a maximum of 255 messages.
+This message is also used by the controller to report stored
+messages.
+Content:
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 42 of 110 pages
+
+Position
+
+Bytes
+
+Value
+
+Description
+
+1
+
+1
+
+MI Code
+
+0Ch
+
+2
+
+1
+
+BYTE
+
+message ID - identifies the message as
+it is stored in the sign controller's
+memory
+
+3
+
+1
+
+BYTE
+
+revision - identifies the modification
+level of the message
+
+4
+
+1
+
+BYTE
+
+transition time between frames (in
+seconds x 0.01)
+
+5
+
+1
+
+BYTE
+
+frame 1 ID
+
+6
+
+1
+
+BYTE
+
+frame 1 ON time (in seconds x 0.1)
+
+7
+
+1
+
+BYTE
+
+frame 2 ID
+
+8
+
+1
+
+BYTE
+
+frame 2 ON time (in seconds x 0.1)
+
+9
+
+1
+
+BYTE
+
+frame 3 ID
+
+10
+
+1
+
+BYTE
+
+frame 3 ON time (in seconds x 0.1)
+
+11
+
+1
+
+BYTE
+
+frame 4 ID
+
+12
+
+1
+
+BYTE
+
+frame 4 ON time (in seconds x 0.1)
+
+13
+
+1
+
+BYTE
+
+frame 5 ID
+
+14
+
+1
+
+BYTE
+
+frame 5 ON time (in seconds x 0.1)
+
+15
+
+1
+
+BYTE
+
+frame 6 ID
+
+16
+
+1
+
+BYTE
+
+frame 6 ON time (in seconds x 0.1)
+
+Comments:
+•
+
+Message number 00 Hex cannot be set and always means to
+reinstate the display from the current active plan or blank the sign
+if no plan is active.
+
+•
+
+A non-zero transition time shall cause a blanking of the complete
+display. Frames which are permanently on shall also be blanked.
+
+•
+
+A message must contain at least one frame definition. A frame ID
+number of zero indicates that no more frames (ID numbers and
+ON times) follow within the message. This allows a message to
+consist of less than six frames.
+
+•
+
+Where the last frame definition (frame ID and on time) contains a
+frame ON time of zero, this frame shall remain continuously on.
+As an example, Message 1 consists of Frame 10, ON time 10
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 43 of 110 pages
+
+seconds, and Frame 20, ON time zero seconds. When Message
+1 is displayed, Frame 10 appears only for 10 seconds, and then
+Frame 20 appears from then on. Note that a Message is still
+reported back to the master in the Status Reply.
+
+3.6.3.14
+
+•
+
+Overlaying of frames is achieved by OR-ing the ON pixels of the
+individual frames.
+
+•
+
+Where any but the last frame definition (frame ID and on time)
+contains a frame ON time of zero, this frame shall be overlaid
+with the other frames in the message. As an example, Message 1
+consists of Frame 10, ON time zero seconds (shows an accident
+symbol), Frame 20, ON time two seconds (shows ACCIDENT
+AHEAD), and Frame 30, ON time two seconds (shows SLOW
+DOWN). When Message 1 is displayed, the accident symbol
+appears permanently on with the alternating text ACCIDENT
+AHEAD/SLOW DOWN. Another example, which uses the overlay
+feature to display multiple colours, could be defined as Frame 1,
+ON time zero seconds (shows red ring), Frame 2 ON time zero
+seconds (shows 60), to obtain a 60 km/h speed sign on a multicolour sign.
+
+•
+
+Length errors shall be reported by the sign controller where a
+message has no frame definitions or when a message is
+terminated by zero and further frames are defined afterwards.
+
+•
+
+The controller shall respond with this message when responding
+to a Sign Request Stored Frame/Message/Plan command from
+the master.
+
+Sign Set Plan
+Direction: Master to Sign Controller and Sign Controller to Master
+(bidirectional)
+Message Size: Variable, up to 40 bytes
+Description: The SIGN SET PLAN message is used to store a plan of
+up to six frames or messages (or a combination) in the sign
+controller's memory. A plan can be programmed on a daily basis or
+weekly basis.
+This message is also used by the controller to report stored plans.
+Content:
+Position
+
+Bytes
+
+Value
+
+Description
+
+1
+
+1
+
+MI Code
+
+0Dh
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 44 of 110 pages
+
+Position
+
+Bytes
+
+Value
+
+Description
+
+2
+
+1
+
+BYTE
+
+plan ID - identifies the plan as it is stored
+in the sign controller's memory
+
+3
+
+1
+
+BYTE
+
+revision - identifies the modification
+level of the plan
+
+4
+
+1
+
+BYTE
+
+day of the week*
+
+5
+
+1
+
+BYTE
+
+frame/message - indicates whether the
+next field refers to a frame (1) or a
+message (2). If zero (0), no subsequent
+frame/message definitions occur.
+
+6
+
+1
+
+BYTE
+
+frame/message 1 ID
+
+7
+
+1
+
+BYTE
+
+frame/message 1 start time - hour (0-23)
+
+8
+
+1
+
+BYTE
+
+frame/message 1 start time - minute (059)
+
+9
+
+1
+
+BYTE
+
+frame/message 1 stop time - hour (0-23)
+
+10
+
+1
+
+BYTE
+
+frame/message 1 stop time - minute (059)
+
+11
+
+1
+
+BYTE
+
+frame/message - indicates whether the
+next field ends the plan definition or
+refers to a frame or a message (0/1/2)
+
+12
+
+1
+
+BYTE
+
+frame/message 2 ID
+
+…
+
+…
+
+…
+
+…
+
+39
+
+1
+
+BYTE
+
+frame/message 6 stop time - hour (0-23)
+
+40
+
+1
+
+BYTE
+
+frame/message 6 stop time - minute
+
+*day of the week is a bitwise field where bits 1, 2, 3, 4, 5, 6 and 7
+represent Sunday, Monday, Tuesday, Wednesday, Thursday, Friday
+and Saturday respectively. Bit 8 is unused. For the plan to operate
+daily, the day of week field is set to 7Fh.
+Comments:
+•
+
+Plan number 00 Hex is invalid.
+
+•
+
+Setting the frame/message ID to zero causes the sign to blank for
+the period specified by the start and stop times.
+
+•
+
+A plan must contain at least one frame or message definition. A
+frame/message value of zero indicates that no more frames or
+messages follow within the plan. This allows a plan to consist of
+less than six frames/messages.
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+3.6.3.15
+
+Page 45 of 110 pages
+
+•
+
+Length errors shall be reported by the sign controller where a
+plan has no frame or message definitions or when a plan is
+terminated by a zero and further frame or message definitions are
+defined afterwards.
+
+•
+
+The start time always uses the day of week field to obtain the
+start day. The stop time follows on from the start time and day.
+Eg, 20:00 to 20:00 on Monday and Wednesday means to activate
+from Monday 8:00pm to Tuesday 8:00pm and from Wednesday
+8:00pm to Thursday 8:00pm.
+
+•
+
+Each plan need not be contiguous (i.e.: the start time need not
+follow on from the previous stop time).
+
+•
+
+The controller shall respond with this message when responding
+to a Sign Request Stored Frame/Message/Plan command from
+the master.
+
+Sign Display Frame
+Direction: Master to Sign Controller
+Message Size: 3 bytes
+Description: The SIGN DISPLAY FRAME command is used to
+instruct the sign controller to display pre-stored frame in the specified
+group. The frame is displayed continuously.
+•
+
+Frame number 00 Hex cannot be displayed and always means to
+reinstate the display from the current active plan or blank the sign
+if no plan is active.
+
+Content:
+Position
+
+Bytes
+
+Value
+
+Description
+
+1
+
+1
+
+MI Code
+
+0Eh
+
+2
+
+1
+
+BYTE
+
+group ID
+
+3
+
+1
+
+BYTE
+
+frame ID - identifies the frame as it is
+stored in the sign controller's memory
+
+Comments:
+•
+
+To instruct the sign controller to display different pre-stored
+frames on different signs in the specified group refer to the ‘SIGN
+DISPLAY ATOMIC FRAMES’ command.
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+3.6.3.16
+
+Page 46 of 110 pages
+
+Sign Display Message
+Direction: Master to Sign Controller
+Message Size: 3 bytes
+Description: The SIGN DISPLAY MESSAGE command is used to
+instruct the sign controller to display a pre-stored message in the
+specified group. The message is displayed continuously.
+•
+
+Message number 00 Hex cannot be displayed and always means
+that after the current message completes reinstate the display
+from the current active plan or blank the group or sign if no plan
+is active.
+
+Content:
+
+3.6.3.17
+
+Position
+
+Bytes
+
+Value
+
+Description
+
+1
+
+1
+
+MI Code
+
+0Fh
+
+2
+
+1
+
+BYTE
+
+group ID
+
+3
+
+1
+
+BYTE
+
+message ID - identifies the message as
+it is stored in the sign controller's
+memory
+
+Enable Plan
+Direction: Master to Controller
+Message Size: 3 bytes
+Description: The ENABLE PLAN command is used to instruct the
+device controller to enable a pre-stored plan in a specified group.
+The plan remains in force until disabled.
+A plan that is enabled can run per its configured schedule, unless
+overridden, by a SIGN DISPLAY FRAME or SIGN DISPLAY
+MESSAGE command.
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 47 of 110 pages
+
+Content:
+Position
+
+Bytes
+
+Value
+
+Description
+
+1
+
+1
+
+MI Code
+
+10h
+
+2
+
+1
+
+BYTE
+
+group ID - the group where the plan is to
+be enabled
+
+3
+
+1
+
+BYTE
+
+plan ID - identifies the plan as it is stored
+in the device controller's memory
+
+Comments:
+
+3.6.3.18
+
+•
+
+Plan number 00 always disables all enabled plans on the single
+group specified. Notwithstanding, an active plan cannot be
+disabled by the command which shall be rejected and not acted
+upon (i.e. no enabled plans shall be disabled).
+
+•
+
+For HAR, the group ID is always zero.
+
+•
+
+Although many plans may be enabled at the same time only one
+plan can be active at a time.
+
+•
+
+To enable plans on multiple groups, the command must be sent
+to each group.
+
+Disable Plan
+Direction: Master to Controller
+Message Size: 3 bytes
+Description: The DISABLE PLAN command is used to instruct the
+device controller to disable a pre-stored plan in a specified group.
+Content:
+Position
+
+Bytes
+
+Value
+
+Description
+
+1
+
+1
+
+MI Code
+
+11h
+
+2
+
+1
+
+BYTE
+
+group ID - the group where the plan is to
+be disabled
+
+3
+
+1
+
+BYTE
+
+plan ID - identifies the plan as it is stored
+in the device controller's memory
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 48 of 110 pages
+
+Comments:
+
+3.6.3.19
+
+•
+
+Plan number 00 always disables all enabled plans on the single
+group specified. An active plan cannot be disabled by the
+command. In all such cases, the command shall be rejected and
+not acted upon (i.e. any other enabled plans that are covered by
+the command but not currently active shall remain enabled).
+
+•
+
+For HAR, the group ID is always zero.
+
+•
+
+To disable plans on multiple groups, the command must be sent
+to each group.
+
+Request Enabled Plans
+Direction: Master to Controller
+Message Size: 1 byte
+Description: The REQUEST ENABLED PLANS command is used to
+determine what plans are enabled in the device controller. The
+device controller shall respond with a REPORT ENABLED PLANS
+reply.
+Content:
+
+3.6.3.20
+
+Position
+
+Bytes
+
+Value
+
+Description
+
+1
+
+1
+
+MI Code
+
+12h
+
+Report Enabled Plans
+Direction: Controller to Master
+Message Size: variable
+Description: REPORT ENABLED PLANS is used to report which
+plans are enabled in the device controller.
+Content:
+Position
+
+Bytes
+
+Value
+
+Description
+
+1
+
+1
+
+MI Code
+
+13h
+
+2
+
+1
+
+BYTE
+
+number of entries to follow
+
+3
+
+1
+
+BYTE
+
+*group ID - identifies the group where
+the plan is enabled
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 49 of 110 pages
+
+Position
+
+Bytes
+
+Value
+
+Description
+
+4
+
+1
+
+BYTE
+
+*plan ID - identifies the plan as it is
+stored in the device controller's memory
+
+*field may be repeated depending on the number of enabled plans.
+Comments:
+
+3.6.3.21
+
+•
+
+For HAR, the group ID is always zero.
+
+•
+
+This message also applies if the same plan is enabled on more
+than one group.
+
+Sign Set Dimming Level
+Direction: Master to Sign Controller
+Message Size: variable
+Description: The SIGN SET DIMMING LEVEL command is used to
+instruct the sign controller to set the luminance level in the specified
+groups to either automatic mode or manual mode with the specified
+level.
+Content:
+Position
+
+Bytes
+
+Value
+
+Description
+
+1
+
+1
+
+MI Code
+
+14h
+
+2
+
+1
+
+BYTE
+
+number of entries to follow
+
+3
+
+1
+
+BYTE
+
+*group ID
+
+4
+
+1
+
+BYTE
+
+*automatic/manual dimming mode (0/1)
+
+5
+
+1
+
+BYTE
+
+*luminance level (1-16)
+
+*field may be repeated depending on the number of entries.
+Comments:
+•
+
+Where the dimming mode is set to automatic, the luminance level
+is ignored.
+
+•
+
+Luminance levels range from 1 (minimum sign intensity) to 16
+(maximum sign intensity).
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+•
+
+3.6.3.22
+
+Page 50 of 110 pages
+
+For a device controller with multiple device groups, a group ID of
+zero applies to all groups, that is, all devices.
+
+Power ON/OFF
+Direction: Master to Controller
+Message Size: variable
+Description: The POWER ON/OFF command is used to instruct the
+device controller to turn ON or OFF the power for the specified
+groups.

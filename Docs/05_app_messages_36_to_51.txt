@@ -1,0 +1,2533 @@
+
+3
+
+Strategy is not playing. The Application
+error code shall indicate the reason why.
+
+HAR Set Voice Data
+Direction: HAR Controller to Master / Master to HAR Controller
+(bidirectional)
+Message Size: Variable
+Description: The HAR SET VOICE DATA message is used to store a
+voice file in the memory of the controller. The number of voice files
+that can be stored in the controller's memory and the maximum size
+of the voice file vary according to the controller. The protocol allows a
+maximum of 65535 pre-set voice files, where:
+•
+
+Voice ID number 00 Hex cannot be used as it is used to indicate
+no voice file is playing
+
+•
+
+Voice IDs from 01 up to FFFF Hex can be stored in the
+controllers memory using the HAR SET VOICE DATA message.
+
+This message is also used by the controller to report stored voice
+data.
+Content:
+Position
+
+Bytes
+
+Value
+
+Description
+
+1
+
+1
+
+MI Code
+
+41h (Incomplete) or 42h (Complete). See
+below.
+
+2
+
+2
+
+WORD
+
+Voice ID
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 70 of 110 pages
+
+Position
+
+Bytes
+
+Value
+
+Description
+
+4
+
+1
+
+BYTE
+
+Revision Number
+
+5
+
+1
+
+BYTE
+
+Format
+
+6
+
+1
+
+BYTE
+
+Conspicuity Devices
+
+7
+
+1
+
+BYTE
+
+Sequence Number
+
+8
+
+2
+
+WORD
+
+Number of bytes to follow
+
+10
+
+Variable
+
+BYTE
+
+The voice file fragment in this message
+
+Comments:
+•
+
+•
+
+•
+
+A voice file is transferred in one of a number of file formats:
+Format
+
+Value
+
+Uncompressed WAV
+
+0
+
+Compressed WAV
+
+1
+
+MPEG Layer 3 Audio (MP3)
+
+2
+
+Real Audio Streamed Content (RAW)
+
+3
+
+The codes for the conspicuity devices are as follows:
+Conspicuity
+Devices
+
+Value
+
+Speed
+Annulus
+
+Value
+
+Off
+
+xxxxx000
+
+Off
+
+xxx00xxx
+
+Up/Down
+
+xxxxx001
+
+Flashing
+
+xxx01xxx
+
+Left/Right
+
+xxxxx010
+
+On
+
+xxx10xxx
+
+Wig/Wag
+
+xxxxx011
+
+All Flash
+
+xxxxx100
+
+All On
+
+xxxxx101
+
+The complete file may be transferred in a number of HAR SET
+VOICE DATA messages. Where this is the case then this is done
+by sending a series of HAR SET VOICE DATA (incomplete)
+messages followed by one HAR SET VOICE DATA (complete)
+message.
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 71 of 110 pages
+
+•
+
+The Sequence Number field is used to provide error free transfer
+of the voice file fragment. Sequence numbers start from 0 for the
+first message and increment for each message sent.
+
+•
+
+When a HAR controller receives a HAR SET VOICE DATA
+(Incomplete) message with the correct sequence number it
+returns a HAR VOICE DATA ACK message.
+
+•
+
+When a HAR controller receives a HAR SET VOICE DATA
+(Complete) message with the correct sequence number it returns
+a HAR STATUS REPLY message.
+
+•
+
+If a HAR controller receives a message with a Sequence Number
+that is out of sequence it must behave as follows:
+1) If a message has already been received with the same
+sequence number, the new message is just discarded.
+2) Otherwise, the message is rejected and a HAR VOICE DATA
+NAK message is returned to the master.
+
+3.6.3.36
+
+•
+
+If a master continues to receive HAR VOICE DATA NAK
+messages (e.g. 3 in a row, although this should be configurable in
+the master), then it will abandon the download (and start again).
+
+•
+
+It shall not be possible to Set Voice Data that is part of the
+currently active strategy, unless that strategy is not playing.
+
+•
+
+The controller shall respond with this message when responding
+to a HAR Request Stored Voice/Strategy/Plan command from the
+master.
+
+HAR Set Strategy
+Direction: Master to HAR Controller and HAR Controller to Master
+(bidirectional)
+Message Size: Variable
+Description: The HAR SET STRATEGY message is used to store a
+voice strategy in the memory of the controller. A strategy is an
+ordered sequence of voice ids that make up a message to be
+transmitted by the HAR controller. The number of strategies that can
+be stored in the controller's memory and the maximum number of the
+voice ids that make up a strategy vary according to the HAR
+controller. The protocol allows a maximum of 65535 pre-set
+strategies, where:
+•
+
+Strategy ID number 00 Hex cannot be used as it is used to
+indicate no strategy is active.
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+•
+
+Page 72 of 110 pages
+
+Strategy IDs from 01 up to FFFF Hex can be stored in the
+controllers memory using the HAR SET STRATEGY message.
+
+This message is also used by the controller to report stored
+strategies.
+Content:
+Position
+
+Bytes
+
+Value
+
+Description
+
+1
+
+1
+
+MI Code
+
+43h
+
+2
+
+2
+
+WORD
+
+Strategy ID
+
+4
+
+1
+
+BYTE
+
+Revision Number
+
+5
+
+1
+
+BYTE
+
+Number of Voice IDs to follow
+
+6
+
+2
+
+WORD
+
+*Voice ID
+
+*field may be repeated depending on the number of Voice IDs.
+Comments:
+
+3.6.3.37
+
+•
+
+The order in which the Voice IDs appear in the message is the
+order in which to play the associated Voice files.
+
+•
+
+It shall only be possible to Set a Strategy that is not active, or
+active but not playing.
+
+•
+
+The controller shall respond with this message when responding
+to a HAR Request Stored Voice/Strategy/Plan command from the
+master.
+
+HAR Activate Strategy
+Direction: Master to HAR Controller
+Message Size: 3 bytes
+Description: The HAR ACTIVATE STRATEGY command is used to
+activate a voice strategy stored in the memory of the controller.
+Content:
+Position
+
+Bytes
+
+Value
+
+Description
+
+1
+
+1
+
+MI Code
+
+44h
+
+3
+
+2
+
+WORD
+
+Strategy ID
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 73 of 110 pages
+
+Comments:
+
+3.6.3.38
+
+•
+
+When a Controller receives a HAR ACTIVATE STRATEGY
+message it must complete playing the sequence of voice files for
+its current strategy before it starts play the voice files for the
+newly requested one.
+
+•
+
+If Strategy ID Zero is requested, then this is treated as a stop to
+the current strategy, i.e. no new strategy is started. The HAR
+STATUS REPLY message shall indicate that the strategy is still
+the active one, but that it is not playing as it has been stopped by
+the master.
+
+HAR Set Plan
+Direction: Master to HAR Controller and HAR Controller to Master
+(bidirectional)
+Message Size: Variable, up to 40 bytes
+Description: The HAR SET PLAN message is used to store a plan of
+up to six strategies in the HAR controller's memory. A plan can be
+programmed on a daily basis or weekly basis.
+This message is also used by the controller to report stored plans.
+Content:
+Position
+
+Bytes
+
+Value
+
+Description
+
+1
+
+1
+
+MI Code
+
+45h
+
+2
+
+1
+
+BYTE
+
+plan ID - identifies the plan as it is stored
+in the HAR controller's memory
+
+3
+
+1
+
+BYTE
+
+revision - identifies the modification
+level of the plan
+
+4
+
+1
+
+BYTE
+
+day of the week*
+
+5
+
+2
+
+WORD
+
+strategy 1 ID
+
+7
+
+1
+
+BYTE
+
+strategy 1 start time - hour (0-23)
+
+8
+
+1
+
+BYTE
+
+strategy 1 start time - minute (0-59)
+
+9
+
+1
+
+BYTE
+
+strategy 1 stop time - hour (0-23)
+
+10
+
+1
+
+BYTE
+
+strategy 1 stop time - minute (0-59)
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 74 of 110 pages
+
+Position
+
+Bytes
+
+Value
+
+Description
+
+11
+
+2
+
+WORD
+
+strategy 2 ID
+
+…
+
+…
+
+…
+
+…
+
+39
+
+1
+
+BYTE
+
+strategy 6 stop time - hour (0-23)
+
+40
+
+1
+
+BYTE
+
+strategy 6 stop time - minute
+
+*day of the week is a bitwise field where bits 1, 2, 3, 4, 5, 6 and 7
+represent Sunday, Monday, Tuesday, Wednesday, Thursday, Friday
+and Saturday respectively. Bit 8 is unused. For the plan to operate
+daily, the day of week field is set to 7Fh.
+Comments:
+
+3.6.3.39
+
+•
+
+Plan number 00 Hex is invalid.
+
+•
+
+A plan must contain at least one strategy definition. A strategy
+value of zero indicates that no more strategies follow within the
+plan. This allows a plan to consist of less than six strategies.
+
+•
+
+Length errors shall be reported by the HAR controller where a
+plan has no strategy definitions or when a plan is terminated by a
+zero and further strategy definitions are defined afterwards.
+
+•
+
+The start time always uses the day of week field to obtain the
+start day. The stop time follows on from the start time and day.
+Eg, 20:00 to 20:00 on Monday and Wednesday means to activate
+from Monday 8:00pm to Tuesday 8:00pm and from Wednesday
+8:00pm to Thursday 8:00pm.
+
+•
+
+Each plan need not be contiguous (i.e.: the start time need not
+follow on from the previous stop time).
+
+•
+
+The controller shall respond with this message when responding
+to a HAR Request Stored Voice/Strategy/Plan command from the
+master.
+
+HAR Request Stored Voice/Strategy/Plan
+Direction: Master to HAR Controller
+Message Size: 5 bytes
+Description: The HAR REQUEST VOICE/STRATEGY/PLAN
+command is used to request a voice data, strategy or plan stored in
+the memory of the controller. The HAR controller shall respond with a
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 75 of 110 pages
+
+HAR SET VOICE DATA, HAR SET STRATEGY OR HAR SET PLAN
+message.
+Content:
+Position
+
+Bytes
+
+Value
+
+Description
+
+1
+
+1
+
+MI Code
+
+46h
+
+2
+
+1
+
+BYTE
+
+Voice/Strategy/Plan (0/1/2)
+
+3
+
+2
+
+WORD
+
+Voice/Strategy/Plan ID
+
+5
+
+1
+
+BYTE
+
+Sequence Number
+
+Comments:
+
+3.6.3.40
+
+•
+
+When requesting a Voice ID, the master will use the sequence
+number field to indicate which fragment it requires. It will start at
+sequence number 0, and will continue requesting fragments by
+incrementing the sequence number until it receives a HAR SET
+VOICE DATA (complete) message from the controller indicating
+this is the last fragment of the voice file.
+
+•
+
+If the controller receives a request with a sequence number
+indicating it is for a fragment it has already sent and the fragment
+is still in its communications buffer, it shall resend the fragment.
+
+•
+
+If the controller receives a request with a sequence number
+indicating it is for a fragment it has already sent and the fragment
+is no longer in its communications buffer, or the sequence
+number indicates a fragment such that it would have to omit some
+fragments of the voice message, then the controller shall respond
+with a HAR VOICE DATA NAK message.
+
+•
+
+If a master continues to receive HAR VOICE DATA NAK
+messages (e.g. 3 in a row, although this should be configurable in
+the master), then it will abandon the upload (and start again).
+
+•
+
+When requesting a Strategy or Plan, the Sequence Number is not
+used and should be set to Zero.
+
+HAR Set Voice Data ACK
+Direction: HAR Controller to Master
+Message Size: 4 bytes
+Description: The HAR SET VOICE DATA ACK message is used to
+acknowledge the receipt of a Voice Data fragment.
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 76 of 110 pages
+
+Content:
+Position
+
+Bytes
+
+Value
+
+Description
+
+1
+
+1
+
+MI Code
+
+47h
+
+2
+
+2
+
+WORD
+
+Voice ID
+
+4
+
+1
+
+BYTE
+
+Sequence Number
+
+Comments:
+•
+
+3.6.3.41
+
+The sequence number shall indicate the sequence number of the
+last HAR SET VOICE DATA message the controller received
+correctly.
+
+HAR Set Voice Data NAK
+Direction: HAR Controller to Master
+Message Size: 4 bytes
+Description: The HAR SET VOICE DATA NAK message is used to
+indicate a bad sequence number received either in a HAR SET
+VOICE DATA message or a HAR REQUEST VOICE/STRATEGY
+message received from the master.
+Content:
+Position
+
+Bytes
+
+Value
+
+Description
+
+1
+
+1
+
+MI Code
+
+48h
+
+2
+
+2
+
+WORD
+
+Voice ID
+
+4
+
+1
+
+BYTE
+
+Sequence Number
+
+Comments:
+•
+
+The Sequence Number shall indicate the Sequence Number of
+the last HAR SET VOICE DATA or HAR REQUEST
+VOICE/STRATEGY message the controller received correctly.
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+3.6.3.42
+
+Page 77 of 110 pages
+
+Environmental/Weather Status Reply
+Direction: Environmental/Weather Station Controller to Master
+Message Size: 30 bytes
+Description: The ENVIRONMENTAL/WEATHER STATUS REPLY
+message is sent by the environmental/weather station controller to
+the master as a response to a HEARTBEAT POLL command. The
+ENVIRONMENTAL/WEATHER STATUS REPLY message contains
+the basic status information of the Environmental/Weather station
+controller.
+Content:
+Position
+
+Bytes
+
+Value
+
+Description
+
+1
+
+1
+
+MI Code
+
+80h
+
+2
+
+1
+
+BYTE
+
+'off-line'/'on-Line' status (0/1)
+
+3
+
+1
+
+BYTE
+
+Application error code (see appendix C)
+
+4
+
+1
+
+BYTE
+
+Day (1-31)
+
+5
+
+1
+
+BYTE
+
+Month (1-12)
+
+6
+
+2
+
+WORD
+
+Year (1-9999)
+
+8
+
+1
+
+BYTE
+
+Hours (0-23)
+
+9
+
+1
+
+BYTE
+
+Minutes (0-59)
+
+10
+
+1
+
+BYTE
+
+Seconds (0-59)
+
+11
+
+2
+
+WORD
+
+Controller Hardware Checksum
+
+13
+
+1
+
+BYTE
+
+Controller error code (see appendix C)
+
+14
+
+1
+
+BYTE
+
+Supports Thresholds Flag (0 – doesn’t
+support Threshold Definition or the Event
+Log; 1 - does support them)
+
+15
+
+1
+
+BYTE
+
+Current Event Log Sequence Number
+
+16
+
+1
+
+BYTE
+
+Pressure Sensor Present (0 – not present,
+1 – enabled, 2 – disabled)
+
+17
+
+1
+
+BYTE
+
+Temperature Sensor Present (0 – not
+present, 1 – enabled, 2 – disabled)
+
+18
+
+1
+
+BYTE
+
+Visibility Sensor Present (0 – not present, 1
+– enabled, 2 – disabled)
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 78 of 110 pages
+
+Position
+
+Bytes
+
+Value
+
+Description
+
+19
+
+1
+
+BYTE
+
+Precipitation Sensor Present (0 – not
+present, 1 – enabled, 2 – disabled)
+
+20
+
+1
+
+BYTE
+
+Air Quality Sensor Present (0 – not
+present, 1 – enabled, 2 – disabled)
+
+21
+
+1
+
+BYTE
+
+Pavement Sensor Present (0 – not present,
+1 – enabled, 2 – disabled)
+
+22
+
+1
+
+BYTE
+
+Wind Sensor Present (0 – not present, 1 –
+enabled, 2 – disabled)
+
+23
+
+1
+
+BYTE
+
+Water Depth Sensor Present (0 – not
+present, 1 – enabled, 2 – disabled)
+
+24
+
+1
+
+BYTE
+
+Reserved for Future Sensor (0 – not
+present, 1 – enabled, 2 – disabled)
+
+…
+
+…
+
+…
+
+…
+
+30
+
+1
+
+BYTE
+
+Reserved for Future Sensor (0 – not
+present, 1 – enabled, 2 – disabled)
+
+Comments:
+•
+
+The application error code field indicates the current application
+error. If no error exists, this field is set to zero.
+
+•
+
+The controller error code field indicates the current error (fault)
+present in the controller or its sensors. When a change in fault
+status occurs (fault occurrence or clearance), the error code field
+shall be updated to trigger the retrieval of the fault log by the
+master. If no error exists, this field is set to zero, and indicates to
+the master that all faults are cleared for the controller.
+
+•
+
+The controller hardware checksum is used to check the
+environmental/weather station controller’s memory. The master
+uses this to verify that the environmental/weather station
+controller’s memory locations have not changed. The
+Environmental/Weather Threshold Definition returns a Status
+Reply as this command affects the environmental/weather station
+controller hardware checksum. Note that in some instances the
+System Reset command affects the hardware checksum. In these
+instances, the master must send a Heartbeat Poll to obtain the
+new hardware checksum.
+
+•
+
+The environmental/weather station controller must use the
+Support Thresholds Flag defined in this message to indicate to
+the master whether it supports downloading of thresholds for
+environmental/weather parameters and the generation of
+environmental/weather events when environmental/weather
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 79 of 110 pages
+
+parameters pass the defined thresholds. If this field is set to a 1
+then the environmental/weather station must support the
+ENVIRONMENTAL/WEATHER
+THRESHOLD
+DEFINITION,
+REQUEST
+THRESHOLD
+DEFINITION,
+REQUEST
+ENVIRONMENTAL/WEATHER
+EVENT
+LOG,
+ENVIRONMENTAL/WEATHER EVENT LOG REPLY and RESET
+ENVIRONMENTAL/WEATHER EVENT LOG messages.
+
+3.6.3.43
+
+•
+
+The current event log sequence number shall be used to indicate
+the sequence number of the most recent entry in the
+Environmental/Weather Event Log. The master uses this to
+determine when new environmental/weather events have been
+generated and whether to poll for the Environmental/Weather
+Event Log. If the environmental/weather station controller does
+not support environmental/weather thresholds then this value
+must always be zero.
+A value of 255 may indicate an empty or full log.
+
+•
+
+The environmental/weather station must use the other fields in
+this message to indicate which sensors are connected to it and
+hence what its reporting capabilities are.
+
+Request Environmental/Weather Values
+Direction: Master to Environmental/Weather Station Controller
+Message Size: 1 byte
+Description: The REQUEST ENVIRONMENTAL/WEATHER VALUES
+command is used to request the current environmental/weather
+parameter values as reported by the sensors connected to the
+environmental/weather station controller.
+Content:
+
+3.6.3.44
+
+Position
+
+Bytes
+
+Value
+
+Description
+
+1
+
+1
+
+MI Code
+
+81h
+
+Environmental/Weather Values
+Direction: Environmental/Weather Station Controller to Master
+Message Size: 125 bytes
+Description: The ENVIRONMENTAL/WEATHER VALUES message
+is sent in response to a REQUEST ENVIRONMENTAL/WEATHER
+VALUES command from the master and is used to return the current
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 80 of 110 pages
+
+environmental/weather parameter values as reported by the sensors
+connected to the environmental/weather station controller.
+Content:
+Position
+
+Bytes
+
+Value
+
+Description
+
+1
+
+1
+
+MI Code
+
+82h
+
+2
+
+2
+
+WORD
+
+Atmospheric Pressure in 1/10s of
+millibars. Set to 65535 if pressure sensor
+is not present or faulty
+
+4
+
+2
+
+WORD
+
+Wind Speed in 0.1m/s increments. Set
+to 65535 if wind sensor is not present or
+faulty
+
+6
+
+2
+
+WORD
+
+Wind Direction in degrees from True
+North. Set to 361 if wind sensor is not
+present or faulty
+
+8
+
+2
+
+WORD
+
+Max Wind Gust Speed in 0.1m/s
+increments. Set to 65535 if wind sensor
+is not present or faulty
+
+10
+
+2
+
+WORD
+
+Max Wind Gust Direction in degrees
+from True North. Set to 361 if wind
+sensor is not present or faulty
+
+12
+
+2
+
+WORD
+
+Dry Bulb Temperature in 1/10s of
+degrees Celsius.
+Range is -1000 to +1000.
+Value in Sign-Magnitude Format.
+Set to -32767 if temperature sensor is
+not present or faulty
+
+14
+
+2
+
+WORD
+
+Wet Bulb Temperature in 1/10s of
+degrees Celsius.
+Range is -1000 to +1000.
+Value in Sign-Magnitude Format.
+Set to -32767 if temperature sensor is
+not present or faulty
+
+16
+
+2
+
+WORD
+
+Dewpoint Temperature in 1/10s of
+degrees Celsius.
+Range is -1000 to +1000.
+Value in Sign-Magnitude Format.
+Set to -32767 if temperature sensor is
+not present or faulty
+
+18
+
+2
+
+WORD
+
+Maximum Temperature in last 24 hours
+in 1/10s of degrees Celsius.
+Range is -1000 to +1000.
+Value in Sign-Magnitude Format.
+Set to -32767 if temperature sensor is
+not present or faulty
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 81 of 110 pages
+
+Position
+
+Bytes
+
+Value
+
+Description
+
+20
+
+2
+
+WORD
+
+Minimum Temperature in last 24 hours
+in 1/10s of degrees Celsius.
+Range is -1000 to +1000.
+Value in Sign-Magnitude Format.
+Set to -32767 if temperature sensor is
+not present or faulty
+
+22
+
+1
+
+BYTE
+
+Relative Humidity in percent. Set to 101
+if precipitation sensor is not present or
+faulty
+
+23
+
+2
+
+WORD
+
+Snow Depth (unpacked on roadway) in
+centimetres.
+Range is 0 to 3000.
+Set to 65535 if precipitation sensor is not
+present or faulty
+
+25
+
+2
+
+WORD
+
+Snowfall Rate in 10 m/s. Set to 65535 if
+precipitation sensor is not present or
+faulty
+
+27
+
+1
+
+BYTE
+
+Reserved for Future Sensor Levels.
+Set to 255 if precipitation sensor is not
+present or faulty.
+[Formerly used for Ice Thickness]
+
+28
+
+7
+
+BYTE
+
+Time at which most recent precipitation
+started. See comment below for
+structure.
+
+35
+
+7
+
+BYTE
+
+Time at which most recent precipitation
+ended. See comment below for
+structure.
+
+42
+
+2
+
+WORD
+
+Total precipitation in the last hour in
+2
+1/10s of kg/m (equivalent to 1/10s of
+millimetres for rain at 3.98 degrees
+Celsius). Set to 65535 if precipitation
+sensor is not present or faulty
+
+44
+
+2
+
+WORD
+
+Total precipitation in the last 24 hours in
+2
+1/10s of kg/m (equivalent to 1/10s of
+millimetres for rain at 3.98 degrees
+Celsius). Set to 65535 if precipitation
+sensor is not present or faulty
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+-7
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 82 of 110 pages
+
+Position
+
+Bytes
+
+Value
+
+Description
+
+46
+
+2
+
+WORD
+
+Horizontal Visibility in 1/10s of metres.
+Range is 0 to 65530 (equivalent to
+6.553km).
+Set to 65531 if 6.554km < range <
+9.999km
+Set to 65532 if 10.000km < range <
+19.999km
+Set to 65533 if 20.000km < range <
+49.999km
+Set to 65534 if 50.000km < range <
+99.999km
+Set to 65535 if visibility sensor not
+present or faulty
+
+48
+
+1
+
+BYTE
+
+Present Weather indication, see
+comment below for values.
+
+49
+
+1
+
+BYTE
+
+Surface Status, see comment below for
+values.
+
+50
+
+2
+
+WORD
+
+Surface Temperature in 1/10s of
+degrees Celsius.
+Range is -1000 to +1000.
+Value in Sign-Magnitude Format.
+Set to -32767 if pavement sensor is not
+present or faulty
+
+52
+
+2
+
+WORD
+
+Surface Freezepoint in 1/10s of degrees
+Celsius.
+Range is -1000 to +1000.
+Value in Sign-Magnitude Format.
+Set to -32767 if pavement sensor is not
+present or faulty
+
+54
+
+1
+
+BYTE
+
+Surface Black Ice Status. See comment
+below for values.
+
+55
+
+1
+
+BYTE
+
+Carbon Monoxide Level in parts per
+million. Set to 255 if air quality sensor
+not present or faulty
+
+56
+
+1
+
+BYTE
+
+Nitrous Oxide Level in parts per million.
+Set to 255 if air quality sensor not
+present or faulty
+
+57
+
+1
+
+BYTE
+
+Nitrogen Dioxide Level in parts per
+9
+billion (i.e. 10 ). Set to 255 if air quality
+sensor not present or faulty
+
+58
+
+2
+
+WORD
+
+Sulphur Dioxide Level in parts per billion
+9
+(i.e. 10 ). Set to 65535 if air quality
+sensor not present or faulty
+
+60
+
+1
+
+BYTE
+
+Ozone Level in parts per 100 billion (i.e.
+9
+100 x 10 ). Set to 255 if air quality
+sensor not present or faulty
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 83 of 110 pages
+
+Position
+
+Bytes
+
+Value
+
+Description
+
+61
+
+1
+
+BYTE
+
+Reserved for future Sensor.
+Set to 255 if sensor not present or faulty.
+
+62
+
+1
+
+BYTE
+
+Reserved for future Sensor.
+Set to 255 if sensor not present or faulty.
+
+63
+
+2
+
+WORD
+
+Water depth in centimetres.
+Set to 65535 if water level sensor not
+present or faulty.
+
+65
+
+2
+
+WORD
+
+Ice Thickness in centimetres.
+Set to 65535 if precipitation sensor is not
+present or faulty
+[Formerly at Position 27.]
+
+67
+
+1
+
+BYTE
+
+Reserved for Future Sensor Levels Set
+to 255 if not present or faulty
+
+…
+
+…
+
+…
+
+…
+
+125
+
+1
+
+BYTE
+
+Reserved for Future Sensor Levels Set
+to 255 if not present or faulty
+
+Comments:
+•
+
+The time structure for precipitation start time and precipitation
+end time are as for Bytes 4 to 10 of the Environmental/Weather
+Status Reply message. If the precipitation sensor is not present
+or faulty then all bytes shall be set to 0xFF. If there has been no
+precipitation since start-up, the start and end times shall be set to
+01-Jan-2001 00:00:00.
+
+•
+
+Present Weather indication shall be one of the following values:
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Value
+
+Weather Condition
+
+100
+
+Nothing significant to report
+
+130
+
+Fog
+
+140
+
+Precipitation [no longer supported; see Note]
+
+141
+
+Precipitation, slight or moderate [no longer
+supported; see Note]
+
+142
+
+Precipitation, heavy [no longer supported; see
+Note]
+
+143
+
+Liquid precipitation, slight or moderate [no
+longer supported; see Note]
+
+Specification TSI-SP-003, Issue 5.0
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Page 84 of 110 pages
+Value
+
+Weather Condition
+
+144
+
+Liquid precipitation, heavy [no longer supported;
+see Note]
+
+145
+
+Solid precipitation, slight or moderate [no longer
+supported; see Note]
+
+146
+
+Solid precipitation, heavy [no longer supported;
+see Note]
+
+147
+
+Freezing precipitation, slight or moderate [no
+longer supported; see Note]
+
+148
+
+Freezing precipitation, heavy [no longer
+supported; see Note]
+
+160
+
+Rain [no longer supported; see Note]
+
+161
+
+Rain, not freezing, slight
+
+162
+
+Rain, not freezing, moderate
+
+163
+
+Rain, not freezing, heavy
+
+164
+
+Rain, freezing, slight
+
+165
+
+Rain, freezing, moderate
+
+166
+
+Rain, freezing, heavy
+
+167
+
+Rain (or drizzle) and snow, slight [no longer
+supported; see Note]
+
+168
+
+Rain (or drizzle) and snow, moderate or heavy
+[no longer supported; see Note]
+
+170
+
+Snow [no longer supported; see Note]
+
+171
+
+Snow, slight
+
+172
+
+Snow, moderate
+
+173
+
+Snow, heavy
+
+174
+
+Ice pellets, slight [no longer supported; see
+Note]
+
+175
+
+Ice pellets, moderate [no longer supported; see
+Note]
+
+176
+
+Ice pellets, heavy [no longer supported; see
+Note]
+
+239
+
+Blowing snow, impossible to determine whether
+snow is falling or not
+
+Specification TSI-SP-003, Issue 5.0
+
+NOTE:
+
+Page 85 of 110 pages
+Value
+
+Weather Condition
+
+247
+
+Dense fog, visibility 60 - 90 meters [no longer
+supported; see Note]
+
+248
+
+Dense fog, visibility 30 - 60 meters [no longer
+supported; see Note]
+
+249
+
+Dense fog, visibility less than 30 meters [no
+longer supported; see Note]
+
+255
+
+Visibility sensor not present of faulty.
+
+Certain values in the Present Weather indication are no
+longer supported in this Specification for new design
+equipment. This is because they are no longer supported in
+the relevant NTCIP standard (NTCIP 1204) upon which the
+weather station messages were originally based and
+consequently will not be supported in new-build equipment.
+For TMC legacy systems, the RDP will convert/map all
+those values which are no longer supported to the value
+‘Other’ in the NTCIP standard for onward transmission to
+the Central Management Computer System (CMCS). This
+Specification does not cover the protocol used between the
+RDP and CMCS.
+
+•
+
+Surface Status shall be one of the following values:
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Value
+
+Surface Condition
+
+1
+
+Other Condition not indicated below
+
+2
+
+Pavement sensor faulty or not present
+
+3
+
+Dry
+
+4
+
+Wet
+
+5
+
+Chemically Wet
+
+6
+
+Reserved. [Formerly ‘Snow Or Ice’.]
+
+7
+
+Absorption
+
+8
+
+Dew
+
+9
+
+Frost
+
+10
+
+Reserved. [Formerly ‘Absorption at
+dewpoint’.]
+
+Specification TSI-SP-003, Issue 5.0
+
+•
+
+3.6.3.45
+
+Page 86 of 110 pages
+Value
+
+Surface Condition
+
+11
+
+Trace moisture
+
+12
+
+Ice warning (≡ ice present)
+
+13
+
+Ice watch (≡ ice possible)
+
+14
+
+Snow warning (≡ snow present)
+
+15
+
+Snow watch (≡ snow possible)
+
+Surface Black Ice Status shall be one of the following values:
+Value
+
+Black Ice Condition
+
+1
+
+Other Condition not indicated below
+
+2
+
+No Ice
+
+3
+
+Black Ice
+
+4
+
+Pavement sensor faulty or not present
+
+Environmental/Weather Threshold Definition
+Direction: Master to Environmental/Weather Station Controller and
+Environmental/Weather Station Controller to Master
+(bidirectional)
+Message Size: Variable
+Description: The ENVIRONMENTAL/WEATHER THRESHOLD
+DEFINITION message is used to set the thresholds for a particular
+environmental/weather parameter. The environmental/weather station
+controller uses these thresholds to generate environmental/weather
+events and record them in the environmental/weather event log.
+This message is also used by the controller to report stored
+thresholds.
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 87 of 110 pages
+
+Content:
+Position
+
+Bytes
+
+Value
+
+Description
+
+1
+
+1
+
+MI Code
+
+83h
+
+2
+
+1
+
+BYTE
+
+Environmental/Weather Parameter
+Type. See Comment below for the set of
+applicable values.
+
+3
+
+1
+
+BYTE
+
+Number of Thresholds to follow
+
+4
+
+2
+
+WORD
+
+*Threshold Value
+
+6
+
+1
+
+BYTE
+
+*Rising/Falling threshold (0/1)
+
+*field may be repeated depending on number of thresholds
+Comments:
+•
+
+If the environmental/weather station controller does not support
+configuration of environmental/weather thresholds and the
+generation of the environmental/weather event log, it must set the
+Support Thresholds Flag in the Environmental/Weather Status
+message to zero (see Clause 3.6.3.38).
+
+•
+
+If the environmental/weather station controller does support
+thresholds, it must set the Support Thresholds Flag in the
+Environmental/Weather Status message to One and support at
+least 3 rising and 3 falling thresholds for each
+environmental/weather parameter.
+
+•
+
+If an environmental/weather parameter has no thresholds, the
+Number of Thresholds to Follow field is set to zero, and the
+message ends. That is, the Threshold Value and Rising/Falling
+Threshold fields are not transmitted.
+
+•
+
+For a rising threshold, the environmental/weather station
+controller
+must
+generate
+an
+event
+when
+an
+environmental/weather parameter is increasing such that it is
+greater than or equal to the threshold. Where an
+environmental/weather parameter passes more than one
+threshold, an event shall be generated for each threshold.
+
+•
+
+For a falling threshold, the environmental/weather station
+controller
+must
+generate
+an
+event
+when
+an
+environmental/weather parameter is decreasing such that it is
+less than or equal to the threshold. Where an
+environmental/weather parameter passes more than one
+threshold, an event shall be generated for each threshold.
+
+•
+
+To ensure that the Environmental/Weather Station has exactly
+the same threshold definitions as the master, the master
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 88 of 110 pages
+
+downloads an Environmental/Weather Threshold Definition for all
+threshold types. This includes threshold types that the
+Environmental/Weather Station may not support (because of not
+having the appropriate sensor). This is performed to ensure the
+consistency of the data set used to calculate the checksum.
+•
+
+The controller shall respond with this message when responding
+to a Request Threshold Definition command from the master.
+
+•
+
+Environmental/Weather Parameter Type must be one of the
+following values:
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Value
+
+Environmental/Weather Parameter
+
+1
+
+Atmospheric Pressure
+
+10
+
+Dry Bulb Temperature
+
+11
+
+Wet Bulb Temperature
+
+12
+
+Dewpoint Temperature
+
+13
+
+24hour Maximum Temperature
+
+14
+
+24hour Minimum Temperature
+
+20
+
+Horizontal Visibility
+
+21
+
+Present Weather indication
+
+30
+
+Relative Humidity
+
+31
+
+Snow Depth
+
+32
+
+Snowfall Rate
+
+33
+
+Ice Thickness
+
+34
+
+One Hour Precipitation
+
+35
+
+24hour Precipitation
+
+40
+
+Wind Direction
+
+41
+
+Wind Speed
+
+42
+
+Maximum Wind Gust Speed
+
+43
+
+Maximum Wind Gust Direction
+
+50
+
+Surface Status
+
+51
+
+Surface Temperature
+
+52
+
+Surface Freezepoint
+
+53
+
+Surface Black Ice
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 89 of 110 pages
+Value
+
+Environmental/Weather Parameter
+
+60
+
+Carbon Monoxide Level
+
+61
+
+Nitrous Oxide Level
+
+62
+
+Nitrogen Dioxide Level
+
+63
+
+Sulphur Dioxide Level
+
+64
+
+Ozone Level
+
+66
+
+Water depth
+
+Comments:
+•
+
+3.6.3.46
+
+The omission of value 65 is intentional.
+
+Request Threshold Definition
+Direction: Master to Environmental/Weather Station Controller
+Message Size: 2 bytes
+Description: The REQUEST THRESHOLD DEFINITION command is
+used to request a set of thresholds for a particular
+environmental/weather parameter.
+Content:
+Position
+
+Bytes
+
+Value
+
+Description
+
+1
+
+1
+
+MI Code
+
+84h
+
+2
+
+1
+
+BYTE
+
+Environmental/Weather Parameter
+Type.
+
+Comments:
+•
+
+3.6.3.47
+
+Environmental/Weather Parameter type is as defined for the
+ENVIRONMENTAL/WEATHER
+THRESHOLD
+DEFINITION
+command (see Clause 3.6.3.41).
+
+Request Environmental/Weather Event Log
+Direction: Master to Environmental/Weather Station Controller
+Message Size: 1 byte
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 90 of 110 pages
+
+Description: The REQUEST ENVIRONMENTAL/WEATHER EVENT
+LOG command is used to request the environmental/weather event
+log.
+Content:
+
+3.6.3.48
+
+Position
+
+Bytes
+
+Value
+
+Description
+
+1
+
+1
+
+MI Code
+
+85h
+
+Environmental/Weather Event Log Reply
+Direction: Environmental/Weather Station Controller to Master
+Message Size: variable
+Description: The ENVIRONMENTAL/WEATHER EVENT LOG
+REPLY message is used to return the environmental/weather event
+log.
+Content:
+Position
+
+Bytes
+
+Value
+
+Description
+
+1
+
+1
+
+MI Code
+
+86h
+
+2
+
+1
+
+BYTE
+
+Number of entries to follow (0-20)
+
+3
+
+1
+
+BYTE
+
+*entry number field – cycles between 0
+and 255
+
+4
+
+1
+
+BYTE
+
+*
+
+Day (1-31)
+
+5
+
+1
+
+BYTE
+
+*
+
+Month (1-12)
+
+6
+
+2
+
+WORD
+
+*
+
+Year (1-9999)
+
+8
+
+1
+
+BYTE
+
+*
+
+Hours (0-23)
+
+9
+
+1
+
+BYTE
+
+*
+
+Minutes (0-59)
+
+10
+
+1
+
+BYTE
+
+*
+
+Seconds (0-59)
+
+11
+
+1
+
+BYTE
+
+*
+
+Environmental/Weather Parameter
+Type
+
+12
+
+1
+
+BYTE
+
+*
+
+Rising/Falling threshold (0/1)
+
+13
+
+2
+
+WORD
+
+*
+
+Threshold Value
+
+*field may be repeated depending on the number of entries.
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 91 of 110 pages
+
+Comments:
+
+3.6.3.49
+
+•
+
+The event log is only supported by a environmental/weather
+station
+controller
+if
+it
+supports
+the
+definition
+of
+environmental/weather thresholds. An entry shall be placed in the
+log whenever a threshold is exceeded. Refer to the
+Environmental/Weather Threshold Definition message (see
+Clause 3.6.3.41).
+
+•
+
+The Threshold Value is the actual sensor reported value that
+caused the event to be generated (not the threshold value
+defined in the Threshold Definition). Where the actual sensor
+reported value passes through more than one threshold, more
+than one event shall be logged. For a falling value, the Threshold
+Value shall be the defined threshold minus one. For a rising
+value, the Threshold Value shall be the defined threshold plus
+one. For example, consider a sensor value dropping from 550 to
+90, with falling thresholds defined as 500 and 100. In this case,
+the event log shall contain two entries each with the same time
+but with the first entry having a value of 499 and the second entry
+having a value of 90.
+
+•
+
+A maximum of only twenty entries is allowed in the
+Environmental/Weather Event Log Reply, with the most recent
+entry appearing first in the list and the oldest appearing last.
+
+•
+
+The
+event
+list
+is
+a
+historical
+(archive)
+log
+of
+environmental/weather threshold events. The log is a first-in-firstout log. When the log is full and a new entry is added to the list,
+the oldest entry is removed.
+
+•
+
+Each time an entry is added to the Environmental/Weather Event
+Log, the entry number field is incremented. The entry number
+starts at 255 for an empty log (after each reset of the log),
+increments to zero; then increments to 255 and then rolls over to
+zero and continues. The entry number field may be used to
+determine how many new event log entries have been added
+since the log was last retrieved, or how many event log entries
+have been lost (i.e. more than 20 fault entries have been added).
+
+Reset Environmental/Weather Event Log
+Direction: Master to Environmental/Weather Station Controller
+Message Size: 1 byte
+Description: The RESET ENVIRONMENTAL/WEATHER EVENT
+LOG command is used to reset the environmental/weather event log
+stored in the Environmental/Weather Station Controller's memory.
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 92 of 110 pages
+
+Content:
+
+3.6.3.50
+
+Position
+
+Bytes
+
+Value
+
+Description
+
+1
+
+1
+
+MI Code
+
+87h
+
+Manufacturer Specific Messages
+Direction: Master to Controller and/or Controller to Master as
+assigned by the Manufacturer.
+Message Size: Variable
+Description: MANUFACTURER SPECIFIC MESSAGES are a set of
+MI Codes reserved solely for a device manufacturer’s own use.
+Up to 16 such messages are available for each manufacturer.
+All proposed MI code assignments for MANUFACTURER SPECIFIC
+MESSAGES shall be submitted for approval by the RMS Manager
+Traffic Technology before implementation.
+The Manufacturer shall assign the direction(s) applicable for each MI
+code.
+Content:
+
+3.6.3.51
+
+Position
+
+Bytes
+
+Value
+
+Description
+
+1
+
+1
+
+MI Code
+
+F0 to FFh
+
+Reserved MI Codes
+Message Information Codes C0h to DFh are reserved and allocated
+to other use (for PIDs).
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+

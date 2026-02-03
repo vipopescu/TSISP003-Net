@@ -1,0 +1,620 @@
+ROADS AND MARITIME SERVICES
+TRAFFIC SYSTEMS
+
+SPECIFICATION No. TSI-SP-003
+COMMUNICATIONS PROTOCOL
+FOR ROADSIDE DEVICES
+
+Version:
+5.0
+Issue Date: 28/06/2017
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 2 of 110 pages
+
+DISCLAIMER AND CONDITIONS FOR USE OF THIS SPECIFICATION
+This Specification has been prepared by Roads and Maritime Services (referred to
+herein as RMS) for use, insofar as it is applicable, in the State of New South Wales for
+equipment supplied under an RMS order or contract, or under an order or a contract
+from another party that is required in writing by RMS to use this Specification.
+The use of this RMS Specification other than by those parties stated above and in the
+manner stated above is not recommended or authorised by RMS. Any such use is
+entirely the decision of the user alone. RMS disclaims all responsibilities and liabilities
+arising whether directly or indirectly from any such use. RMS does not warrant that
+this Specification is error free, nor does RMS warrant the suitability, fitness or
+otherwise of this Specification for any stated or implied purposes expressed or implied
+in this Specification or other documents. By using this Specification, the user agrees
+to indemnify RMS against the full amount of all expenses, losses, damages and costs
+(on a full indemnity basis and whether or not incurred by or awarded against RMS)
+which may be suffered by any person or RMS in connection with or arising out of the
+use of this Specification in any manner.
+RMS is not under any duty to inform you of any errors in or changes to this
+Specification.
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 3 of 110 pages
+
+RECORD OF AMENDMENTS
+Version
+1.0
+2.0
+2.1
+3.0
+3.1
+3.2
+
+3.3
+
+3.4
+
+Summary
+Original, based on specification RTACPS
+Second Issues
+ Multiple changes
+Third issue:
+ Multiple changes
+Fourth issue:
+ Multiple changes
+Fifth issue:
+ Multiple changes
+ Minor editorial changes.
+ New Clause 3.6.3.30 inserted for
+command “Sign set extended
+graphics frame” and references
+updated throughout the document in
+clauses Cl.3.6.3.24, 3.6.3.29, 3.6.4
+and 3.6.5. Subsequent clauses to
+3.6.3.30 have been renumbered.
+ Clause C.2 Added 3 new error codes
+ Replaced the acronym VSLS with
+ISLUS.
+ Minor editorial changes.
+ Clause 3.6.3.12 “Sign Set Graphics
+Frame” changed to align with draft
+SA TS 5719.
+ New Clause 3.6.3.30 renamed as
+“Sign Set High Resolution Graphics
+Frame” and sign maximum
+dimensions clarified. References
+updated throughout the document.
+ New Clauses 3.6.3.31 "Sign
+Configuration Request", 3.6.3.32
+"Sign Configuration Reply" and
+3.6.3.33 "Sign Display Atomic
+Frames" added.
+ Clauses subsequent to 3.6.3.33
+have been renumbered.
+Main changes include:
+ General: restored references to
+VSLSs as well as ISLUSs.
+ Reformat of headers and footers.
+ Foreword deleted.
+ Clause 1.4 deleted references to old
+RDP documentation and added
+reference to SA TS 5719.
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Date
+4 October, 2002
+
+Approved
+Mgr, TSI
+
+14 April, 2008
+
+Mgr, TSI
+
+26 June, 2008
+
+Mgr, TSI
+
+25 July, 2012
+
+A/Mgr, TSI
+
+6 February,2013
+
+A/Mgr, TSI
+
+18 November
+2016
+
+Internal use
+only.
+Not for
+approval.
+
+16 January 2017
+
+Internal use
+only.
+Not for
+approval.
+
+7 April 2017
+
+Internal use
+only.
+Not for
+approval.
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 4 of 110 pages
+
+
+
+3.5
+
+4.0
+4.1
+
+Clause 1.6 added definitions for
+“group”, “interlocking”, “Referencing
+Specification”, “Word” in the context
+of this document. Also clarified
+categories of signs capable of
+displaying graphics.
+ Clause 2.1 updated to cover
+contemporary communications
+technologies.amended.
+ Clause 2.4.4 renamed.
+ Clause 3.2 revised.
+ Clause 3.3.2.4 detail added.
+ Clause 3.3.2.5 detail added.
+ Clause 3.6.3.12 deleted references
+to 1-bit, 2-bit, nibble or byte encoded
+colour intensities and related text.
+Added deprecation of message in
+preference to SIGN SET HIGH
+RESOLUTION GRAPHICS FRAME
+message.
+ Clause 3.6.3.15 added reference to
+SIGN DISPLAY ATOMIC FRAMES
+message.
+ Clause 3.6.3.23 added reference to
+maintaining a blank display.
+ Clause 3.6.3.29 clarified references
+to advanced graphics sign.
+ Clause 3.6.3.32 added note relating
+to SA TS 5719 and no support for
+CMSs.
+ Clause 3.6.3.50 (formerly 3.6.3.46)
+clarified numbers of and assignment
+information for Manufacturer Specific
+Messages.
+ Clause 3.6.5 MI code columns
+added.
+ Appendix C.2 note amended with
+reference to SA TS 5719
+ Appendix D message example
+clarifieded.
+Main changes include:
+ Record of amendments clarified.
+ Cl.1.6 amended sign category
+descriptions.
+ Cl.3.6.3.12 delete the deprecation on
+its use for new design signs.
+ Cl.3.6.3.29 add reference to high
+resolution graphics signs.
+Approved version of 3.5, converted to
+pdf
+Main changes include:
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+27 April 2017
+
+Submitted
+for
+approval
+
+1 May 2017
+
+a/ Principal
+Mgr, ITS
+Submitted
+
+20 June 2017
+
+Specification TSI-SP-003, Issue 5.0
+
+
+
+5.0
+
+Page 5 of 110 pages
+for
+approval
+
+Appendix C.1 additional error codes
+allocated
+Appendix C.2 additional error codes
+allocated.
+
+.
+Approved version of 4.1, converted to
+pdf
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+28 June 2017
+
+a/ Mgr, TSI
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 6 of 110 pages
+
+CONTENTS
+
+DISCLAIMER AND CONDITIONS FOR USE OF THIS SPECIFICATION ..............................................2
+RECORD OF AMENDMENTS ................................................................................................................3
+1.
+
+2.
+
+3.
+
+INTRODUCTION ............................................................................................................................9
+1.1
+
+PURPOSE .............................................................................................................................9
+
+1.2
+
+SCOPE .................................................................................................................................9
+
+1.3
+
+OVERVIEW ............................................................................................................................9
+
+1.4
+
+COMPATIBILITY WITH OTHER SPECIFICATIONS AND SYSTEMS....................................................10
+
+1.5
+
+COMPLIANCE WITH THIS SPECIFICATION .................................................................................11
+
+1.6
+
+DEFINITIONS AND GLOSSARY OF TERMS .................................................................................11
+
+GENERAL DESCRIPTION ...........................................................................................................14
+2.1
+
+PHYSICAL SYSTEM LAYOUT ...................................................................................................14
+
+2.2
+
+MASTER AND SLAVES ...........................................................................................................14
+
+2.3
+
+SYSTEM SECURITY ..............................................................................................................15
+
+2.4
+
+PROTOCOL ATTRIBUTES .......................................................................................................15
+2.4.1
+
+Device Controller Address .......................................................................................15
+
+2.4.2
+
+Broadcast Messages ...............................................................................................16
+
+2.4.3
+
+Transparency ..........................................................................................................16
+
+2.4.4
+
+Data Integrity ...........................................................................................................16
+
+PROTOCOL LAYERS ..................................................................................................................17
+3.1
+
+INTRODUCTION ....................................................................................................................17
+
+3.2
+
+PHYSICAL LINK ....................................................................................................................17
+
+3.3
+
+DATA-LINK PROTOCOL .........................................................................................................17
+
+3.4
+
+3.3.1
+
+Data Presentation ....................................................................................................18
+
+3.3.2
+
+Data Transfer ..........................................................................................................19
+
+3.3.2.1
+
+Message Sequencing ..................................................................................................... 19
+
+3.3.2.2
+
+Address Field ................................................................................................................. 20
+
+3.3.2.3
+
+Cyclic Redundancy Check (CRC) ................................................................................... 20
+
+3.3.2.4
+
+Data Packets ................................................................................................................. 21
+
+3.3.2.5
+
+Non-Data Packets .......................................................................................................... 21
+
+3.3.2.6
+
+Re-Transmission............................................................................................................ 22
+
+SESSION MANAGEMENT .......................................................................................................22
+3.4.1
+
+Data Link Establishment ..........................................................................................22
+
+3.4.2
+
+Data Link Termination..............................................................................................24
+
+3.4.3
+
+Heartbeat Polling .....................................................................................................25
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 7 of 110 pages
+
+3.5
+
+EXAMPLE OF DATALINK MESSAGE EXCHANGE ......................................................................... 26
+
+3.6
+
+APPLICATION LAYER ............................................................................................................27
+3.6.1
+
+Introduction .............................................................................................................27
+
+3.6.2
+
+General Requirements.............................................................................................27
+
+3.6.3
+
+Application Layer Messages .................................................................................... 28
+
+3.6.3.1
+
+Reject ............................................................................................................................ 28
+
+3.6.3.2
+
+Acknowledge (*ACK) ...................................................................................................... 29
+
+3.6.3.3
+
+Start Session ................................................................................................................. 29
+
+3.6.3.4
+
+Password Seed .............................................................................................................. 29
+
+3.6.3.5
+
+Password ....................................................................................................................... 30
+
+3.6.3.6
+
+Heartbeat Poll ................................................................................................................ 30
+
+3.6.3.7
+
+Sign Status Reply .......................................................................................................... 31
+
+3.6.3.8
+
+End Session................................................................................................................... 32
+
+3.6.3.9
+
+System Reset ................................................................................................................ 33
+
+3.6.3.10
+
+Update Time .................................................................................................................. 35
+
+3.6.3.11
+
+Sign Set Text Frame ...................................................................................................... 35
+
+3.6.3.12
+
+Sign Set Graphics Frame ............................................................................................... 38
+
+3.6.3.13
+
+Sign Set Message .......................................................................................................... 41
+
+3.6.3.14
+
+Sign Set Plan ................................................................................................................. 43
+
+3.6.3.15
+
+Sign Display Frame........................................................................................................ 45
+
+3.6.3.16
+
+Sign Display Message .................................................................................................... 46
+
+3.6.3.17
+
+Enable Plan ................................................................................................................... 46
+
+3.6.3.18
+
+Disable Plan .................................................................................................................. 47
+
+3.6.3.19
+
+Request Enabled Plans .................................................................................................. 48
+
+3.6.3.20
+
+Report Enabled Plans .................................................................................................... 48
+
+3.6.3.21
+
+Sign Set Dimming Level ................................................................................................. 49
+
+3.6.3.22
+
+Power ON/OFF .............................................................................................................. 50
+
+3.6.3.23
+
+Disable/Enable Device ................................................................................................... 50
+
+3.6.3.24
+
+Sign Request Stored Frame/Message/Plan..................................................................... 51
+
+3.6.3.25
+
+Retrieve Fault Log .......................................................................................................... 52
+
+3.6.3.26
+
+Fault Log Reply.............................................................................................................. 52
+
+3.6.3.27
+
+Reset Fault Log.............................................................................................................. 55
+
+3.6.3.28
+
+Sign Extended Status Request ....................................................................................... 55
+
+3.6.3.29
+
+Sign Extended Status Reply ........................................................................................... 55
+
+3.6.3.30
+
+Sign Set High Resolution Graphics Frame...................................................................... 60
+
+3.6.3.31
+
+Sign Configuration Request ............................................................................................ 64
+
+3.6.3.32
+
+Sign Configuration Reply................................................................................................ 65
+
+3.6.3.33
+
+Sign Display Atomic Frames .......................................................................................... 67
+
+3.6.3.34
+
+HAR Status Reply .......................................................................................................... 67
+
+3.6.3.35
+
+HAR Set Voice Data ....................................................................................................... 69
+
+3.6.3.36
+
+HAR Set Strategy ........................................................................................................... 71
+
+3.6.3.37
+
+HAR Activate Strategy.................................................................................................... 72
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 8 of 110 pages
+
+3.6.3.38
+
+HAR Set Plan................................................................................................................. 73
+
+3.6.3.39
+
+HAR Request Stored Voice/Strategy/Plan....................................................................... 74
+
+3.6.3.40
+
+HAR Set Voice Data ACK ............................................................................................... 75
+
+3.6.3.41
+
+HAR Set Voice Data NAK ............................................................................................... 76
+
+3.6.3.42
+
+Environmental/Weather Status Reply ............................................................................. 77
+
+3.6.3.43
+
+Request Environmental/Weather Values ........................................................................ 79
+
+3.6.3.44
+
+Environmental/Weather Values ...................................................................................... 79
+
+3.6.3.45
+
+Environmental/Weather Threshold Definition .................................................................. 86
+
+3.6.3.46
+
+Request Threshold Definition ......................................................................................... 89
+
+3.6.3.47
+
+Request Environmental/Weather Event Log ................................................................... 89
+
+3.6.3.48
+
+Environmental/Weather Event Log Reply ....................................................................... 90
+
+3.6.3.49
+
+Reset Environmental/Weather Event Log ....................................................................... 91
+
+3.6.3.50
+
+Manufacturer Specific Messages .................................................................................... 92
+
+3.6.3.51
+
+Reserved MI Codes ........................................................................................................ 92
+
+3.6.4
+
+Summary of Message Information Codes ................................................................93
+
+3.6.5
