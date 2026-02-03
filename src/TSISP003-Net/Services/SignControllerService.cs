@@ -576,10 +576,75 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         return await _ackReplyCompletion.Task;
     }
 
-    public Task UpdateTime()
+    /// <summary>
+    /// Send the UPDATE TIME command to update the real time clock in the device controller.
+    /// </summary>
+    /// <param name="dateTime">The date/time to set. If null, uses the current system time.</param>
+    /// <returns>AckReply on success</returns>
+    /// <exception cref="TimeoutException">Thrown when the request times out</exception>
+    /// <exception cref="SignRequestRejectedException">Thrown when the request is rejected</exception>
+    public async Task<AckReply> UpdateTime(DateTime? dateTime = null)
     {
-        // TODO
-        throw new NotImplementedException();
+        _ackReplyCompletion = new TaskCompletionSource<AckReply>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _rejectReplyCompletion = new TaskCompletionSource<RejectReply>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        // Use provided time or current system time
+        DateTime time = dateTime ?? DateTime.Now;
+
+        // Build the time data:
+        // Day (1 byte), Month (1 byte), Year (2 bytes WORD), Hours (1 byte), Minutes (1 byte), Seconds (1 byte)
+        byte day = (byte)time.Day;
+        byte month = (byte)time.Month;
+        ushort year = (ushort)time.Year;
+        byte hours = (byte)time.Hour;
+        byte minutes = (byte)time.Minute;
+        byte seconds = (byte)time.Second;
+
+        // Year is transmitted as WORD (2 bytes, low byte first based on protocol convention)
+        byte yearLow = (byte)(year & 0xFF);
+        byte yearHigh = (byte)((year >> 8) & 0xFF);
+
+        // build body - MI Code 0x09 (Update Time)
+        string message = SignControllerServiceConfig.SOH // Start of header
+                    + NS.ToString("X2") + NR.ToString("X2") // NS and NR
+                    + _deviceSettings.Address // ADDR
+                    + SignControllerServiceConfig.STX
+                    + SignControllerServiceConfig.MI_UPDATE_TIME.ToString("X2")
+                    + day.ToString("X2")
+                    + month.ToString("X2")
+                    + yearLow.ToString("X2") + yearHigh.ToString("X2")
+                    + hours.ToString("X2")
+                    + minutes.ToString("X2")
+                    + seconds.ToString("X2");
+
+        // append crc and end of message
+        message = message
+                    + Functions.PacketCRC(Encoding.ASCII.GetBytes(message))
+                    + SignControllerServiceConfig.ETX;
+
+        await _tcpClient.SendAsync(message);
+
+        // Wait for either the reply to be received or a timeout after 3 seconds.
+        var delayTask = Task.Delay(TimeSpan.FromSeconds(3));
+
+        var completedTask = await Task.WhenAny(_ackReplyCompletion.Task, _rejectReplyCompletion.Task, delayTask);
+
+        if (completedTask == delayTask)
+        {
+            throw new TimeoutException("Update Time request timed out.");
+        }
+
+        if (completedTask == _rejectReplyCompletion.Task)
+        {
+            throw new SignRequestRejectedException(await _rejectReplyCompletion.Task);
+        }
+
+        if (completedTask == _ackReplyCompletion.Task)
+        {
+            return await _ackReplyCompletion.Task;
+        }
+
+        throw new InvalidOperationException("Unexpected execution path.");
     }
 
     public async Task<SignStatusReply> SignSetTextFrame(SignSetTextFrame request)

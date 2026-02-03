@@ -250,6 +250,15 @@ public class SystemResetCommandDto
     public byte ResetLevel { get; set; }
 }
 
+public class UpdateTimeCommandDto
+{
+    /// <summary>
+    /// Optional date/time to set on the controller.
+    /// If null, the current server time will be used.
+    /// </summary>
+    public DateTime? DateTime { get; set; }
+}
+
 public class EnablePlanCommandDto
 {
     /// <summary>

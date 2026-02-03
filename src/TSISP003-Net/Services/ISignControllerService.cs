@@ -16,7 +16,7 @@ public interface ISignControllerService : IHostedService
     Task HeartbeatPoll();
     Task EndSession();
     Task<AckReply> SystemReset(byte groupId, byte resetLevel);
-    Task UpdateTime();
+    Task<AckReply> UpdateTime(DateTime? dateTime = null);
     Task<SignStatusReply> SignSetTextFrame(SignSetTextFrame request);
     Task<SignStatusReply> SignSetGraphicsFrame(SignSetGraphicsFrame request);
     Task<SignStatusReply> SignSetHighResolutionGraphicsFrame(SignSetHighResolutionGraphicsFrame request);

@@ -64,6 +64,41 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
     }
 
     /// <summary>
+    /// Updates the real time clock in the device controller.
+    /// If no DateTime is provided in the request body, the current server time is used.
+    /// </summary>
+    [HttpPost]
+    [Route("{device}/UpdateTime")]
+    public async Task<IActionResult> UpdateTime(string device, [FromBody] UpdateTimeCommandDto? request = null)
+    {
+        try
+        {
+            if (!_signControllerServiceFactory.ContainsSignController(device))
+                return NotFound("Device not found");
+
+            var ackReply = await _signControllerServiceFactory.GetSignControllerService(device)
+                .UpdateTime(request?.DateTime);
+
+            return Ok(ackReply.AsDto());
+        }
+        catch (TimeoutException ex)
+        {
+            _logger.LogWarning(ex, "Update Time timed out for device {Device}", device);
+            return StatusCode(StatusCodes.Status408RequestTimeout, "Update Time timed out.");
+        }
+        catch (SignRequestRejectedException ex)
+        {
+            _logger.LogWarning(ex, "Update Time rejected for device {Device}", device);
+            return StatusCode(StatusCodes.Status400BadRequest, ex.RejectReply.AsDto());
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating time for device {Device}", device);
+            return StatusCode(StatusCodes.Status500InternalServerError, "Error updating time.");
+        }
+    }
+
+    /// <summary>
     /// Sends a text frame to the specified device.
     /// </summary>
     [HttpPost]
