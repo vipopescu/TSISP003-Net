@@ -93,6 +93,9 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
             var controller = await _signControllerServiceFactory.GetSignControllerService(device)
                 .GetControllerConfigurationAsync();
 
+            if (controller is null)
+                return NotFound("Controller configuration not available");
+
             return Ok(controller.AsDto());
         }
         catch (TimeoutException ex)
@@ -410,6 +413,9 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
                 return NotFound("Device not found");
 
             var controller = await _signControllerServiceFactory.GetSignControllerService(device).GetStatus();
+
+            if (controller is null)
+                return NotFound("Status not available");
 
             return Ok(controller.AsDto());
         }

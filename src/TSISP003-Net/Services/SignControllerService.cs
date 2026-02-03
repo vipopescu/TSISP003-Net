@@ -23,7 +23,7 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
     private readonly TCPClient _tcpClient = tcpClient;
     private readonly SignControllerConnectionOptions _deviceSettings = deviceSettings;
     private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
-    private SignStatusReply _signController = null;
+    private SignStatusReply? _signController;
 
     public bool SignConfigurationReceived { get; set; } = false;
 
@@ -102,7 +102,9 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
                 Thread.Sleep(1000);
 
                 // 2 - Receive an Ack and the password seed
-                string response = await _tcpClient.ReadAsync();
+                var response = await _tcpClient.ReadAsync();
+                if (response is null) continue;
+
                 bool isAcknowledged = false;
                 string passwordSeed = string.Empty;
 
@@ -125,6 +127,8 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
 
                 // 4 - Receive an ACK and ACK* mi code
                 response = await _tcpClient.ReadAsync();
+                if (response is null) continue;
+
                 isAcknowledged = false;
                 bool isAckProtocolReceived = false;
 
@@ -231,9 +235,9 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
     {
         try
         {
-            string response;
+            string? response;
             // Continue reading until ReadAsync returns null
-            while ((response = await _tcpClient.ReadAsync()) != null)
+            while ((response = await _tcpClient.ReadAsync()) is not null)
             {
                 if (!string.IsNullOrEmpty(response))
                 {
@@ -241,10 +245,9 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
                 }
             }
         }
-        catch (Exception ex)
+        catch
         {
             // Handle exceptions as needed
-            //Console.WriteLine($"Failed to read from the socket: {ex.Message}");
             // Optionally, add error handling or retries here
         }
     }
@@ -1051,7 +1054,8 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         }
         finally
         {
-            _signStatusReplyTaskCompletion?.TrySetResult(_signController);
+            if (_signController is not null)
+                _signStatusReplyTaskCompletion?.TrySetResult(_signController);
         }
     }
 
@@ -1128,7 +1132,8 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         }
         finally
         {
-            _signStatusReplyTaskCompletion?.TrySetResult(_signController);
+            if (_signController is not null)
+                _signStatusReplyTaskCompletion?.TrySetResult(_signController);
         }
         return Task.CompletedTask;
     }
@@ -1354,12 +1359,12 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
     /// </summary>
     /// <returns></returns>
     /// <exception cref="Exception"></exception>
-    public Task<SignController> GetControllerConfigurationAsync()
+    public Task<SignController?> GetControllerConfigurationAsync()
     {
         try
         {
-            // To reimplememt
-            return null;
+            // To reimplement
+            return Task.FromResult<SignController?>(null);
         }
         catch (Exception ex)
         {
@@ -1371,7 +1376,7 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
     /// Get the status of the controller
     /// </summary>
     /// <returns></returns>
-    public Task<SignStatusReply> GetStatus()
+    public Task<SignStatusReply?> GetStatus()
     {
         return Task.FromResult(_signController);
     }

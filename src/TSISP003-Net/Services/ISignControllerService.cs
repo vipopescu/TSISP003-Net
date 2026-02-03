@@ -9,8 +9,8 @@ namespace TSISP003.Services;
 /// </summary>
 public interface ISignControllerService : IHostedService
 {
-    Task<SignStatusReply> GetStatus();
-    Task<SignController> GetControllerConfigurationAsync();
+    Task<SignStatusReply?> GetStatus();
+    Task<SignController?> GetControllerConfigurationAsync();
     Task StartSession();
     Task Password(string passwordSeed);
     Task HeartbeatPoll();
