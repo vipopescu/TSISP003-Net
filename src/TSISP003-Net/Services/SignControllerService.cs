@@ -24,6 +24,7 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
     private TaskCompletionSource<HARStatusReply>? _harStatusReplyTaskCompletion;
     private TaskCompletionSource<HARSetStrategy>? _harSetStrategyTaskCompletion;
     private TaskCompletionSource<HARSetPlan>? _harSetPlanTaskCompletion;
+    private TaskCompletionSource<SignController>? _signConfigurationReplyTaskCompletion;
 
     private Task? heartBeatPollTask;
     private Task? startSessionTask;
@@ -31,6 +32,12 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
     private readonly SignControllerConnectionOptions _deviceSettings = deviceSettings;
     private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
     private SignStatusReply? _signController;
+
+    /// <summary>
+    /// Stores the sign controller configuration received from the device.
+    /// Contains group and sign information.
+    /// </summary>
+    private SignController? _signConfiguration;
 
     /// <summary>
     /// Flag to indicate whether the session was manually stopped via EndSession().
@@ -235,11 +242,38 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         // We request the configuration and read it until we receive it
         while (!cancellationToken.IsCancellationRequested && !SignConfigurationReceived)
         {
-            //await SignConfigurationRequest();
-            //Thread.Sleep(5000);
-            //await ReadStream();
+            try
+            {
+                _signConfigurationReplyTaskCompletion = new TaskCompletionSource<SignController>(TaskCreationOptions.RunContinuationsAsynchronously);
 
-            SignConfigurationReceived = true;
+                await SignConfigurationRequest();
+                await Task.Delay(1000, cancellationToken);
+                await ReadStream();
+
+                // Wait for the configuration reply with timeout
+                var delayTask = Task.Delay(TimeSpan.FromSeconds(5), cancellationToken);
+                var completedTask = await Task.WhenAny(_signConfigurationReplyTaskCompletion.Task, delayTask);
+
+                if (completedTask == _signConfigurationReplyTaskCompletion.Task)
+                {
+                    _signConfiguration = await _signConfigurationReplyTaskCompletion.Task;
+                    SignConfigurationReceived = true;
+                    Console.WriteLine($"Sign configuration received: {_signConfiguration.NumberOfGroups} groups");
+                }
+                else
+                {
+                    Console.WriteLine("Sign configuration request timed out, retrying...");
+                }
+            }
+            catch (OperationCanceledException)
+            {
+                break;
+            }
+            catch (Exception ex)
+            {
+                Console.WriteLine($"Failed to get sign configuration: {ex.Message}");
+                await Task.Delay(3000, cancellationToken);
+            }
         }
 
         // We start the hearbeat
@@ -2177,69 +2211,110 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
     }
 
     /// <summary>
-    /// Process the sign configuration reply
+    /// Process the sign configuration reply (MI Code 0x22)
+    /// Format:
+    /// - Position 1: MI Code (22h)
+    /// - Position 2-11: Manufacturer code details (10 bytes)
+    /// - Position 12: Number of groups
+    /// - For each group:
+    ///   - Group ID (1 byte)
+    ///   - Number of signs (1 byte)
+    ///   - For each sign: Sign ID (1), Type (1), Width (2 WORD), Height (2 WORD)
+    ///   - Number of signature data bytes (1 byte)
+    ///   - Signature bytes (variable)
     /// </summary>
-    /// <param name="applicationData"></param>
+    /// <param name="applicationData">The hex-encoded application data</param>
     /// <returns></returns>
     public Task ProcessSignConfigurationReply(string applicationData)
     {
         try
         {
-            // _signController = new SignController();
+            var signConfiguration = new SignController();
 
-            // byte numberOfGroups = Convert.ToByte(applicationData[22..24], 16);
-            // _signController.NumberOfGroups = numberOfGroups;
+            // Position 2-11: Manufacturer code details (10 bytes = 20 hex chars)
+            // Offset 2-22 in the hex string (position 1 is MI code at offset 0-2)
+            // We skip this for now as SignController doesn't have a field for it
 
-            // short baseGroup = 22;
-            // for (byte i = 0; i < numberOfGroups; i++) // Iterate over all groups
-            // {
-            //     // Build group with ID
-            //     SignGroup signGroup = new SignGroup
-            //     {
-            //         GroupID = Convert.ToByte(applicationData[baseGroup..(baseGroup + 2)], 16)
-            //     };
+            // Position 12: Number of groups (offset 22-24)
+            byte numberOfGroups = Convert.ToByte(applicationData[22..24], 16);
+            signConfiguration.NumberOfGroups = numberOfGroups;
 
-            //     byte numberOfSigns = Convert.ToByte(applicationData[(baseGroup + 2)..(baseGroup + 4)], 16);
+            // Parse each group starting at position 13 (offset 24)
+            int offset = 24;
+            for (byte groupIndex = 0; groupIndex < numberOfGroups; groupIndex++)
+            {
+                // Group ID (1 byte)
+                byte groupId = Convert.ToByte(applicationData[offset..(offset + 2)], 16);
+                offset += 2;
 
-            //     // Get all signs for the group
-            //     short baseSign = (short)(baseGroup + 4);
-            //     for (int nSign = 1; nSign <= numberOfSigns; nSign++) // Iterate over all signs
-            //     {
-            //         // Create new sign
-            //         Sign sign = new Sign
-            //         {
-            //             SignID = Convert.ToByte(applicationData[baseSign..(baseSign + 2)], 16),
-            //             SignType = (SignControllerServiceConfig.SignType)Convert.ToByte(applicationData[(baseSign + 2)..(baseSign + 4)], 16),
-            //             SignWidth = Convert.ToInt16(applicationData[(baseSign + 4)..(baseSign + 8)], 16),
-            //             SignHeight = Convert.ToInt16(applicationData[(baseSign + 8)..(baseSign + 12)], 16)
-            //         };
-            //         signGroup.Signs.Add(sign.SignID, sign);
+                // Number of signs (1 byte)
+                byte numberOfSigns = Convert.ToByte(applicationData[offset..(offset + 2)], 16);
+                offset += 2;
 
-            //         baseSign = (short)(baseSign + 12);
-            //     }
+                var signGroup = new SignGroup
+                {
+                    GroupID = groupId
+                };
 
-            //     // Get Signature and add to list
-            //     baseGroup = baseSign;
-            //     byte signatureNumberOfBytes = Convert.ToByte(applicationData[baseGroup..(baseGroup + 2)], 16);
-            //     signGroup.Signature = applicationData[(baseGroup + 2)..(baseGroup + 2 + signatureNumberOfBytes * 2)];
-            //     _signController.Groups.Add(signGroup.GroupID, signGroup);
+                // Parse each sign
+                for (int signIndex = 0; signIndex < numberOfSigns; signIndex++)
+                {
+                    // Sign ID (1 byte)
+                    byte signId = Convert.ToByte(applicationData[offset..(offset + 2)], 16);
+                    offset += 2;
 
-            //     // Continue with the next group
-            //     baseGroup = (short)(baseGroup + 2 + (signatureNumberOfBytes * 2));
-            // }
+                    // Sign type (1 byte)
+                    byte signType = Convert.ToByte(applicationData[offset..(offset + 2)], 16);
+                    offset += 2;
 
-            // SignConfigurationReceived = true;
+                    // Sign width (WORD - 2 bytes, low byte first)
+                    byte widthLow = Convert.ToByte(applicationData[offset..(offset + 2)], 16);
+                    byte widthHigh = Convert.ToByte(applicationData[(offset + 2)..(offset + 4)], 16);
+                    short signWidth = (short)(widthLow + (widthHigh << 8));
+                    offset += 4;
 
+                    // Sign height (WORD - 2 bytes, low byte first)
+                    byte heightLow = Convert.ToByte(applicationData[offset..(offset + 2)], 16);
+                    byte heightHigh = Convert.ToByte(applicationData[(offset + 2)..(offset + 4)], 16);
+                    short signHeight = (short)(heightLow + (heightHigh << 8));
+                    offset += 4;
+
+                    var sign = new Sign
+                    {
+                        SignID = signId,
+                        SignType = (SignControllerServiceConfig.SignType)signType,
+                        SignWidth = signWidth,
+                        SignHeight = signHeight
+                    };
+
+                    signGroup.Signs[signId] = sign;
+                }
+
+                // Number of signature data bytes (1 byte)
+                byte signatureLength = Convert.ToByte(applicationData[offset..(offset + 2)], 16);
+                offset += 2;
+
+                // Signature bytes (variable)
+                if (signatureLength > 0 && offset + (signatureLength * 2) <= applicationData.Length)
+                {
+                    signGroup.Signature = applicationData[offset..(offset + signatureLength * 2)];
+                    offset += signatureLength * 2;
+                }
+
+                signConfiguration.Groups[groupId] = signGroup;
+            }
+
+            Console.WriteLine($"Sign Configuration Reply: {numberOfGroups} groups parsed successfully");
+
+            // Store the configuration and complete the TaskCompletionSource
+            _signConfiguration = signConfiguration;
+            _signConfigurationReplyTaskCompletion?.TrySetResult(signConfiguration);
         }
-        catch (System.Exception)
+        catch (Exception ex)
         {
-            // TODO: Implement logger
+            Console.WriteLine($"Failed to process sign configuration reply: {ex.Message}");
         }
-        finally
-        {
-            if (_signController is not null)
-                _signStatusReplyTaskCompletion?.TrySetResult(_signController);
-        }
+
         return Task.CompletedTask;
     }
 
@@ -2917,10 +2992,26 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Check if a group ID exists in the stored sign controller configuration.
+    /// Group ID 0 is a special case that applies to all groups.
+    /// </summary>
+    /// <param name="groupId">The group ID to check</param>
+    /// <returns>True if the group exists or groupId is 0 (all groups), false otherwise</returns>
     private bool GroupIDExists(byte groupId)
     {
-        // TODO: I need to get this from the configuration that I read from the controller.
-        throw new NotImplementedException();
+        // Group ID 0 applies to all groups, so it's always valid
+        if (groupId == 0)
+            return true;
+
+        // If we haven't received the configuration yet, we can't validate
+        if (_signConfiguration == null)
+        {
+            Console.WriteLine("Warning: GroupIDExists called but sign configuration not yet received");
+            return true; // Allow the operation to proceed; the controller will reject if invalid
+        }
+
+        return _signConfiguration.Groups.ContainsKey(groupId);
     }
 
     /// <summary>
@@ -2938,21 +3029,13 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
     }
 
     /// <summary>
-    /// Get the controller configuration
+    /// Get the controller configuration that was received from the device.
+    /// Returns null if configuration hasn't been received yet.
     /// </summary>
-    /// <returns></returns>
-    /// <exception cref="Exception"></exception>
+    /// <returns>The stored SignController configuration or null</returns>
     public Task<SignController?> GetControllerConfigurationAsync()
     {
-        try
-        {
-            // To reimplement
-            return Task.FromResult<SignController?>(null);
-        }
-        catch (Exception ex)
-        {
-            throw new Exception("Failed to get controller configuration", ex);
-        }
+        return Task.FromResult(_signConfiguration);
     }
 
     /// <summary>
