@@ -252,7 +252,7 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
         }
         catch (SignRequestRejectedException ex)
         {
-            Console.WriteLine($"Request rejected: {ex.RejectReply.ApplicationErrorCode}");
+            _logger.LogWarning("Request rejected: {ErrorCode}", ex.RejectReply.ApplicationErrorCode);
             return StatusCode(StatusCodes.Status400BadRequest, ex.RejectReply.AsDto());
         }
         catch (Exception ex)
@@ -283,7 +283,7 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
         }
         catch (SignRequestRejectedException ex)
         {
-            Console.WriteLine($"Request rejected: {ex.RejectReply.ApplicationErrorCode}");
+            _logger.LogWarning("Request rejected: {ErrorCode}", ex.RejectReply.ApplicationErrorCode);
             return StatusCode(StatusCodes.Status400BadRequest, ex.RejectReply.AsDto());
         }
         catch (Exception ex)
@@ -349,7 +349,7 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
         }
         catch (SignRequestRejectedException ex)
         {
-            Console.WriteLine($"Request rejected: {ex.RejectReply.ApplicationErrorCode}");
+            _logger.LogWarning("Request rejected: {ErrorCode}", ex.RejectReply.ApplicationErrorCode);
             return StatusCode(StatusCodes.Status400BadRequest, ex.RejectReply.AsDto());
         }
         catch (Exception ex)
@@ -380,7 +380,7 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
         }
         catch (SignRequestRejectedException ex)
         {
-            Console.WriteLine($"Request rejected: {ex.RejectReply.ApplicationErrorCode}");
+            _logger.LogWarning("Request rejected: {ErrorCode}", ex.RejectReply.ApplicationErrorCode);
             return StatusCode(StatusCodes.Status400BadRequest, ex.RejectReply.AsDto());
         }
         catch (Exception ex)
@@ -557,7 +557,7 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
         }
         catch (SignRequestRejectedException ex)
         {
-            Console.WriteLine($"Request rejected: {ex.RejectReply.ApplicationErrorCode}");
+            _logger.LogWarning("Request rejected: {ErrorCode}", ex.RejectReply.ApplicationErrorCode);
             return StatusCode(StatusCodes.Status400BadRequest, ex.RejectReply.AsDto());
         }
         catch (Exception ex)
@@ -641,7 +641,7 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
         }
         catch (SignRequestRejectedException ex)
         {
-            Console.WriteLine($"Request rejected: {ex.RejectReply.ApplicationErrorCode}");
+            _logger.LogWarning("Request rejected: {ErrorCode}", ex.RejectReply.ApplicationErrorCode);
             return StatusCode(StatusCodes.Status400BadRequest, ex.RejectReply.AsDto());
         }
         catch (Exception ex)
@@ -943,8 +943,8 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
         // Get the elapsed time as a TimeSpan value
         TimeSpan ts = stopwatch.Elapsed;
 
-        // Format and display the TimeSpan value
-        Console.WriteLine("Elapsed Time: {0:00}:{1:00}:{2:00}.{3:00}",
+        // Log the elapsed time
+        _logger.LogDebug("Elapsed Time: {Hours:00}:{Minutes:00}:{Seconds:00}.{Milliseconds:00}",
             ts.Hours, ts.Minutes, ts.Seconds, ts.Milliseconds / 10);
 
         return Ok();

@@ -5,11 +5,16 @@ using TSISP003.Configuration;
 using TSISP003.Infrastructure.Tcp;
 using TSISP003.Utilities;
 using TSISP003.Domain.Entities;
+using Microsoft.Extensions.Logging;
 
 namespace TSISP003.Services;
 
-public class SignControllerService(TCPClient tcpClient, SignControllerConnectionOptions deviceSettings) : ISignControllerService, IDisposable
+public class SignControllerService(
+    TCPClient tcpClient,
+    SignControllerConnectionOptions deviceSettings,
+    ILogger<SignControllerService> logger) : ISignControllerService, IDisposable
 {
+    private readonly ILogger<SignControllerService> _logger = logger;
     private TaskCompletionSource<List<FaultLogEntry>>? _faultLogReplyTaskCompletion;
     private TaskCompletionSource<SignStatusReply>? _signStatusReplyTaskCompletion;
     private TaskCompletionSource<SignSetTextFrame>? _signSetTextFrameTaskCompletion;
@@ -198,21 +203,21 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
 
                 if (sessionStarted)
                 {
-                    Console.WriteLine("Session started successfully");
+                    _logger.LogInformation("Session started successfully");
                     break;
                 }
             }
-            catch (SocketException soex)
+            catch (SocketException ex)
             {
-                Console.WriteLine($"Starting session failed: {soex.Message}");
+                _logger.LogWarning(ex, "Starting session failed: {Message}", ex.Message);
             }
-            catch (IOException ioex)
+            catch (IOException ex)
             {
-                Console.WriteLine($"Starting session failed: {ioex.Message}");
+                _logger.LogWarning(ex, "Starting session failed: {Message}", ex.Message);
             }
-            catch (OperationCanceledException opex)
+            catch (OperationCanceledException ex)
             {
-                Console.WriteLine($"Starting session failed: {opex.Message}");
+                _logger.LogWarning(ex, "Starting session failed: {Message}", ex.Message);
             }
             finally
             {
@@ -258,11 +263,11 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
                 {
                     _signConfiguration = await _signConfigurationReplyTaskCompletion.Task;
                     SignConfigurationReceived = true;
-                    Console.WriteLine($"Sign configuration received: {_signConfiguration.NumberOfGroups} groups");
+                    _logger.LogInformation("Sign configuration received: {GroupCount} groups", _signConfiguration.NumberOfGroups);
                 }
                 else
                 {
-                    Console.WriteLine("Sign configuration request timed out, retrying...");
+                    _logger.LogWarning("Sign configuration request timed out, retrying...");
                 }
             }
             catch (OperationCanceledException)
@@ -271,7 +276,7 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Failed to get sign configuration: {ex.Message}");
+                _logger.LogError(ex, "Failed to get sign configuration: {Message}", ex.Message);
                 await Task.Delay(3000, cancellationToken);
             }
         }
@@ -289,7 +294,7 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
             }
             catch (Exception ex)
             {
-                Console.WriteLine($"Failed to read from the socket: {ex.Message}");
+                _logger.LogWarning(ex, "Failed to read from the socket: {Message}", ex.Message);
                 failedAttempts++;
             }
             finally
@@ -303,11 +308,11 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         {
             if (_sessionManuallyStopped)
             {
-                Console.WriteLine("Session was manually stopped. Not restarting automatically.");
+                _logger.LogInformation("Session was manually stopped. Not restarting automatically.");
             }
             else
             {
-                Console.WriteLine("Heartbeat failed. Restarting the session...");
+                _logger.LogWarning("Heartbeat failed. Restarting the session...");
                 startSessionTask = Task.Run(() => StartSessionTask(_cancellationTokenSource.Token));
             }
         }
@@ -359,7 +364,7 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
             else if (packet[0] == SignControllerServiceConfig.SOH)
                 DispatchDataPacket(packet);
             else
-                Console.WriteLine("Unable to determine type of the packet.");
+                _logger.LogWarning("Unable to determine type of the packet.");
         }
 
         // Save the incomplete data for the next response.
@@ -450,7 +455,7 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         else if (miCode == SignControllerServiceConfig.MI_ACK_MESSAGE)
             await ProcessAckMessage(applicationData);
         else
-            Console.WriteLine("Unexpected mi code: " + miCode);
+            _logger.LogWarning("Unexpected MI code: {MiCode}", miCode);
 
         // Extract slave's N(S) from the received packet
         // Slave's N(R) at packet[3..5] indicates how many packets it received from us (not needed here)
@@ -500,6 +505,8 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
     /// <returns></returns>
     public async Task StartSession()
     {
+        _logger.LogDebug("Starting session for device at address {Address}", _deviceSettings.Address);
+
         // Reset the manually stopped flag since we're starting a new session
         _sessionManuallyStopped = false;
 
@@ -548,6 +555,8 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
     /// <returns></returns>
     public async Task EndSession()
     {
+        _logger.LogInformation("Ending session for device at address {Address}", _deviceSettings.Address);
+
         // Mark session as manually stopped to prevent automatic restart
         _sessionManuallyStopped = true;
 
@@ -577,6 +586,8 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
     /// <exception cref="ArgumentException">Thrown when an invalid reset level is provided</exception>
     public async Task<AckReply> SystemReset(byte groupId, byte resetLevel)
     {
+        _logger.LogInformation("Sending SystemReset command - GroupId: {GroupId}, ResetLevel: {ResetLevel}", groupId, resetLevel);
+
         // Validate reset level
         if (!IsValidResetLevel(resetLevel))
         {
@@ -872,7 +883,7 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         }
         catch (Exception ex)
         {
-            Console.WriteLine("Failed to process sign set graphics frame: " + ex.Message);
+            _logger.LogError(ex, "Failed to process sign set graphics frame: {Message}", ex.Message);
         }
 
         return Task.CompletedTask;
@@ -2077,9 +2088,9 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
             // if (errorCodeChanged) await RetrieveFaultLog();
 
         }
-        catch (System.Exception)
+        catch (Exception ex)
         {
-            Console.WriteLine("Failed to process sign status reply");
+            _logger.LogError(ex, "Failed to process sign status reply");
         }
         finally
         {
@@ -2157,13 +2168,14 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
             harStatusReply.StrategyRevision = Convert.ToByte(applicationData[38..40], 16);
             harStatusReply.StrategyStatus = Convert.ToByte(applicationData[40..42], 16);
 
-            Console.WriteLine($"HAR Status Reply received - Online: {harStatusReply.OnlineStatus}, Enabled: {harStatusReply.HAREnabled}, AppError: {harStatusReply.ApplicationErrorCode}, CtrlError: {harStatusReply.ControllerErrorCode}");
+            _logger.LogDebug("HAR Status Reply received - Online: {Online}, Enabled: {Enabled}, AppError: {AppError}, CtrlError: {CtrlError}",
+                harStatusReply.OnlineStatus, harStatusReply.HAREnabled, harStatusReply.ApplicationErrorCode, harStatusReply.ControllerErrorCode);
 
             _harStatusReplyTaskCompletion?.TrySetResult(harStatusReply);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Failed to process HAR Status Reply: {ex.Message}");
+            _logger.LogError(ex, "Failed to process HAR Status Reply: {Message}", ex.Message);
         }
 
         return Task.CompletedTask;
@@ -2200,11 +2212,12 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
             byte controllerErrorCode = Convert.ToByte(applicationData[24..26], 16);
             bool supportsThresholds = Convert.ToByte(applicationData[26..28], 16) == 1;
 
-            Console.WriteLine($"Environmental/Weather Status Reply received - Online: {onlineStatus}, SupportsThresholds: {supportsThresholds}, AppError: {appErrorCode}, CtrlError: {controllerErrorCode}");
+            _logger.LogDebug("Environmental/Weather Status Reply received - Online: {Online}, SupportsThresholds: {SupportsThresholds}, AppError: {AppError}, CtrlError: {CtrlError}",
+                onlineStatus, supportsThresholds, appErrorCode, controllerErrorCode);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Failed to process Environmental/Weather Status Reply: {ex.Message}");
+            _logger.LogError(ex, "Failed to process Environmental/Weather Status Reply: {Message}", ex.Message);
         }
 
         return Task.CompletedTask;
@@ -2304,7 +2317,7 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
                 signConfiguration.Groups[groupId] = signGroup;
             }
 
-            Console.WriteLine($"Sign Configuration Reply: {numberOfGroups} groups parsed successfully");
+            _logger.LogDebug("Sign Configuration Reply: {GroupCount} groups parsed successfully", numberOfGroups);
 
             // Store the configuration and complete the TaskCompletionSource
             _signConfiguration = signConfiguration;
@@ -2312,7 +2325,7 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Failed to process sign configuration reply: {ex.Message}");
+            _logger.LogError(ex, "Failed to process sign configuration reply: {Message}", ex.Message);
         }
 
         return Task.CompletedTask;
@@ -2358,7 +2371,7 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         }
         catch (Exception ex)
         {
-            Console.WriteLine("Failed to process report enabled plans: " + ex.Message);
+            _logger.LogError(ex, "Failed to process report enabled plans: {Message}", ex.Message);
         }
 
         return Task.CompletedTask;
@@ -2471,7 +2484,7 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         }
         catch (Exception ex)
         {
-            Console.WriteLine("Failed to process sign extended status reply: " + ex.Message);
+            _logger.LogError(ex, "Failed to process sign extended status reply: {Message}", ex.Message);
         }
 
         return Task.CompletedTask;
@@ -2543,11 +2556,11 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
             ushort voiceId = (ushort)(voiceIdLow + (voiceIdHigh << 8));
             byte sequenceNumber = Convert.ToByte(applicationData[6..8], 16);
 
-            Console.WriteLine($"HAR Voice Data ACK received - VoiceID: {voiceId}, Sequence: {sequenceNumber}");
+            _logger.LogDebug("HAR Voice Data ACK received - VoiceID: {VoiceId}, Sequence: {SequenceNumber}", voiceId, sequenceNumber);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Failed to process HAR Voice Data ACK: {ex.Message}");
+            _logger.LogError(ex, "Failed to process HAR Voice Data ACK: {Message}", ex.Message);
         }
 
         return Task.CompletedTask;
@@ -2573,11 +2586,11 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
             ushort voiceId = (ushort)(voiceIdLow + (voiceIdHigh << 8));
             byte sequenceNumber = Convert.ToByte(applicationData[6..8], 16);
 
-            Console.WriteLine($"HAR Voice Data NAK received - VoiceID: {voiceId}, LastGoodSequence: {sequenceNumber}");
+            _logger.LogWarning("HAR Voice Data NAK received - VoiceID: {VoiceId}, LastGoodSequence: {SequenceNumber}", voiceId, sequenceNumber);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Failed to process HAR Voice Data NAK: {ex.Message}");
+            _logger.LogError(ex, "Failed to process HAR Voice Data NAK: {Message}", ex.Message);
         }
 
         return Task.CompletedTask;
@@ -2621,13 +2634,14 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
                 offset += 4;
             }
 
-            Console.WriteLine($"HAR Set Strategy received - StrategyID: {harSetStrategy.StrategyID}, Revision: {harSetStrategy.Revision}, VoiceIDs: {numberOfVoiceIDs}");
+            _logger.LogDebug("HAR Set Strategy received - StrategyID: {StrategyId}, Revision: {Revision}, VoiceIDs: {VoiceIdCount}",
+                harSetStrategy.StrategyID, harSetStrategy.Revision, numberOfVoiceIDs);
 
             _harSetStrategyTaskCompletion?.TrySetResult(harSetStrategy);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Failed to process HAR Set Strategy: {ex.Message}");
+            _logger.LogError(ex, "Failed to process HAR Set Strategy: {Message}", ex.Message);
         }
 
         return Task.CompletedTask;
@@ -2687,13 +2701,14 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
                 offset += 12;
             }
 
-            Console.WriteLine($"HAR Set Plan received - PlanID: {harSetPlan.PlanID}, Revision: {harSetPlan.Revision}, Entries: {harSetPlan.Entries.Count}");
+            _logger.LogDebug("HAR Set Plan received - PlanID: {PlanId}, Revision: {Revision}, Entries: {EntryCount}",
+                harSetPlan.PlanID, harSetPlan.Revision, harSetPlan.Entries.Count);
 
             _harSetPlanTaskCompletion?.TrySetResult(harSetPlan);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Failed to process HAR Set Plan: {ex.Message}");
+            _logger.LogError(ex, "Failed to process HAR Set Plan: {Message}", ex.Message);
         }
 
         return Task.CompletedTask;
@@ -2710,11 +2725,11 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         {
             // Environmental/Weather Values Reply contains sensor readings
             // Format varies based on which sensors are present
-            Console.WriteLine($"Environmental/Weather Values Reply received - Data length: {applicationData.Length / 2} bytes");
+            _logger.LogDebug("Environmental/Weather Values Reply received - Data length: {DataLength} bytes", applicationData.Length / 2);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Failed to process Environmental/Weather Values Reply: {ex.Message}");
+            _logger.LogError(ex, "Failed to process Environmental/Weather Values Reply: {Message}", ex.Message);
         }
 
         return Task.CompletedTask;
@@ -2740,11 +2755,12 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
             byte parameterType = Convert.ToByte(applicationData[2..4], 16);
             byte numberOfThresholds = Convert.ToByte(applicationData[4..6], 16);
 
-            Console.WriteLine($"Environmental/Weather Threshold Definition Reply received - ParameterType: {parameterType}, NumberOfThresholds: {numberOfThresholds}");
+            _logger.LogDebug("Environmental/Weather Threshold Definition Reply received - ParameterType: {ParameterType}, NumberOfThresholds: {ThresholdCount}",
+                parameterType, numberOfThresholds);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Failed to process Environmental/Weather Threshold Definition Reply: {ex.Message}");
+            _logger.LogError(ex, "Failed to process Environmental/Weather Threshold Definition Reply: {Message}", ex.Message);
         }
 
         return Task.CompletedTask;
@@ -2771,11 +2787,11 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
 
             byte numberOfEntries = Convert.ToByte(applicationData[2..4], 16);
 
-            Console.WriteLine($"Environmental/Weather Event Log Reply received - NumberOfEntries: {numberOfEntries}");
+            _logger.LogDebug("Environmental/Weather Event Log Reply received - NumberOfEntries: {EntryCount}", numberOfEntries);
         }
         catch (Exception ex)
         {
-            Console.WriteLine($"Failed to process Environmental/Weather Event Log Reply: {ex.Message}");
+            _logger.LogError(ex, "Failed to process Environmental/Weather Event Log Reply: {Message}", ex.Message);
         }
 
         return Task.CompletedTask;
@@ -2825,7 +2841,7 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         }
         catch (Exception ex)
         {
-            Console.WriteLine("Failed to process sign set high resolution graphics frame: " + ex.Message);
+            _logger.LogError(ex, "Failed to process sign set high resolution graphics frame: {Message}", ex.Message);
         }
 
         return Task.CompletedTask;
@@ -2893,7 +2909,7 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         }
         catch (Exception ex)
         {
-            Console.WriteLine("Failed to process sign set message: " + ex.Message);
+            _logger.LogError(ex, "Failed to process sign set message: {Message}", ex.Message);
         }
 
         return Task.CompletedTask;
@@ -2959,7 +2975,7 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         }
         catch (Exception ex)
         {
-            Console.WriteLine("Failed to process sign set plan: " + ex.Message);
+            _logger.LogError(ex, "Failed to process sign set plan: {Message}", ex.Message);
         }
 
         return Task.CompletedTask;
@@ -2972,10 +2988,16 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
     /// <returns></returns>
     public Task ProcessRejectMessage(string applicationData)
     {
+        var rejectedMiCode = Convert.ToByte(applicationData[2..4], 16);
+        var errorCode = Convert.ToByte(applicationData[4..6], 16);
+
+        _logger.LogWarning("Request rejected - MI Code: 0x{MiCode:X2}, Error Code: {ErrorCode}",
+            rejectedMiCode, errorCode);
+
         _rejectReplyCompletion?.TrySetResult(new RejectReply
         {
-            RejectedMiCode = Convert.ToByte(applicationData[2..4], 16),
-            ApplicationErrorCode = Convert.ToByte(applicationData[4..6], 16)
+            RejectedMiCode = rejectedMiCode,
+            ApplicationErrorCode = errorCode
         });
 
         return Task.CompletedTask;
@@ -3007,7 +3029,7 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         // If we haven't received the configuration yet, we can't validate
         if (_signConfiguration == null)
         {
-            Console.WriteLine("Warning: GroupIDExists called but sign configuration not yet received");
+            _logger.LogWarning("GroupIDExists called but sign configuration not yet received");
             return true; // Allow the operation to proceed; the controller will reject if invalid
         }
 
@@ -3196,9 +3218,9 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
             result = true;
         }
 
-        catch (System.Exception ex)
+        catch (Exception ex)
         {
-            Console.WriteLine("Failed to process extended request message: " + ex.Message);
+            _logger.LogError(ex, "Failed to process extended request message: {Message}", ex.Message);
         }
         return result;
     }
