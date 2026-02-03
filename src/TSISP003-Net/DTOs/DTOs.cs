@@ -71,6 +71,46 @@ public class SignStatusReplyDto
     public Dictionary<byte, SignStatusDto> Signs { get; set; } = [];
 }
 
+public class SignExtendedStatusReplyDto
+{
+    public bool OnlineStatus { get; set; }
+    public byte ApplicationErrorCode { get; set; }
+    public required string ApplicationError { get; set; }
+    public string ManufacturerCode { get; set; } = string.Empty;
+    public DateTime DateTime { get; set; }
+    public byte ControllerErrorCode { get; set; }
+    public required string ControllerError { get; set; }
+    public byte NumberOfSigns { get; set; }
+    public Dictionary<byte, SignExtendedStatusDto> Signs { get; set; } = [];
+}
+
+public class SignExtendedStatusDto
+{
+    public byte SignID { get; set; }
+    /// <summary>
+    /// Sign type: 0=text, 1=graphics, 2=advanced graphics
+    /// </summary>
+    public byte SignType { get; set; }
+    public required string SignTypeDescription { get; set; }
+    public byte NumberOfRows { get; set; }
+    public byte NumberOfColumns { get; set; }
+    public byte SignErrorCode { get; set; }
+    public required string SignError { get; set; }
+    /// <summary>
+    /// Dimming mode: 0=automatic, 1=manual
+    /// </summary>
+    public byte DimmingMode { get; set; }
+    public required string DimmingModeDescription { get; set; }
+    /// <summary>
+    /// Luminance level (1-16)
+    /// </summary>
+    public byte LuminanceLevel { get; set; }
+    /// <summary>
+    /// Lamp/LED status data (hex string)
+    /// </summary>
+    public string LampLedStatus { get; set; } = string.Empty;
+}
+
 public class SignSetTextFrameDto
 {
     public byte FrameID { get; set; }

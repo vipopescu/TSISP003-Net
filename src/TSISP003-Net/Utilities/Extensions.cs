@@ -172,6 +172,75 @@ public static class Extensions
         };
     }
 
+    public static SignExtendedStatusReplyDto AsDto(this SignExtendedStatusReply signExtendedStatusReply)
+    {
+        // Attempt to parse the DateTime
+        DateTime dateTime;
+        try
+        {
+            dateTime = new DateTime(
+                signExtendedStatusReply.Year,
+                signExtendedStatusReply.Month,
+                signExtendedStatusReply.Day,
+                signExtendedStatusReply.Hour,
+                signExtendedStatusReply.Minute,
+                signExtendedStatusReply.Second);
+        }
+        catch
+        {
+            dateTime = new DateTime(1900, 1, 1);
+        }
+
+        return new SignExtendedStatusReplyDto
+        {
+            OnlineStatus = signExtendedStatusReply.OnlineStatus,
+            ApplicationErrorCode = signExtendedStatusReply.ApplicationErrorCode,
+            ApplicationError = ErrorCodes.ApplicationErrorCodes.GetValueOrDefault(signExtendedStatusReply.ApplicationErrorCode, "Unknown error code"),
+            ManufacturerCode = signExtendedStatusReply.ManufacturerCode,
+            DateTime = dateTime,
+            ControllerErrorCode = signExtendedStatusReply.ControllerErrorCode,
+            ControllerError = ErrorCodes.ControllerDeviceErrorCodes.GetValueOrDefault(signExtendedStatusReply.ControllerErrorCode, "Unknown error code"),
+            NumberOfSigns = signExtendedStatusReply.NumberOfSigns,
+            Signs = signExtendedStatusReply.Signs.ToDictionary(
+                kvp => kvp.Key,
+                kvp => kvp.Value.AsDto()
+            )
+        };
+    }
+
+    public static SignExtendedStatusDto AsDto(this SignExtendedStatus signExtendedStatus)
+    {
+        string signTypeDescription = signExtendedStatus.SignType switch
+        {
+            0 => "Text",
+            1 => "Graphics",
+            2 => "Advanced Graphics",
+            _ => "Unknown"
+        };
+
+        string dimmingModeDescription = signExtendedStatus.DimmingMode switch
+        {
+            0 => "Automatic",
+            1 => "Manual",
+            _ => "Unknown"
+        };
+
+        return new SignExtendedStatusDto
+        {
+            SignID = signExtendedStatus.SignID,
+            SignType = signExtendedStatus.SignType,
+            SignTypeDescription = signTypeDescription,
+            NumberOfRows = signExtendedStatus.NumberOfRows,
+            NumberOfColumns = signExtendedStatus.NumberOfColumns,
+            SignErrorCode = signExtendedStatus.SignErrorCode,
+            SignError = ErrorCodes.ControllerDeviceErrorCodes.GetValueOrDefault(signExtendedStatus.SignErrorCode, "Unknown error code"),
+            DimmingMode = signExtendedStatus.DimmingMode,
+            DimmingModeDescription = dimmingModeDescription,
+            LuminanceLevel = signExtendedStatus.LuminanceLevel,
+            LampLedStatus = signExtendedStatus.LampLedStatus
+        };
+    }
+
     public static SignSetTextFrameDto AsDto(this SignSetTextFrame signSetTextFrame)
     {
         string asciiText = "";

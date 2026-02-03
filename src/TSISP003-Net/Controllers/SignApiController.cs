@@ -620,8 +620,31 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
     [Route("{device}/SignExtendedStatusRequest")]
     public async Task<IActionResult> SignExtendedStatusRequest(string device)
     {
-        // TODO: Implement
-        return Ok();
+        try
+        {
+            if (!_signControllerServiceFactory.ContainsSignController(device))
+                return NotFound("Device not found");
+
+            var controllerResponse = await _signControllerServiceFactory.GetSignControllerService(device)
+                .SignExtendedStatusRequest();
+
+            return Ok(controllerResponse.AsDto());
+        }
+        catch (TimeoutException ex)
+        {
+            _logger.LogWarning(ex, "Sign Extended Status Request timed out for device {Device}", device);
+            return StatusCode(StatusCodes.Status408RequestTimeout, "Sign Extended Status Request timed out.");
+        }
+        catch (SignRequestRejectedException ex)
+        {
+            _logger.LogWarning(ex, "Sign Extended Status Request rejected for device {Device}", device);
+            return StatusCode(StatusCodes.Status400BadRequest, ex.RejectReply.AsDto());
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error requesting extended status for device {Device}", device);
+            return StatusCode(StatusCodes.Status500InternalServerError, "Error requesting extended status.");
+        }
     }
 
     [HttpGet]

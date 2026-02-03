@@ -18,6 +18,7 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
     private TaskCompletionSource<SignSetMessage>? _signSetMessageTaskCompletion;
     private TaskCompletionSource<SignSetPlan>? _signSetPlanTaskCompletion;
     private TaskCompletionSource<ReportEnabledPlans>? _reportEnabledPlansTaskCompletion;
+    private TaskCompletionSource<SignExtendedStatusReply>? _signExtendedStatusReplyTaskCompletion;
     private TaskCompletionSource<RejectReply>? _rejectReplyCompletion;
     private TaskCompletionSource<AckReply>? _ackReplyCompletion;
 
@@ -1383,9 +1384,52 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         throw new InvalidOperationException("Unexpected execution path.");
     }
 
-    public Task SignExtendedStatusRequest()
+    /// <summary>
+    /// Send a request for extended status information from the sign controller
+    /// </summary>
+    /// <returns>SignExtendedStatusReply containing detailed status information</returns>
+    /// <exception cref="TimeoutException">Thrown when the request times out</exception>
+    /// <exception cref="SignRequestRejectedException">Thrown when the request is rejected</exception>
+    public async Task<SignExtendedStatusReply> SignExtendedStatusRequest()
     {
-        throw new NotImplementedException();
+        _signExtendedStatusReplyTaskCompletion = new TaskCompletionSource<SignExtendedStatusReply>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _rejectReplyCompletion = new TaskCompletionSource<RejectReply>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        // build body - MI Code 0x1B (Sign Extended Status Request)
+        string message = SignControllerServiceConfig.SOH // Start of header
+                    + NS.ToString("X2") + NR.ToString("X2") // NS and NR
+                    + _deviceSettings.Address // ADDR
+                    + SignControllerServiceConfig.STX
+                    + SignControllerServiceConfig.MI_SIGN_EXTENDED_STATUS_REQUEST.ToString("X2");
+
+        // append crc and end of message
+        message = message
+                    + Functions.PacketCRC(Encoding.ASCII.GetBytes(message))
+                    + SignControllerServiceConfig.ETX;
+
+        await _tcpClient.SendAsync(message);
+
+        // Wait for either the reply to be received or a timeout after 3 seconds.
+        var delayTask = Task.Delay(TimeSpan.FromSeconds(3));
+
+        var completedTask = await Task.WhenAny(_signExtendedStatusReplyTaskCompletion.Task, _rejectReplyCompletion.Task, delayTask);
+
+        if (completedTask == delayTask)
+        {
+            throw new TimeoutException("Sign Extended Status Request timed out.");
+        }
+
+        if (completedTask == _rejectReplyCompletion.Task)
+        {
+            throw new SignRequestRejectedException(await _rejectReplyCompletion.Task);
+        }
+
+        if (completedTask == _signExtendedStatusReplyTaskCompletion.Task)
+        {
+            return await _signExtendedStatusReplyTaskCompletion.Task;
+        }
+
+        throw new InvalidOperationException("Unexpected execution path.");
     }
 
     public async Task<List<FaultLogEntry>> RetrieveFaultLog()
@@ -1687,10 +1731,117 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Process the Sign Extended Status Reply message (MI Code 0x1C)
+    /// </summary>
+    /// <param name="applicationData">The hex-encoded application data</param>
+    /// <returns></returns>
     public Task ProcessSignExtendedStatusReply(string applicationData)
     {
-        // TODO
-        throw new NotImplementedException();
+        try
+        {
+            var reply = new SignExtendedStatusReply();
+
+            // Position 2: Online status (offset 2-4 in hex string)
+            reply.OnlineStatus = Convert.ToByte(applicationData[2..4], 16) == 1;
+
+            // Position 3: Application error code (offset 4-6)
+            reply.ApplicationErrorCode = Convert.ToByte(applicationData[4..6], 16);
+
+            // Position 4-13: Manufacturer code details (10 bytes = 20 chars, offset 6-26)
+            reply.ManufacturerCode = applicationData[6..26];
+
+            // Position 14: Day (offset 26-28)
+            reply.Day = Convert.ToByte(applicationData[26..28], 16);
+
+            // Position 15: Month (offset 28-30)
+            reply.Month = Convert.ToByte(applicationData[28..30], 16);
+
+            // Position 16-17: Year (WORD, offset 30-34)
+            byte yearLow = Convert.ToByte(applicationData[30..32], 16);
+            byte yearHigh = Convert.ToByte(applicationData[32..34], 16);
+            reply.Year = (ushort)(yearLow + (yearHigh << 8));
+
+            // Position 18: Hours (offset 34-36)
+            reply.Hour = Convert.ToByte(applicationData[34..36], 16);
+
+            // Position 19: Minutes (offset 36-38)
+            reply.Minute = Convert.ToByte(applicationData[36..38], 16);
+
+            // Position 20: Seconds (offset 38-40)
+            reply.Second = Convert.ToByte(applicationData[38..40], 16);
+
+            // Position 21: Controller error code (offset 40-42)
+            reply.ControllerErrorCode = Convert.ToByte(applicationData[40..42], 16);
+
+            // Position 22: Number of signs (offset 42-44)
+            reply.NumberOfSigns = Convert.ToByte(applicationData[42..44], 16);
+
+            // Parse each sign's extended status
+            int offset = 44; // Starting position for sign data
+            for (int i = 0; i < reply.NumberOfSigns; i++)
+            {
+                var signStatus = new SignExtendedStatus();
+
+                // Sign ID
+                signStatus.SignID = Convert.ToByte(applicationData[offset..(offset + 2)], 16);
+                offset += 2;
+
+                // Sign type (0=text, 1=graphics, 2=advanced graphics)
+                signStatus.SignType = Convert.ToByte(applicationData[offset..(offset + 2)], 16);
+                offset += 2;
+
+                // Number of rows
+                signStatus.NumberOfRows = Convert.ToByte(applicationData[offset..(offset + 2)], 16);
+                offset += 2;
+
+                // Number of columns
+                signStatus.NumberOfColumns = Convert.ToByte(applicationData[offset..(offset + 2)], 16);
+                offset += 2;
+
+                // Sign error code
+                signStatus.SignErrorCode = Convert.ToByte(applicationData[offset..(offset + 2)], 16);
+                offset += 2;
+
+                // Dimming mode (0=automatic, 1=manual)
+                signStatus.DimmingMode = Convert.ToByte(applicationData[offset..(offset + 2)], 16);
+                offset += 2;
+
+                // Luminance level (1-16)
+                signStatus.LuminanceLevel = Convert.ToByte(applicationData[offset..(offset + 2)], 16);
+                offset += 2;
+
+                // Lamp/LED status length
+                signStatus.LampLedStatusLength = Convert.ToByte(applicationData[offset..(offset + 2)], 16);
+                offset += 2;
+
+                // Lamp/LED status data (variable length)
+                int lampLedDataLength = signStatus.LampLedStatusLength * 2; // Convert bytes to hex chars
+                if (lampLedDataLength > 0 && offset + lampLedDataLength <= applicationData.Length)
+                {
+                    signStatus.LampLedStatus = applicationData[offset..(offset + lampLedDataLength)];
+                    offset += lampLedDataLength;
+                }
+
+                reply.Signs[signStatus.SignID] = signStatus;
+            }
+
+            // Last 2 bytes: CRC (if present)
+            if (offset + 4 <= applicationData.Length)
+            {
+                byte crcLow = Convert.ToByte(applicationData[offset..(offset + 2)], 16);
+                byte crcHigh = Convert.ToByte(applicationData[(offset + 2)..(offset + 4)], 16);
+                reply.CRC = (ushort)(crcLow + (crcHigh << 8));
+            }
+
+            _signExtendedStatusReplyTaskCompletion?.TrySetResult(reply);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Failed to process sign extended status reply: " + ex.Message);
+        }
+
+        return Task.CompletedTask;
     }
 
     /// <summary>

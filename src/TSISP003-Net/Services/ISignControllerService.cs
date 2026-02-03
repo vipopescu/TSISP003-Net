@@ -33,7 +33,7 @@ public interface ISignControllerService : IHostedService
     Task<AckReply> PowerOnOff(byte groupId, bool powerOn);
     Task<AckReply> DisableEnableDevice(List<(byte groupId, bool enabled)> entries);
     Task<ISignResponse> SignRequestStoredFrameMessagePlan(RequestType requestType, byte requestID);
-    Task SignExtendedStatusRequest();
+    Task<SignExtendedStatusReply> SignExtendedStatusRequest();
     Task<List<FaultLogEntry>> RetrieveFaultLog();
     Task ResetFaultLog();
     Task HARSetVoiceDataIncomplete();
