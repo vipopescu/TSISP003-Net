@@ -1822,16 +1822,89 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         }
     }
 
+    /// <summary>
+    /// Process HAR Status Reply (MI Code 0x40)
+    /// Contains HAR controller status: online status, date/time, error codes,
+    /// HAR enabled/disabled, voice ID playing, strategy ID active, etc.
+    /// </summary>
+    /// <param name="applicationData">The hex-encoded application data</param>
     public Task ProcessHARStatusReply(string applicationData)
     {
-        // TODO
-        throw new NotImplementedException();
+        try
+        {
+            // HAR Status Reply format (21 bytes):
+            // Position 1: MI Code (40h)
+            // Position 2: Online status (0/1)
+            // Position 3: Application error code
+            // Position 4: Day (1-31)
+            // Position 5: Month (1-12)
+            // Position 6-7: Year (WORD)
+            // Position 8: Hours (0-23)
+            // Position 9: Minutes (0-59)
+            // Position 10: Seconds (0-59)
+            // Position 11-12: Controller hardware checksum (WORD)
+            // Position 13: Controller error code
+            // Position 14: HAR disabled/enabled (0/1)
+            // Position 15-16: Voice ID playing (WORD, 0 if none)
+            // Position 17: Voice revision
+            // Position 18-19: Strategy ID active (WORD, 0 if none)
+            // Position 20: Strategy revision
+            // Position 21: Strategy status
+
+            bool onlineStatus = Convert.ToByte(applicationData[2..4], 16) == 1;
+            byte appErrorCode = Convert.ToByte(applicationData[4..6], 16);
+            byte controllerErrorCode = Convert.ToByte(applicationData[24..26], 16);
+            bool harEnabled = Convert.ToByte(applicationData[26..28], 16) == 1;
+
+            Console.WriteLine($"HAR Status Reply received - Online: {onlineStatus}, Enabled: {harEnabled}, AppError: {appErrorCode}, CtrlError: {controllerErrorCode}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to process HAR Status Reply: {ex.Message}");
+        }
+
+        return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Process Environmental/Weather Status Reply (MI Code 0x80)
+    /// Contains environmental/weather station status: online status, date/time,
+    /// error codes, sensor presence flags, etc.
+    /// </summary>
+    /// <param name="applicationData">The hex-encoded application data</param>
     public Task ProcessEnvironmentalWeatherStatusReply(string applicationData)
     {
-        // TODO
-        throw new NotImplementedException();
+        try
+        {
+            // Environmental/Weather Status Reply format (30 bytes):
+            // Position 1: MI Code (80h)
+            // Position 2: Online status (0/1)
+            // Position 3: Application error code
+            // Position 4: Day (1-31)
+            // Position 5: Month (1-12)
+            // Position 6-7: Year (WORD)
+            // Position 8: Hours (0-23)
+            // Position 9: Minutes (0-59)
+            // Position 10: Seconds (0-59)
+            // Position 11-12: Controller hardware checksum (WORD)
+            // Position 13: Controller error code
+            // Position 14: Supports thresholds flag (0/1)
+            // Position 15: Current event log sequence number
+            // Position 16-30: Sensor presence flags (pressure, temp, visibility, etc.)
+
+            bool onlineStatus = Convert.ToByte(applicationData[2..4], 16) == 1;
+            byte appErrorCode = Convert.ToByte(applicationData[4..6], 16);
+            byte controllerErrorCode = Convert.ToByte(applicationData[24..26], 16);
+            bool supportsThresholds = Convert.ToByte(applicationData[26..28], 16) == 1;
+
+            Console.WriteLine($"Environmental/Weather Status Reply received - Online: {onlineStatus}, SupportsThresholds: {supportsThresholds}, AppError: {appErrorCode}, CtrlError: {controllerErrorCode}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to process Environmental/Weather Status Reply: {ex.Message}");
+        }
+
+        return Task.CompletedTask;
     }
 
     /// <summary>
@@ -2107,34 +2180,145 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Process HAR Voice Data ACK (MI Code 0x47)
+    /// Acknowledges receipt of HAR voice data.
+    /// </summary>
+    /// <param name="applicationData">The hex-encoded application data</param>
     public Task ProcessHARVoiceDataAck(string applicationData)
     {
-        // TODO
-        throw new NotImplementedException();
+        try
+        {
+            // HAR Voice Data ACK format (4 bytes):
+            // Position 1: MI Code (47h)
+            // Position 2-3: Voice ID (WORD)
+            // Position 4: Sequence Number
+
+            byte voiceIdLow = Convert.ToByte(applicationData[2..4], 16);
+            byte voiceIdHigh = Convert.ToByte(applicationData[4..6], 16);
+            ushort voiceId = (ushort)(voiceIdLow + (voiceIdHigh << 8));
+            byte sequenceNumber = Convert.ToByte(applicationData[6..8], 16);
+
+            Console.WriteLine($"HAR Voice Data ACK received - VoiceID: {voiceId}, Sequence: {sequenceNumber}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to process HAR Voice Data ACK: {ex.Message}");
+        }
+
+        return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Process HAR Voice Data NAK (MI Code 0x48)
+    /// Indicates HAR voice data was not received correctly.
+    /// Contains the sequence number of the last correctly received data.
+    /// </summary>
+    /// <param name="applicationData">The hex-encoded application data</param>
     public Task ProcessHARVoiceDataNak(string applicationData)
     {
-        // TODO
-        throw new NotImplementedException();
+        try
+        {
+            // HAR Voice Data NAK format (4 bytes):
+            // Position 1: MI Code (48h)
+            // Position 2-3: Voice ID (WORD)
+            // Position 4: Sequence Number (last correctly received)
+
+            byte voiceIdLow = Convert.ToByte(applicationData[2..4], 16);
+            byte voiceIdHigh = Convert.ToByte(applicationData[4..6], 16);
+            ushort voiceId = (ushort)(voiceIdLow + (voiceIdHigh << 8));
+            byte sequenceNumber = Convert.ToByte(applicationData[6..8], 16);
+
+            Console.WriteLine($"HAR Voice Data NAK received - VoiceID: {voiceId}, LastGoodSequence: {sequenceNumber}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to process HAR Voice Data NAK: {ex.Message}");
+        }
+
+        return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Process Environmental/Weather Values Reply (MI Code 0x82)
+    /// Contains environmental/weather sensor values.
+    /// </summary>
+    /// <param name="applicationData">The hex-encoded application data</param>
     public Task ProcessEnvironmentalWeatherValuesReply(string applicationData)
     {
-        // TODO
-        throw new NotImplementedException();
+        try
+        {
+            // Environmental/Weather Values Reply contains sensor readings
+            // Format varies based on which sensors are present
+            Console.WriteLine($"Environmental/Weather Values Reply received - Data length: {applicationData.Length / 2} bytes");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to process Environmental/Weather Values Reply: {ex.Message}");
+        }
+
+        return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Process Environmental/Weather Threshold Definition Reply (MI Code 0x83)
+    /// Contains threshold definitions for environmental/weather parameters.
+    /// </summary>
+    /// <param name="applicationData">The hex-encoded application data</param>
     public Task ProcessEnvironmentalWeatherThresholdDefinitionReply(string applicationData)
     {
-        // TODO
-        throw new NotImplementedException();
+        try
+        {
+            // Environmental/Weather Threshold Definition format:
+            // Position 1: MI Code (83h)
+            // Position 2: Environmental/Weather Parameter Type
+            // Position 3: Number of thresholds to follow
+            // For each threshold:
+            //   - Threshold Value (WORD)
+            //   - Rising/Falling threshold (0/1)
+
+            byte parameterType = Convert.ToByte(applicationData[2..4], 16);
+            byte numberOfThresholds = Convert.ToByte(applicationData[4..6], 16);
+
+            Console.WriteLine($"Environmental/Weather Threshold Definition Reply received - ParameterType: {parameterType}, NumberOfThresholds: {numberOfThresholds}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to process Environmental/Weather Threshold Definition Reply: {ex.Message}");
+        }
+
+        return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Process Environmental/Weather Event Log Reply (MI Code 0x86)
+    /// Contains environmental/weather event log entries.
+    /// </summary>
+    /// <param name="applicationData">The hex-encoded application data</param>
     public Task ProcessEnvironmentalWeatherEventLogReply(string applicationData)
     {
-        // TODO
-        throw new NotImplementedException();
+        try
+        {
+            // Environmental/Weather Event Log Reply format:
+            // Position 1: MI Code (86h)
+            // Position 2: Number of entries (0-20)
+            // For each entry (13 bytes):
+            //   - Entry number (cycles 0-255)
+            //   - Day, Month, Year (WORD), Hours, Minutes, Seconds
+            //   - Environmental/Weather Parameter Type
+            //   - Rising/Falling threshold (0/1)
+            //   - Threshold Value (WORD)
+
+            byte numberOfEntries = Convert.ToByte(applicationData[2..4], 16);
+
+            Console.WriteLine($"Environmental/Weather Event Log Reply received - NumberOfEntries: {numberOfEntries}");
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to process Environmental/Weather Event Log Reply: {ex.Message}");
+        }
+
+        return Task.CompletedTask;
     }
 
     /// <summary>
