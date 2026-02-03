@@ -19,7 +19,7 @@ public interface ISignControllerService : IHostedService
     Task UpdateTime();
     Task<SignStatusReply> SignSetTextFrame(SignSetTextFrame request);
     Task<SignStatusReply> SignSetGraphicsFrame(SignSetGraphicsFrame request);
-    Task SignSetHighResolutionGraphicsFrame();
+    Task<SignStatusReply> SignSetHighResolutionGraphicsFrame(SignSetHighResolutionGraphicsFrame request);
     Task SignConfigurationRequest();
     Task<AckReply> SignDisplayAtomicFrames(SignDisplayAtomicFrame request);
     Task<SignStatusReply> SignSetMessage(SignSetMessage request);

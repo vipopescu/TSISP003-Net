@@ -14,6 +14,7 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
     private TaskCompletionSource<SignStatusReply>? _signStatusReplyTaskCompletion;
     private TaskCompletionSource<SignSetTextFrame>? _signSetTextFrameTaskCompletion;
     private TaskCompletionSource<SignSetGraphicsFrame>? _signSetGraphicsFrameTaskCompletion;
+    private TaskCompletionSource<SignSetHighResolutionGraphicsFrame>? _signSetHighResGraphicsFrameTaskCompletion;
     private TaskCompletionSource<SignSetMessage>? _signSetMessageTaskCompletion;
     private TaskCompletionSource<RejectReply>? _rejectReplyCompletion;
     private TaskCompletionSource<AckReply>? _ackReplyCompletion;
@@ -703,10 +704,66 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         return Task.CompletedTask;
     }
 
-    public Task SignSetHighResolutionGraphicsFrame()
+    /// <summary>
+    /// Send a high resolution graphics frame to be stored in the sign controller's memory
+    /// Used for displays up to 65535 x 65535 pixels
+    /// </summary>
+    /// <param name="request">The high resolution graphics frame to store</param>
+    /// <returns>SignStatusReply on success</returns>
+    /// <exception cref="TimeoutException">Thrown when the request times out</exception>
+    /// <exception cref="SignRequestRejectedException">Thrown when the request is rejected</exception>
+    public async Task<SignStatusReply> SignSetHighResolutionGraphicsFrame(SignSetHighResolutionGraphicsFrame request)
     {
-        // TODO
-        throw new NotImplementedException();
+        _signStatusReplyTaskCompletion = new TaskCompletionSource<SignStatusReply>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _rejectReplyCompletion = new TaskCompletionSource<RejectReply>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        // build header
+        string header = SignControllerServiceConfig.SOH // Start of header
+                    + NS.ToString("X2") + NR.ToString("X2") // NS and NR
+                    + _deviceSettings.Address // ADDR
+                    + SignControllerServiceConfig.STX;
+
+        // Build application message:
+        // MI Code (1D) + FrameID + Revision + NumberOfRows (2 bytes) + NumberOfColumns (2 bytes) + Colour + Conspicuity + GraphicsLength (4 bytes) + GraphicsData
+        string applicationMessage = SignControllerServiceConfig.MI_SIGN_SET_HIGH_RESOLUTION_GRAPHICS_FRAME.ToString("X2")
+                   + request.FrameID.ToString("X2")
+                   + request.Revision.ToString("X2")
+                   + request.NumberOfRows.ToString("X4") // 2 bytes (WORD) for rows
+                   + request.NumberOfColumns.ToString("X4") // 2 bytes (WORD) for columns
+                   + request.Colour.ToString("X2")
+                   + request.Conspicuity.ToString("X2")
+                   + request.GraphicsLength.ToString("X8") // 4 bytes (DWORD) for length
+                   + request.GraphicsData;
+
+        // Calculate application message CRC
+        applicationMessage = applicationMessage + Functions.PacketCRC(Encoding.ASCII.GetBytes(Functions.HexToAscii(applicationMessage)));
+
+        var message = header + applicationMessage;
+
+        // append packet crc and end of message
+        message = message
+                    + Functions.PacketCRC(Encoding.ASCII.GetBytes(message))
+                    + SignControllerServiceConfig.ETX;
+
+        await _tcpClient.SendAsync(message);
+
+        // Wait for either the sign status reply to be received or a timeout after 3 seconds.
+        var delayTask = Task.Delay(TimeSpan.FromSeconds(3));
+
+        var completedTask = await Task.WhenAny(_signStatusReplyTaskCompletion.Task, _rejectReplyCompletion.Task, delayTask);
+
+        if (completedTask == delayTask)
+        {
+            throw new TimeoutException("Sign set high resolution graphics frame request timed out.");
+        }
+
+        if (completedTask == _rejectReplyCompletion.Task)
+        {
+            RejectReply rejectReply = await _rejectReplyCompletion.Task;
+            throw new SignRequestRejectedException(rejectReply);
+        }
+
+        return await _signStatusReplyTaskCompletion.Task;
     }
 
     public async Task SignConfigurationRequest()
@@ -963,6 +1020,7 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
     {
         _signSetTextFrameTaskCompletion = new TaskCompletionSource<SignSetTextFrame>(TaskCreationOptions.RunContinuationsAsynchronously);
         _signSetGraphicsFrameTaskCompletion = new TaskCompletionSource<SignSetGraphicsFrame>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _signSetHighResGraphicsFrameTaskCompletion = new TaskCompletionSource<SignSetHighResolutionGraphicsFrame>(TaskCreationOptions.RunContinuationsAsynchronously);
         _rejectReplyCompletion = new TaskCompletionSource<RejectReply>(TaskCreationOptions.RunContinuationsAsynchronously);
         _signSetMessageTaskCompletion = new TaskCompletionSource<SignSetMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -987,6 +1045,7 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         var completedTask = await Task.WhenAny(
             _signSetTextFrameTaskCompletion.Task,
             _signSetGraphicsFrameTaskCompletion.Task,
+            _signSetHighResGraphicsFrameTaskCompletion.Task,
             _signSetMessageTaskCompletion.Task,
             _rejectReplyCompletion.Task,
             delayTask);
@@ -1015,6 +1074,11 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         if (completedTask == _signSetGraphicsFrameTaskCompletion.Task)
         {
             return await _signSetGraphicsFrameTaskCompletion.Task;
+        }
+
+        if (completedTask == _signSetHighResGraphicsFrameTaskCompletion.Task)
+        {
+            return await _signSetHighResGraphicsFrameTaskCompletion.Task;
         }
 
         throw new InvalidOperationException("Unexpected execution path.");
@@ -1367,10 +1431,54 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         throw new NotImplementedException();
     }
 
+    /// <summary>
+    /// Process the sign set high resolution graphics frame response
+    /// </summary>
+    /// <param name="applicationData">The application data from the response</param>
+    /// <returns></returns>
     public Task ProcessSignSetHighResolutionGraphicsFrame(string applicationData)
     {
-        // TODO
-        throw new NotImplementedException();
+        try
+        {
+            SignSetHighResolutionGraphicsFrame signSetHighResGraphicsFrameFeedback = new SignSetHighResolutionGraphicsFrame();
+
+            // Parse the application data according to the protocol:
+            // Position 1: MI Code (1D) - already parsed by dispatcher
+            // Position 2: Frame ID (1 byte)
+            // Position 3: Revision (1 byte)
+            // Position 4-5: Number of rows (2 bytes, WORD)
+            // Position 6-7: Number of columns (2 bytes, WORD)
+            // Position 8: Colour (1 byte)
+            // Position 9: Conspicuity (1 byte)
+            // Position 10-13: Graphics length (4 bytes, DWORD)
+            // Position 14+: Graphics data (variable)
+            // Last 4 chars: CRC (2 bytes)
+
+            signSetHighResGraphicsFrameFeedback.FrameID = Convert.ToByte(applicationData[2..4], 16);
+            signSetHighResGraphicsFrameFeedback.Revision = Convert.ToByte(applicationData[4..6], 16);
+            signSetHighResGraphicsFrameFeedback.NumberOfRows = Convert.ToUInt16(applicationData[6..10], 16);
+            signSetHighResGraphicsFrameFeedback.NumberOfColumns = Convert.ToUInt16(applicationData[10..14], 16);
+            signSetHighResGraphicsFrameFeedback.Colour = Convert.ToByte(applicationData[14..16], 16);
+            signSetHighResGraphicsFrameFeedback.Conspicuity = Convert.ToByte(applicationData[16..18], 16);
+            signSetHighResGraphicsFrameFeedback.GraphicsLength = Convert.ToUInt32(applicationData[18..26], 16);
+
+            // Graphics data starts at position 26 and goes for GraphicsLength * 2 hex characters
+            int graphicsDataLength = (int)(signSetHighResGraphicsFrameFeedback.GraphicsLength * 2);
+            signSetHighResGraphicsFrameFeedback.GraphicsData = applicationData[26..(26 + graphicsDataLength)];
+
+            // CRC is the last 4 hex characters after the graphics data
+            signSetHighResGraphicsFrameFeedback.CRC = Convert.ToUInt16(applicationData[(26 + graphicsDataLength)..(26 + graphicsDataLength + 4)], 16);
+
+            _signSetHighResGraphicsFrameTaskCompletion?.TrySetResult(signSetHighResGraphicsFrameFeedback);
+
+            return Task.CompletedTask;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Failed to process sign set high resolution graphics frame: " + ex.Message);
+        }
+
+        return Task.CompletedTask;
     }
 
     /// <summary>

@@ -132,14 +132,39 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
         }
     }
 
+    /// <summary>
+    /// Sends a high resolution graphics frame to the specified device.
+    /// Used for signs with dimensions up to 65535 x 65535 pixels.
+    /// </summary>
     [HttpPost]
     [Route("{device}/SignSetHighResolutionGraphicsFrame")]
-    public async Task<IActionResult> SignSetHighResolutionGraphicsFrame(string device)
+    public async Task<IActionResult> SignSetHighResolutionGraphicsFrame(string device, [FromBody] SignSetHighResolutionGraphicsFrameDto request)
     {
-        // TODO: Implement  
+        try
+        {
+            if (!_signControllerServiceFactory.ContainsSignController(device))
+                return NotFound("Device not found");
 
+            var controller = await _signControllerServiceFactory.GetSignControllerService(device)
+                .SignSetHighResolutionGraphicsFrame(request.AsEntity());
 
-        return Ok();
+            return Ok(controller.AsDto());
+        }
+        catch (TimeoutException ex)
+        {
+            _logger.LogWarning(ex, "Sign Set High Resolution Graphics Frame timed out for device {Device}", device);
+            return StatusCode(StatusCodes.Status408RequestTimeout, "Sign Set High Resolution Graphics Frame timed out.");
+        }
+        catch (SignRequestRejectedException ex)
+        {
+            _logger.LogError("Sign Set High Resolution Graphics Frame rejected: {ErrorCode}", ex.RejectReply.ApplicationErrorCode);
+            return StatusCode(StatusCodes.Status400BadRequest, ex.RejectReply.AsDto());
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error setting high resolution graphics frame for device {Device}", device);
+            return StatusCode(StatusCodes.Status500InternalServerError, "Error setting high resolution graphics frame.");
+        }
     }
 
     [HttpGet]
@@ -397,6 +422,10 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
             else if (controllerResponse is SignSetGraphicsFrame signSetGraphicsFrame)
             {
                 return Ok(signSetGraphicsFrame.AsDto());
+            }
+            else if (controllerResponse is SignSetHighResolutionGraphicsFrame signSetHighResGraphicsFrame)
+            {
+                return Ok(signSetHighResGraphicsFrame.AsDto());
             }
 
             return StatusCode(StatusCodes.Status500InternalServerError, "Unexpected response type.");

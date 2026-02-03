@@ -188,3 +188,26 @@ public class SystemResetCommandDto
     public byte GroupID { get; set; }
     public byte ResetLevel { get; set; }
 }
+
+public class SignSetHighResolutionGraphicsFrameDto
+{
+    public byte FrameID { get; set; }
+    public byte Revision { get; set; }
+    /// <summary>
+    /// Number of rows of pixels (1-65535)
+    /// </summary>
+    public ushort NumberOfRows { get; set; }
+    /// <summary>
+    /// Number of columns of pixels (1-65535)
+    /// </summary>
+    public ushort NumberOfColumns { get; set; }
+    /// <summary>
+    /// Colour code (0=Default, 1-9=Monochrome colours, 0x0D=Multiple colours, 0x0E=24-bit RGB)
+    /// </summary>
+    public byte Colour { get; set; }
+    public byte Conspicuity { get; set; }
+    /// <summary>
+    /// Graphics data as hex string (e.g., "FF00FF00" for pixel data)
+    /// </summary>
+    public required string GraphicsData { get; set; }
+}

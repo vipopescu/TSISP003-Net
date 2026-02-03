@@ -378,4 +378,38 @@ public static class Extensions
         };
     }
 
+    public static SignSetHighResolutionGraphicsFrameDto AsDto(this SignSetHighResolutionGraphicsFrame signSetHighResolutionGraphicsFrame)
+    {
+        return new SignSetHighResolutionGraphicsFrameDto
+        {
+            FrameID = signSetHighResolutionGraphicsFrame.FrameID,
+            Revision = signSetHighResolutionGraphicsFrame.Revision,
+            NumberOfRows = signSetHighResolutionGraphicsFrame.NumberOfRows,
+            NumberOfColumns = signSetHighResolutionGraphicsFrame.NumberOfColumns,
+            Colour = signSetHighResolutionGraphicsFrame.Colour,
+            Conspicuity = signSetHighResolutionGraphicsFrame.Conspicuity,
+            GraphicsData = signSetHighResolutionGraphicsFrame.GraphicsData
+        };
+    }
+
+    public static SignSetHighResolutionGraphicsFrame AsEntity(this SignSetHighResolutionGraphicsFrameDto signSetHighResolutionGraphicsFrameDto)
+    {
+        // Graphics data should already be in hex format
+        string graphicsData = signSetHighResolutionGraphicsFrameDto.GraphicsData ?? string.Empty;
+        uint graphicsLength = (uint)(graphicsData.Length / 2);
+
+        return new SignSetHighResolutionGraphicsFrame
+        {
+            FrameID = signSetHighResolutionGraphicsFrameDto.FrameID,
+            Revision = signSetHighResolutionGraphicsFrameDto.Revision,
+            NumberOfRows = signSetHighResolutionGraphicsFrameDto.NumberOfRows,
+            NumberOfColumns = signSetHighResolutionGraphicsFrameDto.NumberOfColumns,
+            Colour = signSetHighResolutionGraphicsFrameDto.Colour,
+            Conspicuity = signSetHighResolutionGraphicsFrameDto.Conspicuity,
+            GraphicsLength = graphicsLength,
+            GraphicsData = graphicsData
+        };
+    }
+
 }
+
