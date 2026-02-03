@@ -31,33 +31,65 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
 
     public bool SignConfigurationReceived { get; set; } = false;
 
-    // TODO: Implement lock when setting the NS
+    // Lock object for thread-safe access to NS and NR sequence numbers
+    private readonly Lock _sequenceLock = new();
+
     private int _ns;
+    /// <summary>
+    /// N(S) - Send Sequence Number. The sequence number of data packets sent by the master.
+    /// Cycles between 1 and 255 after initial 0 at link establishment.
+    /// </summary>
     public int NS
     {
         get
         {
-            return _ns;
+            lock (_sequenceLock)
+            {
+                return _ns;
+            }
         }
         set
         {
-            _ns = value;
+            lock (_sequenceLock)
+            {
+                _ns = value;
+            }
         }
     }
 
-    // TODO: Implement lock when setting the NR
     private int _nr;
+    /// <summary>
+    /// N(R) - Receive Sequence Number. The number of valid data packets received from the slave.
+    /// Used to indicate to the slave which packet we expect next.
+    /// Cycles between 1 and 255 after initial 0 at link establishment.
+    /// </summary>
     public int NR
     {
         get
         {
-
-            return _nr;
+            lock (_sequenceLock)
+            {
+                return _nr;
+            }
         }
         set
         {
-            _nr = value;
+            lock (_sequenceLock)
+            {
+                _nr = value;
+            }
         }
+    }
+
+    /// <summary>
+    /// Increment a sequence number with wrap-around (0 -> 1 -> 2 -> ... -> 255 -> 1)
+    /// Per TSI-SP-003: sequence numbers cycle between 1 and 255 after initial 0
+    /// </summary>
+    private static int IncrementSequenceNumber(int current)
+    {
+        if (current == 0 || current >= 255)
+            return 1;
+        return current + 1;
     }
 
     /// <summary>
@@ -286,39 +318,45 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
 
 
     /// <summary>
-    /// Process non data packets
+    /// Process non data packets (ACK or NAK from slave)
+    /// Non-data packet format: ACK/NAK | N(R) | ADDR | CRC | ETX
     /// </summary>
     /// <param name="packet"></param>
     private void ProcessNonDataPacket(string packet)
     {
         if (packet[0] == SignControllerServiceConfig.ACK)
         {
-            NR = int.Parse(packet[1..3], System.Globalization.NumberStyles.HexNumber);
-            NS++;
+            // Slave's ACK contains N(R) which indicates how many valid data packets
+            // the slave has received from us. This confirms our last packet was received.
+            int slaveNR = int.Parse(packet[1..3], System.Globalization.NumberStyles.HexNumber);
+
+            // Increment our send sequence number for the next packet we send
+            NS = IncrementSequenceNumber(NS);
         }
         else if (packet[0] == SignControllerServiceConfig.NAK)
         {
-            // TODO
+            // NAK received - slave rejected our packet (sequence error or corrupted data)
+            // We should retransmit the last packet (not incrementing NS)
+            // TODO: Implement retransmission logic
         }
-
-        // TODO: get the NS from here
-        //Console.WriteLine(Functions.PacketCRC(Encoding.ASCII.GetBytes(packet[0..5])));
-        //Console.WriteLine("Non Data Packet: " + packet);
     }
 
     /// <summary>
-    /// Dispatch data packets
+    /// Dispatch data packets received from the slave
+    /// Data packet format: SOH | N(S) | N(R) | ADDR | STX | Application Message | CRC | ETX
     /// </summary>
     /// <param name="packet"></param>
     private async void DispatchDataPacket(string packet)
     {
-        // packet[0]                        -> SOH
-        // packet[1..3]                     -> NR
-        // packet[4..6]                     -> NS
-        // packet[7]                        -> STX
-        // packet[(packet.Length-5)..^1]    -> CRC
-        // packet[8..^5]                    -> Packet Data 
-        // packet[^1]                       -> ETX
+        // Data packet structure (ASCII Hex encoded except control chars):
+        // packet[0]      -> SOH (Start of Header)
+        // packet[1..3]   -> N(S) - Slave's send sequence number (2 hex chars = 1 byte)
+        // packet[3..5]   -> N(R) - Slave's receive count (2 hex chars = 1 byte)
+        // packet[5..7]   -> ADDR - Device address (2 hex chars = 1 byte)
+        // packet[7]      -> STX (Start of Text)
+        // packet[8..^5]  -> Application Message
+        // packet[^5..^1] -> CRC (4 hex chars = 2 bytes)
+        // packet[^1]     -> ETX (End of Text)
 
         string applicationData = packet[8..^5];
         int miCode = Convert.ToInt32(packet[8..10], 16);
@@ -356,10 +394,13 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         else
             Console.WriteLine("Unexpected mi code: " + miCode);
 
-        int nr = Convert.ToInt32(packet[3..5], 16);
-        NR = nr;
-        NS = nr;
+        // Extract slave's N(S) from the received packet
+        // Slave's N(R) at packet[3..5] indicates how many packets it received from us (not needed here)
+        int slaveNS = Convert.ToInt32(packet[1..3], 16);
 
+        // Update our N(R) to indicate we've received this data packet from the slave
+        // Our N(R) should be one more than the slave's N(S) to indicate we expect the next one
+        NR = IncrementSequenceNumber(slaveNS);
     }
 
     /// <summary>
