@@ -11,32 +11,64 @@ TSISP003-Net is a .NET 8 web API application that implements the TSI-SP-003 comm
 ### Build and Run
 ```bash
 # Build the solution
-dotnet build TSISP003-Net/TSISP003-Net.sln
+dotnet build TSISP003-Net.slnx
 
 # Run the application (development)
-cd TSISP003-Net && dotnet run
+dotnet run --project src/TSISP003-Net
 
 # Run with specific profile
-cd TSISP003-Net && dotnet run --launch-profile https
+dotnet run --project src/TSISP003-Net --launch-profile https
 ```
 
-### Testing and Validation
+### Testing
+```bash
+# Run all tests
+dotnet test TSISP003-Net.slnx
+
+# Run tests with verbose output
+dotnet test TSISP003-Net.slnx --verbosity normal
+```
+
+### Other Commands
 ```bash
 # Restore packages
-dotnet restore TSISP003-Net/TSISP003-Net.sln
+dotnet restore TSISP003-Net.slnx
 
 # Clean build artifacts
-dotnet clean TSISP003-Net/TSISP003-Net.sln
+dotnet clean TSISP003-Net.slnx
 ```
 
 ## Architecture
 
+### Repository Structure
+
+```
+TSISP003-Net/
+├── src/
+│   └── TSISP003-Net/             # Main web API project
+│       ├── Controllers/          # REST API endpoints
+│       ├── Domain/
+│       │   └── Entities/         # Domain entities (Sign, Frame, etc.)
+│       ├── Services/             # SignControllerService, Factory, Config
+│       ├── Infrastructure/
+│       │   ├── Tcp/              # TCP client for sign communication
+│       │   └── DataStore/        # Data store implementation
+│       ├── DTOs/                 # Data Transfer Objects
+│       ├── Configuration/        # Settings classes
+│       ├── Utilities/            # Helper classes, extensions, constants
+│       └── Program.cs
+├── tests/
+│   └── TSISP003.Tests/           # Unit tests (xUnit)
+├── Directory.Build.props         # Common build settings
+└── TSISP003-Net.slnx             # Solution file
+```
+
 ### Core Components
 
-1. **SignControllerService** - Manages TCP connections and protocol communication with sign controllers
-2. **SignControllerDataStore** - Data models and entities for the TSI-SP-003 protocol
-3. **TCP Client** - Low-level TCP communication handling
-4. **Controllers** - REST API endpoints for device management
+1. **SignControllerService** (`Services/`) - Manages TCP connections and protocol communication with sign controllers
+2. **Domain Entities** (`Domain/Entities/`) - Data models for the TSI-SP-003 protocol
+3. **TCP Client** (`Infrastructure/Tcp/`) - Low-level TCP communication handling
+4. **Controllers** (`Controllers/`) - REST API endpoints for device management
 
 ### Key Patterns
 

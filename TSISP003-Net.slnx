@@ -1,0 +1,8 @@
+<Solution>
+  <Folder Name="/src/">
+    <Project Path="src/TSISP003-Net/TSISP003-Net.csproj" />
+  </Folder>
+  <Folder Name="/tests/">
+    <Project Path="tests/TSISP003.Tests/TSISP003.Tests.csproj" />
+  </Folder>
+</Solution>
