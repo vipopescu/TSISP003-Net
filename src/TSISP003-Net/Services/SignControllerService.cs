@@ -330,7 +330,7 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
             await ProcessHARStatusReply(applicationData);
         else if (miCode == SignControllerServiceConfig.MI_ENVIRONMENTAL_WEATHER_STATUS_REPLY)
             await ProcessEnvironmentalWeatherStatusReply(applicationData);
-        else if (miCode == SignControllerServiceConfig.MI_SIGN_CONFIGURATION_REPLY || miCode == SignControllerServiceConfig.MI_DISABLE_ENABLE_DEVICE)
+        else if (miCode == SignControllerServiceConfig.MI_SIGN_CONFIGURATION_REPLY)
             await ProcessSignConfigurationReply(applicationData);
         else if (miCode == SignControllerServiceConfig.MI_REPORT_ENABLED_PLANS)
             await ProcessReportEnabledPlans(applicationData);
@@ -1245,10 +1245,60 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         throw new InvalidOperationException("Unexpected execution path.");
     }
 
-    public Task DisableEnableDevice()
+    /// <summary>
+    /// Send a command to disable or enable device groups
+    /// </summary>
+    /// <param name="entries">List of tuples containing (groupId, enabled)</param>
+    /// <returns>AckReply on success</returns>
+    /// <exception cref="TimeoutException">Thrown when the request times out</exception>
+    /// <exception cref="SignRequestRejectedException">Thrown when the request is rejected</exception>
+    public async Task<AckReply> DisableEnableDevice(List<(byte groupId, bool enabled)> entries)
     {
-        // TODO
-        throw new NotImplementedException();
+        _ackReplyCompletion = new TaskCompletionSource<AckReply>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _rejectReplyCompletion = new TaskCompletionSource<RejectReply>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        // build body
+        string message = SignControllerServiceConfig.SOH // Start of header
+                    + NS.ToString("X2") + NR.ToString("X2") // NS and NR
+                    + _deviceSettings.Address // ADDR
+                    + SignControllerServiceConfig.STX
+                    + SignControllerServiceConfig.MI_DISABLE_ENABLE_DEVICE.ToString("X2")
+                    + entries.Count.ToString("X2"); // number of entries
+
+        // Add each entry (groupId + enabled flag)
+        foreach (var entry in entries)
+        {
+            message += entry.groupId.ToString("X2") + (entry.enabled ? 1 : 0).ToString("X2");
+        }
+
+        // append crc and end of message
+        message = message
+                    + Functions.PacketCRC(Encoding.ASCII.GetBytes(message))
+                    + SignControllerServiceConfig.ETX;
+
+        await _tcpClient.SendAsync(message);
+
+        // Wait for either the reply to be received or a timeout after 3 seconds.
+        var delayTask = Task.Delay(TimeSpan.FromSeconds(3));
+
+        var completedTask = await Task.WhenAny(_ackReplyCompletion.Task, _rejectReplyCompletion.Task, delayTask);
+
+        if (completedTask == delayTask)
+        {
+            throw new TimeoutException("Disable/Enable Device request timed out.");
+        }
+
+        if (completedTask == _rejectReplyCompletion.Task)
+        {
+            throw new SignRequestRejectedException(await _rejectReplyCompletion.Task);
+        }
+
+        if (completedTask == _ackReplyCompletion.Task)
+        {
+            return await _ackReplyCompletion.Task;
+        }
+
+        throw new InvalidOperationException("Unexpected execution path.");
     }
 
     /// <summary>

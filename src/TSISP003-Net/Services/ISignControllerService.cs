@@ -31,7 +31,7 @@ public interface ISignControllerService : IHostedService
     Task<ReportEnabledPlans> RequestEnabledPlans();
     Task<AckReply> SignSetDimmingLevel(List<(byte groupId, byte dimmingMode, byte luminanceLevel)> entries);
     Task<AckReply> PowerOnOff(byte groupId, bool powerOn);
-    Task DisableEnableDevice();
+    Task<AckReply> DisableEnableDevice(List<(byte groupId, bool enabled)> entries);
     Task<ISignResponse> SignRequestStoredFrameMessagePlan(RequestType requestType, byte requestID);
     Task SignExtendedStatusRequest();
     Task<List<FaultLogEntry>> RetrieveFaultLog();

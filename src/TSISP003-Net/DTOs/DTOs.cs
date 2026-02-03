@@ -177,6 +177,27 @@ public class PowerOnOffCommandDto
     public bool PoweredOn { get; set; }
 }
 
+public class DisableEnableDeviceCommandDto
+{
+    /// <summary>
+    /// List of disable/enable device entries for different groups
+    /// </summary>
+    public List<DisableEnableDeviceEntryDto> Entries { get; set; } = [];
+}
+
+public class DisableEnableDeviceEntryDto
+{
+    /// <summary>
+    /// Group ID - zero applies to all groups
+    /// </summary>
+    public byte GroupID { get; set; }
+
+    /// <summary>
+    /// Enable/Disable device group: false = disable, true = enable
+    /// </summary>
+    public bool Enabled { get; set; }
+}
+
 public class RejectReplyDto
 {
     public byte ApplicationErrorCode { get; set; }

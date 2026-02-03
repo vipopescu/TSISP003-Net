@@ -534,10 +534,34 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
 
     [HttpPost]
     [Route("{device}/DisableEnableDevice")]
-    public async Task<IActionResult> DisableEnableDevice(string device)
+    public async Task<IActionResult> DisableEnableDevice(string device, [FromBody] DisableEnableDeviceCommandDto request)
     {
-        // TODO: Implement
-        return Ok();
+        try
+        {
+            if (!_signControllerServiceFactory.ContainsSignController(device))
+                return NotFound("Device not found");
+
+            var entries = request.Entries.Select(e => (e.GroupID, e.Enabled)).ToList();
+            var controllerResponse = await _signControllerServiceFactory.GetSignControllerService(device)
+                .DisableEnableDevice(entries);
+
+            return Ok(controllerResponse.AsDto());
+        }
+        catch (TimeoutException ex)
+        {
+            _logger.LogWarning(ex, "Disable/Enable Device request timed out for device {Device}", device);
+            return StatusCode(StatusCodes.Status408RequestTimeout, "Disable/Enable Device request timed out.");
+        }
+        catch (SignRequestRejectedException ex)
+        {
+            _logger.LogWarning(ex, "Disable/Enable Device request rejected for device {Device}", device);
+            return StatusCode(StatusCodes.Status400BadRequest, ex.RejectReply.AsDto());
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error disabling/enabling device for {Device}", device);
+            return StatusCode(StatusCodes.Status500InternalServerError, "Error disabling/enabling device.");
+        }
     }
 
     [HttpPost]
