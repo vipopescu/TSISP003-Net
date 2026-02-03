@@ -423,3 +423,136 @@ public class SignSetPlanEntryDto
     /// </summary>
     public byte StopMinute { get; set; }
 }
+
+// ================== HAR DTOs ==================
+
+public class HARStatusReplyDto
+{
+    public bool OnlineStatus { get; set; }
+    public byte ApplicationErrorCode { get; set; }
+    public required string ApplicationError { get; set; }
+    public DateTime DateTime { get; set; }
+    public ushort ControllerChecksum { get; set; }
+    public byte ControllerErrorCode { get; set; }
+    public required string ControllerError { get; set; }
+    public bool HAREnabled { get; set; }
+    public ushort VoiceIDPlaying { get; set; }
+    public byte VoiceRevision { get; set; }
+    public ushort StrategyIDActive { get; set; }
+    public byte StrategyRevision { get; set; }
+    public byte StrategyStatus { get; set; }
+    public required string StrategyStatusDescription { get; set; }
+}
+
+public class HARSetStrategyCommandDto
+{
+    /// <summary>
+    /// Strategy ID (1-65535)
+    /// </summary>
+    public ushort StrategyID { get; set; }
+
+    /// <summary>
+    /// Revision number
+    /// </summary>
+    public byte Revision { get; set; }
+
+    /// <summary>
+    /// List of Voice IDs that make up the strategy.
+    /// The order determines the playback order.
+    /// </summary>
+    public List<ushort> VoiceIDs { get; set; } = [];
+}
+
+public class HARSetStrategyReplyDto
+{
+    public ushort StrategyID { get; set; }
+    public byte Revision { get; set; }
+    public List<ushort> VoiceIDs { get; set; } = [];
+}
+
+public class HARActivateStrategyCommandDto
+{
+    /// <summary>
+    /// Strategy ID to activate.
+    /// Strategy ID 0 stops the current strategy.
+    /// </summary>
+    public ushort StrategyID { get; set; }
+}
+
+public class HARSetPlanCommandDto
+{
+    /// <summary>
+    /// Plan ID (1-255)
+    /// </summary>
+    public byte PlanID { get; set; }
+
+    /// <summary>
+    /// Revision number
+    /// </summary>
+    public byte Revision { get; set; }
+
+    /// <summary>
+    /// Day of the week - bitwise field where bits 1-7 represent Sunday through Saturday.
+    /// 0x7F (127) means daily operation.
+    /// </summary>
+    public byte DayOfWeek { get; set; }
+
+    /// <summary>
+    /// List of strategy entries (up to 6)
+    /// </summary>
+    public List<HARSetPlanEntryDto> Entries { get; set; } = [];
+}
+
+public class HARSetPlanEntryDto
+{
+    /// <summary>
+    /// Strategy ID
+    /// </summary>
+    public ushort StrategyID { get; set; }
+
+    /// <summary>
+    /// Start time - hour (0-23)
+    /// </summary>
+    public byte StartHour { get; set; }
+
+    /// <summary>
+    /// Start time - minute (0-59)
+    /// </summary>
+    public byte StartMinute { get; set; }
+
+    /// <summary>
+    /// Stop time - hour (0-23)
+    /// </summary>
+    public byte StopHour { get; set; }
+
+    /// <summary>
+    /// Stop time - minute (0-59)
+    /// </summary>
+    public byte StopMinute { get; set; }
+}
+
+public class HARSetPlanReplyDto
+{
+    public byte PlanID { get; set; }
+    public byte Revision { get; set; }
+    public byte DayOfWeek { get; set; }
+    public List<HARSetPlanEntryDto> Entries { get; set; } = [];
+}
+
+public class HARRequestStoredCommandDto
+{
+    /// <summary>
+    /// Type of request: 0 = Voice, 1 = Strategy, 2 = Plan
+    /// </summary>
+    public byte RequestType { get; set; }
+
+    /// <summary>
+    /// Voice/Strategy/Plan ID
+    /// </summary>
+    public ushort RequestID { get; set; }
+
+    /// <summary>
+    /// Sequence number (used only for Voice requests, set to 0 for Strategy/Plan)
+    /// </summary>
+    public byte SequenceNumber { get; set; }
+}

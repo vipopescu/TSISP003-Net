@@ -545,6 +545,103 @@ public static class Extensions
         };
     }
 
+    // ================== HAR Extensions ==================
+
+    public static HARStatusReplyDto AsDto(this HARStatusReply harStatusReply)
+    {
+        string strategyStatusDescription = harStatusReply.StrategyStatus switch
+        {
+            1 => "Strategy is playing",
+            2 => "Strategy is preparing to play",
+            3 => "Strategy is not playing",
+            _ => "Unknown"
+        };
+
+        return new HARStatusReplyDto
+        {
+            OnlineStatus = harStatusReply.OnlineStatus,
+            ApplicationErrorCode = harStatusReply.ApplicationErrorCode,
+            ApplicationError = ErrorCodes.ApplicationErrorCodes.GetValueOrDefault(harStatusReply.ApplicationErrorCode, "Unknown error code"),
+            DateTime = harStatusReply.DateTime,
+            ControllerChecksum = harStatusReply.ControllerChecksum,
+            ControllerErrorCode = harStatusReply.ControllerErrorCode,
+            ControllerError = ErrorCodes.ControllerDeviceErrorCodes.GetValueOrDefault(harStatusReply.ControllerErrorCode, "Unknown error code"),
+            HAREnabled = harStatusReply.HAREnabled,
+            VoiceIDPlaying = harStatusReply.VoiceIDPlaying,
+            VoiceRevision = harStatusReply.VoiceRevision,
+            StrategyIDActive = harStatusReply.StrategyIDActive,
+            StrategyRevision = harStatusReply.StrategyRevision,
+            StrategyStatus = harStatusReply.StrategyStatus,
+            StrategyStatusDescription = strategyStatusDescription
+        };
+    }
+
+    public static HARSetStrategyReplyDto AsDto(this HARSetStrategy harSetStrategy)
+    {
+        return new HARSetStrategyReplyDto
+        {
+            StrategyID = harSetStrategy.StrategyID,
+            Revision = harSetStrategy.Revision,
+            VoiceIDs = harSetStrategy.VoiceIDs.ToList()
+        };
+    }
+
+    public static HARSetStrategy AsEntity(this HARSetStrategyCommandDto harSetStrategyCommandDto)
+    {
+        return new HARSetStrategy
+        {
+            StrategyID = harSetStrategyCommandDto.StrategyID,
+            Revision = harSetStrategyCommandDto.Revision,
+            VoiceIDs = harSetStrategyCommandDto.VoiceIDs.ToList()
+        };
+    }
+
+    public static HARSetPlanReplyDto AsDto(this HARSetPlan harSetPlan)
+    {
+        return new HARSetPlanReplyDto
+        {
+            PlanID = harSetPlan.PlanID,
+            Revision = harSetPlan.Revision,
+            DayOfWeek = harSetPlan.DayOfWeek,
+            Entries = harSetPlan.Entries.Select(e => e.AsDto()).ToList()
+        };
+    }
+
+    public static HARSetPlanEntryDto AsDto(this HARSetPlanEntry harSetPlanEntry)
+    {
+        return new HARSetPlanEntryDto
+        {
+            StrategyID = harSetPlanEntry.StrategyID,
+            StartHour = harSetPlanEntry.StartHour,
+            StartMinute = harSetPlanEntry.StartMinute,
+            StopHour = harSetPlanEntry.StopHour,
+            StopMinute = harSetPlanEntry.StopMinute
+        };
+    }
+
+    public static HARSetPlan AsEntity(this HARSetPlanCommandDto harSetPlanCommandDto)
+    {
+        return new HARSetPlan
+        {
+            PlanID = harSetPlanCommandDto.PlanID,
+            Revision = harSetPlanCommandDto.Revision,
+            DayOfWeek = harSetPlanCommandDto.DayOfWeek,
+            Entries = harSetPlanCommandDto.Entries.Select(e => e.AsEntity()).ToList()
+        };
+    }
+
+    public static HARSetPlanEntry AsEntity(this HARSetPlanEntryDto harSetPlanEntryDto)
+    {
+        return new HARSetPlanEntry
+        {
+            StrategyID = harSetPlanEntryDto.StrategyID,
+            StartHour = harSetPlanEntryDto.StartHour,
+            StartMinute = harSetPlanEntryDto.StartMinute,
+            StopHour = harSetPlanEntryDto.StopHour,
+            StopMinute = harSetPlanEntryDto.StopMinute
+        };
+    }
+
 }
 
 

@@ -21,6 +21,9 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
     private TaskCompletionSource<SignExtendedStatusReply>? _signExtendedStatusReplyTaskCompletion;
     private TaskCompletionSource<RejectReply>? _rejectReplyCompletion;
     private TaskCompletionSource<AckReply>? _ackReplyCompletion;
+    private TaskCompletionSource<HARStatusReply>? _harStatusReplyTaskCompletion;
+    private TaskCompletionSource<HARSetStrategy>? _harSetStrategyTaskCompletion;
+    private TaskCompletionSource<HARSetPlan>? _harSetPlanTaskCompletion;
 
     private Task? heartBeatPollTask;
     private Task? startSessionTask;
@@ -380,6 +383,14 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
             await ProcessPasswordSeed(applicationData);
         else if (miCode == SignControllerServiceConfig.MI_HAR_STATUS_REPLY)
             await ProcessHARStatusReply(applicationData);
+        else if (miCode == SignControllerServiceConfig.MI_HAR_SET_STRATEGY)
+            await ProcessHARSetStrategy(applicationData);
+        else if (miCode == SignControllerServiceConfig.MI_HAR_SET_PLAN)
+            await ProcessHARSetPlan(applicationData);
+        else if (miCode == SignControllerServiceConfig.MI_HAR_SET_VOICE_DATA_ACK)
+            await ProcessHARVoiceDataAck(applicationData);
+        else if (miCode == SignControllerServiceConfig.MI_HAR_SET_VOICE_DATA_NAK)
+            await ProcessHARVoiceDataNak(applicationData);
         else if (miCode == SignControllerServiceConfig.MI_ENVIRONMENTAL_WEATHER_STATUS_REPLY)
             await ProcessEnvironmentalWeatherStatusReply(applicationData);
         else if (miCode == SignControllerServiceConfig.MI_SIGN_CONFIGURATION_REPLY)
@@ -1694,24 +1705,245 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         throw new NotImplementedException();
     }
 
-    public Task HARSetStrategy()
+    /// <summary>
+    /// Send HAR Set Strategy command to store a voice strategy in the HAR controller's memory
+    /// </summary>
+    /// <param name="request">The strategy to store</param>
+    /// <returns>HARStatusReply on success</returns>
+    /// <exception cref="TimeoutException">Thrown when the request times out</exception>
+    /// <exception cref="SignRequestRejectedException">Thrown when the request is rejected</exception>
+    public async Task<HARStatusReply> HARSetStrategy(HARSetStrategy request)
     {
-        throw new NotImplementedException();
+        _harStatusReplyTaskCompletion = new TaskCompletionSource<HARStatusReply>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _rejectReplyCompletion = new TaskCompletionSource<RejectReply>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        // Build message:
+        // MI Code (43h) + StrategyID (WORD) + Revision + Number of VoiceIDs + VoiceIDs
+        string message = SignControllerServiceConfig.SOH
+                    + NS.ToString("X2") + NR.ToString("X2")
+                    + _deviceSettings.Address
+                    + SignControllerServiceConfig.STX
+                    + SignControllerServiceConfig.MI_HAR_SET_STRATEGY.ToString("X2");
+
+        // Strategy ID (WORD - low byte first)
+        message += (request.StrategyID & 0xFF).ToString("X2");
+        message += ((request.StrategyID >> 8) & 0xFF).ToString("X2");
+
+        // Revision
+        message += request.Revision.ToString("X2");
+
+        // Number of Voice IDs
+        message += ((byte)request.VoiceIDs.Count).ToString("X2");
+
+        // Voice IDs (WORD each - low byte first)
+        foreach (var voiceId in request.VoiceIDs)
+        {
+            message += (voiceId & 0xFF).ToString("X2");
+            message += ((voiceId >> 8) & 0xFF).ToString("X2");
+        }
+
+        // Append CRC and ETX
+        message += Functions.PacketCRC(Encoding.ASCII.GetBytes(message));
+        message += SignControllerServiceConfig.ETX;
+
+        await _tcpClient.SendAsync(message);
+
+        // Wait for HAR Status Reply or timeout
+        var delayTask = Task.Delay(TimeSpan.FromSeconds(3));
+
+        var completedTask = await Task.WhenAny(_harStatusReplyTaskCompletion.Task, _rejectReplyCompletion.Task, delayTask);
+
+        if (completedTask == delayTask)
+        {
+            throw new TimeoutException("HAR Set Strategy request timed out.");
+        }
+
+        if (completedTask == _rejectReplyCompletion.Task)
+        {
+            throw new SignRequestRejectedException(await _rejectReplyCompletion.Task);
+        }
+
+        return await _harStatusReplyTaskCompletion.Task;
     }
 
-    public Task HARActivateStrategy()
+    /// <summary>
+    /// Send HAR Activate Strategy command to activate a voice strategy
+    /// </summary>
+    /// <param name="strategyId">Strategy ID to activate (0 stops the current strategy)</param>
+    /// <returns>AckReply on success</returns>
+    /// <exception cref="TimeoutException">Thrown when the request times out</exception>
+    /// <exception cref="SignRequestRejectedException">Thrown when the request is rejected</exception>
+    public async Task<AckReply> HARActivateStrategy(ushort strategyId)
     {
-        throw new NotImplementedException();
+        _ackReplyCompletion = new TaskCompletionSource<AckReply>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _rejectReplyCompletion = new TaskCompletionSource<RejectReply>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        // Build message:
+        // MI Code (44h) + StrategyID (WORD)
+        string message = SignControllerServiceConfig.SOH
+                    + NS.ToString("X2") + NR.ToString("X2")
+                    + _deviceSettings.Address
+                    + SignControllerServiceConfig.STX
+                    + SignControllerServiceConfig.MI_HAR_ACTIVATE_STRATEGY.ToString("X2");
+
+        // Strategy ID (WORD - low byte first)
+        message += (strategyId & 0xFF).ToString("X2");
+        message += ((strategyId >> 8) & 0xFF).ToString("X2");
+
+        // Append CRC and ETX
+        message += Functions.PacketCRC(Encoding.ASCII.GetBytes(message));
+        message += SignControllerServiceConfig.ETX;
+
+        await _tcpClient.SendAsync(message);
+
+        // Wait for ACK or timeout
+        var delayTask = Task.Delay(TimeSpan.FromSeconds(3));
+
+        var completedTask = await Task.WhenAny(_ackReplyCompletion.Task, _rejectReplyCompletion.Task, delayTask);
+
+        if (completedTask == delayTask)
+        {
+            throw new TimeoutException("HAR Activate Strategy request timed out.");
+        }
+
+        if (completedTask == _rejectReplyCompletion.Task)
+        {
+            throw new SignRequestRejectedException(await _rejectReplyCompletion.Task);
+        }
+
+        return await _ackReplyCompletion.Task;
     }
 
-    public Task HARSetPlan()
+    /// <summary>
+    /// Send HAR Set Plan command to store a plan in the HAR controller's memory
+    /// </summary>
+    /// <param name="request">The plan to store</param>
+    /// <returns>HARStatusReply on success</returns>
+    /// <exception cref="TimeoutException">Thrown when the request times out</exception>
+    /// <exception cref="SignRequestRejectedException">Thrown when the request is rejected</exception>
+    public async Task<HARStatusReply> HARSetPlan(HARSetPlan request)
     {
-        throw new NotImplementedException();
+        _harStatusReplyTaskCompletion = new TaskCompletionSource<HARStatusReply>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _rejectReplyCompletion = new TaskCompletionSource<RejectReply>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        // Build message:
+        // MI Code (45h) + PlanID + Revision + DayOfWeek + StrategyEntries
+        string message = SignControllerServiceConfig.SOH
+                    + NS.ToString("X2") + NR.ToString("X2")
+                    + _deviceSettings.Address
+                    + SignControllerServiceConfig.STX
+                    + SignControllerServiceConfig.MI_HAR_SET_PLAN.ToString("X2");
+
+        // Plan ID and Revision
+        message += request.PlanID.ToString("X2");
+        message += request.Revision.ToString("X2");
+        message += request.DayOfWeek.ToString("X2");
+
+        // Strategy entries (up to 6)
+        foreach (var entry in request.Entries)
+        {
+            // Strategy ID (WORD - low byte first)
+            message += (entry.StrategyID & 0xFF).ToString("X2");
+            message += ((entry.StrategyID >> 8) & 0xFF).ToString("X2");
+            message += entry.StartHour.ToString("X2");
+            message += entry.StartMinute.ToString("X2");
+            message += entry.StopHour.ToString("X2");
+            message += entry.StopMinute.ToString("X2");
+        }
+
+        // Append CRC and ETX
+        message += Functions.PacketCRC(Encoding.ASCII.GetBytes(message));
+        message += SignControllerServiceConfig.ETX;
+
+        await _tcpClient.SendAsync(message);
+
+        // Wait for HAR Status Reply or timeout
+        var delayTask = Task.Delay(TimeSpan.FromSeconds(3));
+
+        var completedTask = await Task.WhenAny(_harStatusReplyTaskCompletion.Task, _rejectReplyCompletion.Task, delayTask);
+
+        if (completedTask == delayTask)
+        {
+            throw new TimeoutException("HAR Set Plan request timed out.");
+        }
+
+        if (completedTask == _rejectReplyCompletion.Task)
+        {
+            throw new SignRequestRejectedException(await _rejectReplyCompletion.Task);
+        }
+
+        return await _harStatusReplyTaskCompletion.Task;
     }
 
-    public Task HARRequestStoredVoiceStrategyPlan()
+    /// <summary>
+    /// Send HAR Request Stored Voice/Strategy/Plan command
+    /// </summary>
+    /// <param name="requestType">Type: 0 = Voice, 1 = Strategy, 2 = Plan</param>
+    /// <param name="requestId">Voice/Strategy/Plan ID</param>
+    /// <param name="sequenceNumber">Sequence number (only used for Voice requests)</param>
+    /// <returns>The requested Voice Data, Strategy, or Plan</returns>
+    /// <exception cref="TimeoutException">Thrown when the request times out</exception>
+    /// <exception cref="SignRequestRejectedException">Thrown when the request is rejected</exception>
+    public async Task<ISignResponse> HARRequestStoredVoiceStrategyPlan(byte requestType, ushort requestId, byte sequenceNumber)
     {
-        throw new NotImplementedException();
+        _harSetStrategyTaskCompletion = new TaskCompletionSource<HARSetStrategy>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _harSetPlanTaskCompletion = new TaskCompletionSource<HARSetPlan>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _rejectReplyCompletion = new TaskCompletionSource<RejectReply>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        // Build message:
+        // MI Code (46h) + Type + ID (WORD) + SequenceNumber
+        string message = SignControllerServiceConfig.SOH
+                    + NS.ToString("X2") + NR.ToString("X2")
+                    + _deviceSettings.Address
+                    + SignControllerServiceConfig.STX
+                    + SignControllerServiceConfig.MI_HAR_REQUEST_STORED_VOICE_STRATEGY_PLAN.ToString("X2");
+
+        // Request type
+        message += requestType.ToString("X2");
+
+        // ID (WORD - low byte first)
+        message += (requestId & 0xFF).ToString("X2");
+        message += ((requestId >> 8) & 0xFF).ToString("X2");
+
+        // Sequence number (0 for Strategy/Plan requests)
+        message += sequenceNumber.ToString("X2");
+
+        // Append CRC and ETX
+        message += Functions.PacketCRC(Encoding.ASCII.GetBytes(message));
+        message += SignControllerServiceConfig.ETX;
+
+        await _tcpClient.SendAsync(message);
+
+        // Wait for the appropriate reply or timeout
+        var delayTask = Task.Delay(TimeSpan.FromSeconds(3));
+
+        var completedTask = await Task.WhenAny(
+            _harSetStrategyTaskCompletion.Task,
+            _harSetPlanTaskCompletion.Task,
+            _rejectReplyCompletion.Task,
+            delayTask);
+
+        if (completedTask == delayTask)
+        {
+            throw new TimeoutException("HAR Request Stored Voice/Strategy/Plan timed out.");
+        }
+
+        if (completedTask == _rejectReplyCompletion.Task)
+        {
+            throw new SignRequestRejectedException(await _rejectReplyCompletion.Task);
+        }
+
+        if (completedTask == _harSetStrategyTaskCompletion.Task)
+        {
+            return await _harSetStrategyTaskCompletion.Task;
+        }
+
+        if (completedTask == _harSetPlanTaskCompletion.Task)
+        {
+            return await _harSetPlanTaskCompletion.Task;
+        }
+
+        throw new InvalidOperationException("Unexpected execution path.");
     }
 
     public Task RequestEnvironmentalWeatherValues()
@@ -1851,12 +2083,49 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
             // Position 20: Strategy revision
             // Position 21: Strategy status
 
-            bool onlineStatus = Convert.ToByte(applicationData[2..4], 16) == 1;
-            byte appErrorCode = Convert.ToByte(applicationData[4..6], 16);
-            byte controllerErrorCode = Convert.ToByte(applicationData[24..26], 16);
-            bool harEnabled = Convert.ToByte(applicationData[26..28], 16) == 1;
+            var harStatusReply = new HARStatusReply
+            {
+                OnlineStatus = Convert.ToByte(applicationData[2..4], 16) == 1,
+                ApplicationErrorCode = Convert.ToByte(applicationData[4..6], 16),
+                Day = Convert.ToByte(applicationData[6..8], 16),
+                Month = Convert.ToByte(applicationData[8..10], 16)
+            };
 
-            Console.WriteLine($"HAR Status Reply received - Online: {onlineStatus}, Enabled: {harEnabled}, AppError: {appErrorCode}, CtrlError: {controllerErrorCode}");
+            // Year is WORD (2 bytes, low byte first)
+            byte yearLow = Convert.ToByte(applicationData[10..12], 16);
+            byte yearHigh = Convert.ToByte(applicationData[12..14], 16);
+            harStatusReply.Year = (ushort)(yearLow + (yearHigh << 8));
+
+            harStatusReply.Hour = Convert.ToByte(applicationData[14..16], 16);
+            harStatusReply.Minute = Convert.ToByte(applicationData[16..18], 16);
+            harStatusReply.Second = Convert.ToByte(applicationData[18..20], 16);
+
+            // Controller hardware checksum (WORD)
+            byte checksumLow = Convert.ToByte(applicationData[20..22], 16);
+            byte checksumHigh = Convert.ToByte(applicationData[22..24], 16);
+            harStatusReply.ControllerChecksum = (ushort)(checksumLow + (checksumHigh << 8));
+
+            harStatusReply.ControllerErrorCode = Convert.ToByte(applicationData[24..26], 16);
+            harStatusReply.HAREnabled = Convert.ToByte(applicationData[26..28], 16) == 1;
+
+            // Voice ID playing (WORD)
+            byte voiceIdLow = Convert.ToByte(applicationData[28..30], 16);
+            byte voiceIdHigh = Convert.ToByte(applicationData[30..32], 16);
+            harStatusReply.VoiceIDPlaying = (ushort)(voiceIdLow + (voiceIdHigh << 8));
+
+            harStatusReply.VoiceRevision = Convert.ToByte(applicationData[32..34], 16);
+
+            // Strategy ID active (WORD)
+            byte strategyIdLow = Convert.ToByte(applicationData[34..36], 16);
+            byte strategyIdHigh = Convert.ToByte(applicationData[36..38], 16);
+            harStatusReply.StrategyIDActive = (ushort)(strategyIdLow + (strategyIdHigh << 8));
+
+            harStatusReply.StrategyRevision = Convert.ToByte(applicationData[38..40], 16);
+            harStatusReply.StrategyStatus = Convert.ToByte(applicationData[40..42], 16);
+
+            Console.WriteLine($"HAR Status Reply received - Online: {harStatusReply.OnlineStatus}, Enabled: {harStatusReply.HAREnabled}, AppError: {harStatusReply.ApplicationErrorCode}, CtrlError: {harStatusReply.ControllerErrorCode}");
+
+            _harStatusReplyTaskCompletion?.TrySetResult(harStatusReply);
         }
         catch (Exception ex)
         {
@@ -2234,6 +2503,122 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         catch (Exception ex)
         {
             Console.WriteLine($"Failed to process HAR Voice Data NAK: {ex.Message}");
+        }
+
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Process HAR Set Strategy Reply (MI Code 0x43)
+    /// Used when controller reports stored strategy in response to HAR Request Stored Voice/Strategy/Plan.
+    /// </summary>
+    /// <param name="applicationData">The hex-encoded application data</param>
+    public Task ProcessHARSetStrategy(string applicationData)
+    {
+        try
+        {
+            // HAR Set Strategy format:
+            // Position 1: MI Code (43h)
+            // Position 2-3: Strategy ID (WORD)
+            // Position 4: Revision Number
+            // Position 5: Number of Voice IDs to follow
+            // Position 6+: Voice IDs (WORD each)
+
+            var harSetStrategy = new HARSetStrategy();
+
+            // Strategy ID (WORD)
+            byte strategyIdLow = Convert.ToByte(applicationData[2..4], 16);
+            byte strategyIdHigh = Convert.ToByte(applicationData[4..6], 16);
+            harSetStrategy.StrategyID = (ushort)(strategyIdLow + (strategyIdHigh << 8));
+
+            harSetStrategy.Revision = Convert.ToByte(applicationData[6..8], 16);
+
+            byte numberOfVoiceIDs = Convert.ToByte(applicationData[8..10], 16);
+
+            // Parse Voice IDs
+            int offset = 10;
+            for (int i = 0; i < numberOfVoiceIDs; i++)
+            {
+                byte voiceIdLow = Convert.ToByte(applicationData[offset..(offset + 2)], 16);
+                byte voiceIdHigh = Convert.ToByte(applicationData[(offset + 2)..(offset + 4)], 16);
+                ushort voiceId = (ushort)(voiceIdLow + (voiceIdHigh << 8));
+                harSetStrategy.VoiceIDs.Add(voiceId);
+                offset += 4;
+            }
+
+            Console.WriteLine($"HAR Set Strategy received - StrategyID: {harSetStrategy.StrategyID}, Revision: {harSetStrategy.Revision}, VoiceIDs: {numberOfVoiceIDs}");
+
+            _harSetStrategyTaskCompletion?.TrySetResult(harSetStrategy);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to process HAR Set Strategy: {ex.Message}");
+        }
+
+        return Task.CompletedTask;
+    }
+
+    /// <summary>
+    /// Process HAR Set Plan Reply (MI Code 0x45)
+    /// Used when controller reports stored plan in response to HAR Request Stored Voice/Strategy/Plan.
+    /// </summary>
+    /// <param name="applicationData">The hex-encoded application data</param>
+    public Task ProcessHARSetPlan(string applicationData)
+    {
+        try
+        {
+            // HAR Set Plan format (up to 40 bytes):
+            // Position 1: MI Code (45h)
+            // Position 2: Plan ID
+            // Position 3: Revision
+            // Position 4: Day of week (bitwise)
+            // Position 5-6: Strategy 1 ID (WORD)
+            // Position 7: Strategy 1 start hour
+            // Position 8: Strategy 1 start minute
+            // Position 9: Strategy 1 stop hour
+            // Position 10: Strategy 1 stop minute
+            // ... (repeat for up to 6 strategies)
+
+            var harSetPlan = new HARSetPlan
+            {
+                PlanID = Convert.ToByte(applicationData[2..4], 16),
+                Revision = Convert.ToByte(applicationData[4..6], 16),
+                DayOfWeek = Convert.ToByte(applicationData[6..8], 16)
+            };
+
+            // Parse strategy entries
+            int offset = 8;
+            while (offset + 12 <= applicationData.Length && harSetPlan.Entries.Count < 6)
+            {
+                // Strategy ID (WORD)
+                byte strategyIdLow = Convert.ToByte(applicationData[offset..(offset + 2)], 16);
+                byte strategyIdHigh = Convert.ToByte(applicationData[(offset + 2)..(offset + 4)], 16);
+                ushort strategyId = (ushort)(strategyIdLow + (strategyIdHigh << 8));
+
+                // Strategy ID 0 indicates end of plan
+                if (strategyId == 0)
+                    break;
+
+                var entry = new HARSetPlanEntry
+                {
+                    StrategyID = strategyId,
+                    StartHour = Convert.ToByte(applicationData[(offset + 4)..(offset + 6)], 16),
+                    StartMinute = Convert.ToByte(applicationData[(offset + 6)..(offset + 8)], 16),
+                    StopHour = Convert.ToByte(applicationData[(offset + 8)..(offset + 10)], 16),
+                    StopMinute = Convert.ToByte(applicationData[(offset + 10)..(offset + 12)], 16)
+                };
+
+                harSetPlan.Entries.Add(entry);
+                offset += 12;
+            }
+
+            Console.WriteLine($"HAR Set Plan received - PlanID: {harSetPlan.PlanID}, Revision: {harSetPlan.Revision}, Entries: {harSetPlan.Entries.Count}");
+
+            _harSetPlanTaskCompletion?.TrySetResult(harSetPlan);
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine($"Failed to process HAR Set Plan: {ex.Message}");
         }
 
         return Task.CompletedTask;

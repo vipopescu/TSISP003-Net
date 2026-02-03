@@ -38,10 +38,10 @@ public interface ISignControllerService : IHostedService
     Task<AckReply> ResetFaultLog();
     Task HARSetVoiceDataIncomplete();
     Task HARSetVoiceDataComplete();
-    Task HARSetStrategy();
-    Task HARActivateStrategy();
-    Task HARSetPlan();
-    Task HARRequestStoredVoiceStrategyPlan();
+    Task<HARStatusReply> HARSetStrategy(HARSetStrategy request);
+    Task<AckReply> HARActivateStrategy(ushort strategyId);
+    Task<HARStatusReply> HARSetPlan(HARSetPlan request);
+    Task<ISignResponse> HARRequestStoredVoiceStrategyPlan(byte requestType, ushort requestId, byte sequenceNumber);
     Task RequestEnvironmentalWeatherValues();
     Task EnvironmentalWeatherValues();
     Task EnvironmentalWeatherThresholdDefinition();
@@ -59,6 +59,8 @@ public interface ISignControllerService : IHostedService
     Task ProcessFaultLogReply(string applicationData);
     Task ProcessHARVoiceDataAck(string applicationData);
     Task ProcessHARVoiceDataNak(string applicationData);
+    Task ProcessHARSetStrategy(string applicationData);
+    Task ProcessHARSetPlan(string applicationData);
     Task ProcessEnvironmentalWeatherValuesReply(string applicationData);
     Task ProcessEnvironmentalWeatherThresholdDefinitionReply(string applicationData);
     Task ProcessEnvironmentalWeatherEventLogReply(string applicationData);
