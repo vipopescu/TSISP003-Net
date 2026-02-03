@@ -258,12 +258,39 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
         }
     }
 
+    /// <summary>
+    /// Sends a plan to the specified device.
+    /// A plan can contain up to 6 frames or messages scheduled by time and day of week.
+    /// </summary>
     [HttpPost]
     [Route("{device}/SignSetPlan")]
-    public async Task<IActionResult> SignSetPlan(string device)
+    public async Task<IActionResult> SignSetPlan(string device, [FromBody] SignSetPlanDto request)
     {
-        // TODO: Implement
-        return Ok();
+        try
+        {
+            if (!_signControllerServiceFactory.ContainsSignController(device))
+                return NotFound("Device not found");
+
+            var controller = await _signControllerServiceFactory.GetSignControllerService(device)
+                .SignSetPlan(request.AsEntity());
+
+            return Ok(controller.AsDto());
+        }
+        catch (TimeoutException ex)
+        {
+            _logger.LogWarning(ex, "Sign Set Plan timed out for device {Device}", device);
+            return StatusCode(StatusCodes.Status408RequestTimeout, "Sign Set Plan timed out.");
+        }
+        catch (SignRequestRejectedException ex)
+        {
+            _logger.LogError("Sign Set Plan rejected: {ErrorCode}", ex.RejectReply.ApplicationErrorCode);
+            return StatusCode(StatusCodes.Status400BadRequest, ex.RejectReply.AsDto());
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error setting plan for device {Device}", device);
+            return StatusCode(StatusCodes.Status500InternalServerError, "Error setting plan.");
+        }
     }
 
     [HttpPost]
@@ -426,6 +453,10 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
             else if (controllerResponse is SignSetHighResolutionGraphicsFrame signSetHighResGraphicsFrame)
             {
                 return Ok(signSetHighResGraphicsFrame.AsDto());
+            }
+            else if (controllerResponse is SignSetPlan signSetPlan)
+            {
+                return Ok(signSetPlan.AsDto());
             }
 
             return StatusCode(StatusCodes.Status500InternalServerError, "Unexpected response type.");

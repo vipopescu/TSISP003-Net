@@ -411,5 +411,54 @@ public static class Extensions
         };
     }
 
+    public static SignSetPlanDto AsDto(this SignSetPlan signSetPlan)
+    {
+        return new SignSetPlanDto
+        {
+            PlanID = signSetPlan.PlanID,
+            Revision = signSetPlan.Revision,
+            DayOfWeek = signSetPlan.DayOfWeek,
+            Entries = signSetPlan.Entries.Select(e => e.AsDto()).ToList()
+        };
+    }
+
+    public static SignSetPlanEntryDto AsDto(this SignSetPlanEntry signSetPlanEntry)
+    {
+        return new SignSetPlanEntryDto
+        {
+            FrameMessageType = signSetPlanEntry.FrameMessageType,
+            FrameMessageID = signSetPlanEntry.FrameMessageID,
+            StartHour = signSetPlanEntry.StartHour,
+            StartMinute = signSetPlanEntry.StartMinute,
+            StopHour = signSetPlanEntry.StopHour,
+            StopMinute = signSetPlanEntry.StopMinute
+        };
+    }
+
+    public static SignSetPlan AsEntity(this SignSetPlanDto signSetPlanDto)
+    {
+        return new SignSetPlan
+        {
+            PlanID = signSetPlanDto.PlanID,
+            Revision = signSetPlanDto.Revision,
+            DayOfWeek = signSetPlanDto.DayOfWeek,
+            Entries = signSetPlanDto.Entries.Select(e => e.AsEntity()).ToList()
+        };
+    }
+
+    public static SignSetPlanEntry AsEntity(this SignSetPlanEntryDto signSetPlanEntryDto)
+    {
+        return new SignSetPlanEntry
+        {
+            FrameMessageType = signSetPlanEntryDto.FrameMessageType,
+            FrameMessageID = signSetPlanEntryDto.FrameMessageID,
+            StartHour = signSetPlanEntryDto.StartHour,
+            StartMinute = signSetPlanEntryDto.StartMinute,
+            StopHour = signSetPlanEntryDto.StopHour,
+            StopMinute = signSetPlanEntryDto.StopMinute
+        };
+    }
+
 }
+
 

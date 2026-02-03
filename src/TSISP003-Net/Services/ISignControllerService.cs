@@ -23,7 +23,7 @@ public interface ISignControllerService : IHostedService
     Task SignConfigurationRequest();
     Task<AckReply> SignDisplayAtomicFrames(SignDisplayAtomicFrame request);
     Task<SignStatusReply> SignSetMessage(SignSetMessage request);
-    Task SignSetPlan();
+    Task<SignStatusReply> SignSetPlan(SignSetPlan request);
     Task<AckReply> SignDisplayFrame(SignDisplayFrame request);
     Task<AckReply> SignDisplayMessage(SignDisplayMessage request);
     Task EnablePlan();

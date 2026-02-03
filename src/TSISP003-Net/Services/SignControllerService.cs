@@ -16,6 +16,7 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
     private TaskCompletionSource<SignSetGraphicsFrame>? _signSetGraphicsFrameTaskCompletion;
     private TaskCompletionSource<SignSetHighResolutionGraphicsFrame>? _signSetHighResGraphicsFrameTaskCompletion;
     private TaskCompletionSource<SignSetMessage>? _signSetMessageTaskCompletion;
+    private TaskCompletionSource<SignSetPlan>? _signSetPlanTaskCompletion;
     private TaskCompletionSource<RejectReply>? _rejectReplyCompletion;
     private TaskCompletionSource<AckReply>? _ackReplyCompletion;
 
@@ -883,10 +884,75 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         return await _signStatusReplyTaskCompletion.Task;
     }
 
-    public Task SignSetPlan()
+    /// <summary>
+    /// Send a plan to be stored in the sign controller's memory
+    /// A plan can contain up to 6 frames or messages scheduled by time and day of week
+    /// </summary>
+    /// <param name="request">The plan to store</param>
+    /// <returns>SignStatusReply on success</returns>
+    /// <exception cref="TimeoutException">Thrown when the request times out</exception>
+    /// <exception cref="SignRequestRejectedException">Thrown when the request is rejected</exception>
+    public async Task<SignStatusReply> SignSetPlan(SignSetPlan request)
     {
-        // TODO
-        throw new NotImplementedException();
+        _signStatusReplyTaskCompletion = new TaskCompletionSource<SignStatusReply>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _rejectReplyCompletion = new TaskCompletionSource<RejectReply>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        // build header
+        string header = SignControllerServiceConfig.SOH // Start of header
+                    + NS.ToString("X2") + NR.ToString("X2") // NS and NR
+                    + _deviceSettings.Address // ADDR
+                    + SignControllerServiceConfig.STX;
+
+        // Build application message:
+        // MI Code (0D) + PlanID + Revision + DayOfWeek + [FrameMessageType + FrameMessageID + StartHour + StartMinute + StopHour + StopMinute]...
+        string applicationMessage = SignControllerServiceConfig.MI_SIGN_SET_PLAN.ToString("X2")
+                   + request.PlanID.ToString("X2")
+                   + request.Revision.ToString("X2")
+                   + request.DayOfWeek.ToString("X2");
+
+        // Add each entry
+        foreach (var entry in request.Entries)
+        {
+            applicationMessage += entry.FrameMessageType.ToString("X2")
+                               + entry.FrameMessageID.ToString("X2")
+                               + entry.StartHour.ToString("X2")
+                               + entry.StartMinute.ToString("X2")
+                               + entry.StopHour.ToString("X2")
+                               + entry.StopMinute.ToString("X2");
+        }
+
+        // Add terminating zero if less than 6 entries (indicates end of plan)
+        if (request.Entries.Count < 6)
+        {
+            applicationMessage += "00"; // FrameMessageType = 0 indicates end of plan
+        }
+
+        var message = header + applicationMessage;
+
+        // append packet crc and end of message
+        message = message
+                    + Functions.PacketCRC(Encoding.ASCII.GetBytes(message))
+                    + SignControllerServiceConfig.ETX;
+
+        await _tcpClient.SendAsync(message);
+
+        // Wait for either the sign status reply to be received or a timeout after 3 seconds.
+        var delayTask = Task.Delay(TimeSpan.FromSeconds(3));
+
+        var completedTask = await Task.WhenAny(_signStatusReplyTaskCompletion.Task, _rejectReplyCompletion.Task, delayTask);
+
+        if (completedTask == delayTask)
+        {
+            throw new TimeoutException("Sign set plan request timed out.");
+        }
+
+        if (completedTask == _rejectReplyCompletion.Task)
+        {
+            RejectReply rejectReply = await _rejectReplyCompletion.Task;
+            throw new SignRequestRejectedException(rejectReply);
+        }
+
+        return await _signStatusReplyTaskCompletion.Task;
     }
 
     public async Task<AckReply> SignDisplayFrame(SignDisplayFrame request)
@@ -1021,6 +1087,7 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         _signSetTextFrameTaskCompletion = new TaskCompletionSource<SignSetTextFrame>(TaskCreationOptions.RunContinuationsAsynchronously);
         _signSetGraphicsFrameTaskCompletion = new TaskCompletionSource<SignSetGraphicsFrame>(TaskCreationOptions.RunContinuationsAsynchronously);
         _signSetHighResGraphicsFrameTaskCompletion = new TaskCompletionSource<SignSetHighResolutionGraphicsFrame>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _signSetPlanTaskCompletion = new TaskCompletionSource<SignSetPlan>(TaskCreationOptions.RunContinuationsAsynchronously);
         _rejectReplyCompletion = new TaskCompletionSource<RejectReply>(TaskCreationOptions.RunContinuationsAsynchronously);
         _signSetMessageTaskCompletion = new TaskCompletionSource<SignSetMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -1047,6 +1114,7 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
             _signSetGraphicsFrameTaskCompletion.Task,
             _signSetHighResGraphicsFrameTaskCompletion.Task,
             _signSetMessageTaskCompletion.Task,
+            _signSetPlanTaskCompletion.Task,
             _rejectReplyCompletion.Task,
             delayTask);
 
@@ -1079,6 +1147,11 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         if (completedTask == _signSetHighResGraphicsFrameTaskCompletion.Task)
         {
             return await _signSetHighResGraphicsFrameTaskCompletion.Task;
+        }
+
+        if (completedTask == _signSetPlanTaskCompletion.Task)
+        {
+            return await _signSetPlanTaskCompletion.Task;
         }
 
         throw new InvalidOperationException("Unexpected execution path.");
@@ -1549,10 +1622,70 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Process the sign set plan response
+    /// </summary>
+    /// <param name="applicationData">The application data from the response</param>
+    /// <returns></returns>
     public Task ProcessSignSetPlan(string applicationData)
     {
-        // TODO
-        throw new NotImplementedException();
+        try
+        {
+            SignSetPlan signSetPlanFeedback = new SignSetPlan();
+
+            // Parse the application data according to the protocol:
+            // Position 1: MI Code (0D) - already parsed by dispatcher
+            // Position 2: Plan ID (1 byte)
+            // Position 3: Revision (1 byte)
+            // Position 4: Day of week (1 byte)
+            // Position 5+: Entries (6 bytes each: type, id, start hour, start min, stop hour, stop min)
+
+            signSetPlanFeedback.PlanID = Convert.ToByte(applicationData[2..4], 16);
+            signSetPlanFeedback.Revision = Convert.ToByte(applicationData[4..6], 16);
+            signSetPlanFeedback.DayOfWeek = Convert.ToByte(applicationData[6..8], 16);
+
+            // Parse entries - each entry is 6 bytes (12 hex characters)
+            int index = 8;
+            while (index + 2 <= applicationData.Length)
+            {
+                byte frameMessageType = Convert.ToByte(applicationData[index..(index + 2)], 16);
+
+                // Type 0 indicates end of plan
+                if (frameMessageType == 0)
+                    break;
+
+                // Make sure we have enough data for a complete entry
+                if (index + 12 > applicationData.Length)
+                    break;
+
+                var entry = new SignSetPlanEntry
+                {
+                    FrameMessageType = frameMessageType,
+                    FrameMessageID = Convert.ToByte(applicationData[(index + 2)..(index + 4)], 16),
+                    StartHour = Convert.ToByte(applicationData[(index + 4)..(index + 6)], 16),
+                    StartMinute = Convert.ToByte(applicationData[(index + 6)..(index + 8)], 16),
+                    StopHour = Convert.ToByte(applicationData[(index + 8)..(index + 10)], 16),
+                    StopMinute = Convert.ToByte(applicationData[(index + 10)..(index + 12)], 16)
+                };
+
+                signSetPlanFeedback.Entries.Add(entry);
+                index += 12;
+
+                // Maximum 6 entries
+                if (signSetPlanFeedback.Entries.Count >= 6)
+                    break;
+            }
+
+            _signSetPlanTaskCompletion?.TrySetResult(signSetPlanFeedback);
+
+            return Task.CompletedTask;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Failed to process sign set plan: " + ex.Message);
+        }
+
+        return Task.CompletedTask;
     }
 
     /// <summary>

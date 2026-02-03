@@ -211,3 +211,60 @@ public class SignSetHighResolutionGraphicsFrameDto
     /// </summary>
     public required string GraphicsData { get; set; }
 }
+
+public class SignSetPlanDto
+{
+    /// <summary>
+    /// Plan ID (1-255)
+    /// </summary>
+    public byte PlanID { get; set; }
+
+    /// <summary>
+    /// Revision - identifies the modification level of the plan
+    /// </summary>
+    public byte Revision { get; set; }
+
+    /// <summary>
+    /// Day of the week - bitwise field where bits 1-7 represent Sunday through Saturday.
+    /// 0x7F (127) means daily operation.
+    /// </summary>
+    public byte DayOfWeek { get; set; }
+
+    /// <summary>
+    /// List of plan entries (up to 6)
+    /// </summary>
+    public List<SignSetPlanEntryDto> Entries { get; set; } = [];
+}
+
+public class SignSetPlanEntryDto
+{
+    /// <summary>
+    /// Type of entry: 1 = frame, 2 = message
+    /// </summary>
+    public byte FrameMessageType { get; set; }
+
+    /// <summary>
+    /// Frame or message ID
+    /// </summary>
+    public byte FrameMessageID { get; set; }
+
+    /// <summary>
+    /// Start time - hour (0-23)
+    /// </summary>
+    public byte StartHour { get; set; }
+
+    /// <summary>
+    /// Start time - minute (0-59)
+    /// </summary>
+    public byte StartMinute { get; set; }
+
+    /// <summary>
+    /// Stop time - hour (0-23)
+    /// </summary>
+    public byte StopHour { get; set; }
+
+    /// <summary>
+    /// Stop time - minute (0-59)
+    /// </summary>
+    public byte StopMinute { get; set; }
+}
