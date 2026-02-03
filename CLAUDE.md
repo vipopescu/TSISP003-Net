@@ -31,12 +31,34 @@ dotnet clean TSISP003-Net/TSISP003-Net.sln
 
 ## Architecture
 
+### Folder Structure
+
+```
+TSISP003-Net/
+├── Controllers/              # REST API endpoints
+├── Domain/
+│   └── Entities/             # Domain entities (Sign, Frame, Message, etc.)
+├── Services/                 # SignControllerService, Factory, Config
+├── Infrastructure/
+│   ├── Tcp/                  # TCP client for sign communication
+│   └── DataStore/            # Data store implementation
+├── DTOs/                     # Data Transfer Objects for API
+├── Configuration/            # Settings classes
+├── Utilities/
+│   ├── Constants/            # Error codes
+│   ├── Enums.cs
+│   ├── Extensions.cs         # Entity/DTO mappings
+│   ├── Exceptions.cs
+│   └── Functions.cs          # CRC, parsing utilities
+└── Program.cs
+```
+
 ### Core Components
 
-1. **SignControllerService** - Manages TCP connections and protocol communication with sign controllers
-2. **SignControllerDataStore** - Data models and entities for the TSI-SP-003 protocol
-3. **TCP Client** - Low-level TCP communication handling
-4. **Controllers** - REST API endpoints for device management
+1. **SignControllerService** (`Services/`) - Manages TCP connections and protocol communication with sign controllers
+2. **Domain Entities** (`Domain/Entities/`) - Data models for the TSI-SP-003 protocol
+3. **TCP Client** (`Infrastructure/Tcp/`) - Low-level TCP communication handling
+4. **Controllers** (`Controllers/`) - REST API endpoints for device management
 
 ### Key Patterns
 

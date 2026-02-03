@@ -1,0 +1,170 @@
+using System.ComponentModel.DataAnnotations;
+
+namespace TSISP003.DTOs;
+
+public class SignDto
+{
+    public byte SignID { get; set; }
+    public byte SignErrorCode { get; set; }
+    public bool SignEnabled { get; set; }
+    public byte FrameID { get; set; }
+    public byte FrameRevision { get; set; }
+    public byte MessageID { get; set; }
+    public byte MessageRevision { get; set; }
+    public byte PlanID { get; set; }
+    public byte PlanRevision { get; set; }
+    public required string SignType { get; set; }
+    public short SignWidth { get; set; }
+    public short SignHeight { get; set; }
+}
+
+public class SignGroupDto
+{
+    public byte GroupId { get; set; }
+    public Dictionary<byte, SignDto> Signs { get; set; } = new();
+    public string? Signature { get; set; }
+}
+
+public class SignControllerDto
+{
+    public bool OnlineStatus { get; set; }
+    public DateTime DateChange { get; set; }
+    public ushort ControllerChecksum { get; set; }
+    public byte ControllerErrorCode { get; set; }
+    public byte NumberOfGroups { get; set; }
+    public Dictionary<byte, SignGroupDto> Groups { get; set; } = [];
+}
+
+public class FaultLogEntryDto
+{
+    public byte Id { get; set; }
+    public byte EntryNumber { get; set; }
+    public byte ErrorCode { get; set; }
+    public required string ErrorDescription { get; set; }
+    public bool IsFaultCleared { get; set; }
+    public DateTime EntryDateTime { get; set; }
+}
+
+public class SignStatusDto
+{
+    public byte SignID { get; set; }
+    public byte SignErrorCode { get; set; }
+    public required string SignError { get; set; }
+    public bool SignEnabled { get; set; }
+    public byte FrameID { get; set; }
+    public byte FrameRevision { get; set; }
+    public byte MessageID { get; set; }
+    public byte MessageRevision { get; set; }
+    public byte PlanID { get; set; }
+    public byte PlanRevision { get; set; }
+}
+
+public class SignStatusReplyDto
+{
+    public bool OnlineStatus { get; set; }
+    public byte ApplicationErrorCode { get; set; }
+    public DateTime dateTime { get; set; }
+    public ushort ControllerChecksum { get; set; }
+    public byte ControllerErrorCode { get; set; }
+    public required string ControllerError { get; set; }
+    public byte NumberOfSigns { get; set; }
+    public Dictionary<byte, SignStatusDto> Signs { get; set; } = [];
+}
+
+public class SignSetTextFrameDto
+{
+    public byte FrameID { get; set; }
+    public byte Revision { get; set; }
+    public byte Font { get; set; }
+    public byte Colour { get; set; }
+    public byte Conspicuity { get; set; }
+    public required string Text { get; set; }
+}
+
+public class SignSetMessageDto
+{
+    public byte MessageID { get; set; }
+    public byte Revision { get; set; }
+    public byte TransitionTimeBetweenFrames { get; set; }
+    public byte Frame1ID { get; set; }
+    public byte Frame1Time { get; set; }
+    public byte Frame2ID { get; set; }
+    public byte Frame2Time { get; set; }
+    public byte Frame3ID { get; set; }
+    public byte Frame3Time { get; set; }
+    public byte Frame4ID { get; set; }
+    public byte Frame4Time { get; set; }
+    public byte Frame5ID { get; set; }
+    public byte Frame5Time { get; set; }
+    public byte Frame6ID { get; set; }
+    public byte Frame6Time { get; set; }
+}
+
+public class ExtendedRequestMessageDto
+{
+    public byte TransitionTimeBetweenFrames { get; set; }
+    public ExtendedTextFrameDto? Frame1 { get; set; }
+    public byte Frame1Time { get; set; }
+    public ExtendedTextFrameDto? Frame2 { get; set; }
+    public byte Frame2Time { get; set; }
+    public ExtendedTextFrameDto? Frame3 { get; set; }
+    public byte Frame3Time { get; set; }
+    public ExtendedTextFrameDto? Frame4 { get; set; }
+    public byte Frame4Time { get; set; }
+    public ExtendedTextFrameDto? Frame5 { get; set; }
+    public byte Frame5Time { get; set; }
+    public ExtendedTextFrameDto? Frame6 { get; set; }
+    public byte Frame6Time { get; set; }
+}
+
+public class ExtendedTextFrameDto
+{
+    public byte Font { get; set; }
+    public byte Colour { get; set; }
+    public byte Conspicuity { get; set; }
+    public required string Text { get; set; }
+}
+
+public class SignDisplayMessageDto
+{
+    public byte GroupID { get; set; }
+    public byte MessageID { get; set; }
+}
+
+public class SignDisplayFrameDto
+{
+    public byte SignID { get; set; }
+    public byte FrameID { get; set; }
+}
+
+public class SignDisplayAtomicFrameDto
+{
+    public byte GroupID { get; set; }
+    public byte NumbeOfSigns { get; set; }
+    public List<SignDisplayFrameDto> Frames { get; set; } = new();
+}
+
+
+public class AckReplyDto
+{
+}
+
+public class SignRequestStoredFrameMessagePlanDto
+{
+    [Range(0, 2, ErrorMessage = "TypeRequest must be 0 (frame), 1 (message), or 2 (plan)")]
+    public byte TypeRequest { get; set; }
+
+    public byte RequestID { get; set; }
+}
+
+public class PowerOnOffCommandDto
+{
+    public byte GroupID { get; set; }
+    public bool PoweredOn { get; set; }
+}
+
+public class RejectReplyDto
+{
+    public byte ApplicationErrorCode { get; set; }
+    public string? ApplicationErrorDescription { get; set; }
+}

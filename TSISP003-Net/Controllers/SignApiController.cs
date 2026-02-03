@@ -1,11 +1,11 @@
 using System.Diagnostics;
 using Microsoft.AspNetCore.Mvc;
-using TSISP003_Net.SignControllerService;
-using TSISP003_Net;
-using TSISP003_Net.SignControllerDataStore.Entities;
-using TSISP003_Net.Utils;
+using TSISP003.Services;
+using TSISP003.DTOs;
+using TSISP003.Domain.Entities;
+using TSISP003.Utilities;
 
-namespace TSISP003_Net.Controllers;
+namespace TSISP003.Controllers;
 
 /// <summary>
 /// HTTP API controller for sign management operations.
