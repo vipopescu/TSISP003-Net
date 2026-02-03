@@ -345,4 +345,37 @@ public static class Extensions
         };
     }
 
+    public static SignSetGraphicsFrameDto AsDto(this SignSetGraphicsFrame signSetGraphicsFrame)
+    {
+        return new SignSetGraphicsFrameDto
+        {
+            FrameID = signSetGraphicsFrame.FrameID,
+            Revision = signSetGraphicsFrame.Revision,
+            NumberOfRows = signSetGraphicsFrame.NumberOfRows,
+            NumberOfColumns = signSetGraphicsFrame.NumberOfColumns,
+            Colour = signSetGraphicsFrame.Colour,
+            Conspicuity = signSetGraphicsFrame.Conspicuity,
+            GraphicsData = signSetGraphicsFrame.GraphicsData
+        };
+    }
+
+    public static SignSetGraphicsFrame AsEntity(this SignSetGraphicsFrameDto signSetGraphicsFrameDto)
+    {
+        // Graphics data should already be in hex format
+        string graphicsData = signSetGraphicsFrameDto.GraphicsData ?? string.Empty;
+        ushort graphicsLength = (ushort)(graphicsData.Length / 2);
+
+        return new SignSetGraphicsFrame
+        {
+            FrameID = signSetGraphicsFrameDto.FrameID,
+            Revision = signSetGraphicsFrameDto.Revision,
+            NumberOfRows = signSetGraphicsFrameDto.NumberOfRows,
+            NumberOfColumns = signSetGraphicsFrameDto.NumberOfColumns,
+            Colour = signSetGraphicsFrameDto.Colour,
+            Conspicuity = signSetGraphicsFrameDto.Conspicuity,
+            GraphicsLength = graphicsLength,
+            GraphicsData = graphicsData
+        };
+    }
+
 }

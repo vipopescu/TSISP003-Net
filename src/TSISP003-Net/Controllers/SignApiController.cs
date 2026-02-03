@@ -97,12 +97,39 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
         }
     }
 
+    /// <summary>
+    /// Sends a graphics frame to the specified device.
+    /// Used for signs with dimensions up to 255 x 255 pixels.
+    /// </summary>
     [HttpPost]
     [Route("{device}/SignSetGraphicsFrame")]
-    public async Task<IActionResult> SignSetGraphicsFrame(string device)
+    public async Task<IActionResult> SignSetGraphicsFrame(string device, [FromBody] SignSetGraphicsFrameDto request)
     {
-        // TODO: Implement
-        return Ok();
+        try
+        {
+            if (!_signControllerServiceFactory.ContainsSignController(device))
+                return NotFound("Device not found");
+
+            var controller = await _signControllerServiceFactory.GetSignControllerService(device)
+                .SignSetGraphicsFrame(request.AsEntity());
+
+            return Ok(controller.AsDto());
+        }
+        catch (TimeoutException ex)
+        {
+            _logger.LogWarning(ex, "Sign Set Graphics Frame timed out for device {Device}", device);
+            return StatusCode(StatusCodes.Status408RequestTimeout, "Sign Set Graphics Frame timed out.");
+        }
+        catch (SignRequestRejectedException ex)
+        {
+            _logger.LogError("Sign Set Graphics Frame rejected: {ErrorCode}", ex.RejectReply.ApplicationErrorCode);
+            return StatusCode(StatusCodes.Status400BadRequest, ex.RejectReply.AsDto());
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error setting graphics frame for device {Device}", device);
+            return StatusCode(StatusCodes.Status500InternalServerError, "Error setting graphics frame.");
+        }
     }
 
     [HttpPost]
@@ -366,6 +393,10 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
             else if (controllerResponse is SignSetTextFrame signSetTextFrame)
             {
                 return Ok(signSetTextFrame.AsDto());
+            }
+            else if (controllerResponse is SignSetGraphicsFrame signSetGraphicsFrame)
+            {
+                return Ok(signSetGraphicsFrame.AsDto());
             }
 
             return StatusCode(StatusCodes.Status500InternalServerError, "Unexpected response type.");

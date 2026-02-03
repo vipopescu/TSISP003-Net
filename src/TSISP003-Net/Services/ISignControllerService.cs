@@ -18,7 +18,7 @@ public interface ISignControllerService : IHostedService
     Task<AckReply> SystemReset(byte groupId, byte resetLevel);
     Task UpdateTime();
     Task<SignStatusReply> SignSetTextFrame(SignSetTextFrame request);
-    Task SignSetGraphicsFrame();
+    Task<SignStatusReply> SignSetGraphicsFrame(SignSetGraphicsFrame request);
     Task SignSetHighResolutionGraphicsFrame();
     Task SignConfigurationRequest();
     Task<AckReply> SignDisplayAtomicFrames(SignDisplayAtomicFrame request);

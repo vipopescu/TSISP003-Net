@@ -81,6 +81,20 @@ public class SignSetTextFrameDto
     public required string Text { get; set; }
 }
 
+public class SignSetGraphicsFrameDto
+{
+    public byte FrameID { get; set; }
+    public byte Revision { get; set; }
+    public byte NumberOfRows { get; set; }
+    public byte NumberOfColumns { get; set; }
+    public byte Colour { get; set; }
+    public byte Conspicuity { get; set; }
+    /// <summary>
+    /// Graphics data as hex string (e.g., "FF00FF00" for pixel data)
+    /// </summary>
+    public required string GraphicsData { get; set; }
+}
+
 public class SignSetMessageDto
 {
     public byte MessageID { get; set; }

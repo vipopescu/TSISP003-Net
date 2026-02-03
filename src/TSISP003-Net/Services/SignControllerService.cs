@@ -13,6 +13,7 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
     private TaskCompletionSource<List<FaultLogEntry>>? _faultLogReplyTaskCompletion;
     private TaskCompletionSource<SignStatusReply>? _signStatusReplyTaskCompletion;
     private TaskCompletionSource<SignSetTextFrame>? _signSetTextFrameTaskCompletion;
+    private TaskCompletionSource<SignSetGraphicsFrame>? _signSetGraphicsFrameTaskCompletion;
     private TaskCompletionSource<SignSetMessage>? _signSetMessageTaskCompletion;
     private TaskCompletionSource<RejectReply>? _rejectReplyCompletion;
     private TaskCompletionSource<AckReply>? _ackReplyCompletion;
@@ -591,16 +592,115 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
     }
 
 
-    public Task SignSetGraphicsFrame()
+    /// <summary>
+    /// Send a graphics frame to be stored in the sign controller's memory
+    /// </summary>
+    /// <param name="request">The graphics frame to store</param>
+    /// <returns>SignStatusReply on success</returns>
+    /// <exception cref="TimeoutException">Thrown when the request times out</exception>
+    /// <exception cref="SignRequestRejectedException">Thrown when the request is rejected</exception>
+    public async Task<SignStatusReply> SignSetGraphicsFrame(SignSetGraphicsFrame request)
     {
-        // TODO
-        throw new NotImplementedException();
+        _signStatusReplyTaskCompletion = new TaskCompletionSource<SignStatusReply>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _rejectReplyCompletion = new TaskCompletionSource<RejectReply>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        // build header
+        string header = SignControllerServiceConfig.SOH // Start of header
+                    + NS.ToString("X2") + NR.ToString("X2") // NS and NR
+                    + _deviceSettings.Address // ADDR
+                    + SignControllerServiceConfig.STX;
+
+        // Build application message:
+        // MI Code (0B) + FrameID + Revision + NumberOfRows + NumberOfColumns + Colour + Conspicuity + GraphicsLength (2 bytes) + GraphicsData
+        string applicationMessage = SignControllerServiceConfig.MI_SIGN_SET_GRAPHIC_FRAME.ToString("X2")
+                   + request.FrameID.ToString("X2")
+                   + request.Revision.ToString("X2")
+                   + request.NumberOfRows.ToString("X2")
+                   + request.NumberOfColumns.ToString("X2")
+                   + request.Colour.ToString("X2")
+                   + request.Conspicuity.ToString("X2")
+                   + request.GraphicsLength.ToString("X4") // 2 bytes (WORD) for length
+                   + request.GraphicsData;
+
+        // Calculate application message CRC
+        applicationMessage = applicationMessage + Functions.PacketCRC(Encoding.ASCII.GetBytes(Functions.HexToAscii(applicationMessage)));
+
+        var message = header + applicationMessage;
+
+        // append packet crc and end of message
+        message = message
+                    + Functions.PacketCRC(Encoding.ASCII.GetBytes(message))
+                    + SignControllerServiceConfig.ETX;
+
+        await _tcpClient.SendAsync(message);
+
+        // Wait for either the sign status reply to be received or a timeout after 3 seconds.
+        var delayTask = Task.Delay(TimeSpan.FromSeconds(3));
+
+        var completedTask = await Task.WhenAny(_signStatusReplyTaskCompletion.Task, _rejectReplyCompletion.Task, delayTask);
+
+        if (completedTask == delayTask)
+        {
+            throw new TimeoutException("Sign set graphics frame request timed out.");
+        }
+
+        if (completedTask == _rejectReplyCompletion.Task)
+        {
+            RejectReply rejectReply = await _rejectReplyCompletion.Task;
+            throw new SignRequestRejectedException(rejectReply);
+        }
+
+        return await _signStatusReplyTaskCompletion.Task;
     }
 
+    /// <summary>
+    /// Process the sign set graphics frame response
+    /// </summary>
+    /// <param name="applicationData">The application data from the response</param>
+    /// <returns></returns>
     public Task ProcessSignSetGraphicsFrame(string applicationData)
     {
-        // TODO
-        throw new NotImplementedException();
+        try
+        {
+            SignSetGraphicsFrame signSetGraphicsFrameFeedback = new SignSetGraphicsFrame();
+
+            // Parse the application data according to the protocol:
+            // Position 1: MI Code (0B) - already parsed by dispatcher
+            // Position 2: Frame ID (1 byte)
+            // Position 3: Revision (1 byte)
+            // Position 4: Number of rows (1 byte)
+            // Position 5: Number of columns (1 byte)
+            // Position 6: Colour (1 byte)
+            // Position 7: Conspicuity (1 byte)
+            // Position 8-9: Graphics length (2 bytes, WORD)
+            // Position 10+: Graphics data (variable)
+            // Last 4 chars: CRC (2 bytes)
+
+            signSetGraphicsFrameFeedback.FrameID = Convert.ToByte(applicationData[2..4], 16);
+            signSetGraphicsFrameFeedback.Revision = Convert.ToByte(applicationData[4..6], 16);
+            signSetGraphicsFrameFeedback.NumberOfRows = Convert.ToByte(applicationData[6..8], 16);
+            signSetGraphicsFrameFeedback.NumberOfColumns = Convert.ToByte(applicationData[8..10], 16);
+            signSetGraphicsFrameFeedback.Colour = Convert.ToByte(applicationData[10..12], 16);
+            signSetGraphicsFrameFeedback.Conspicuity = Convert.ToByte(applicationData[12..14], 16);
+            signSetGraphicsFrameFeedback.GraphicsLength = Convert.ToUInt16(applicationData[14..18], 16);
+
+            // Graphics data starts at position 18 and goes for GraphicsLength * 2 hex characters
+            int graphicsDataLength = signSetGraphicsFrameFeedback.GraphicsLength * 2;
+            signSetGraphicsFrameFeedback.GraphicsData = applicationData[18..(18 + graphicsDataLength)];
+
+            // CRC is the last 4 hex characters after the graphics data
+            signSetGraphicsFrameFeedback.CRC = Convert.ToUInt16(applicationData[(18 + graphicsDataLength)..(18 + graphicsDataLength + 4)], 16);
+
+            _signSetGraphicsFrameTaskCompletion?.TrySetResult(signSetGraphicsFrameFeedback);
+
+            return Task.CompletedTask;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Failed to process sign set graphics frame: " + ex.Message);
+        }
+
+        return Task.CompletedTask;
     }
 
     public Task SignSetHighResolutionGraphicsFrame()
@@ -862,6 +962,7 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
     public async Task<ISignResponse> SignRequestStoredFrameMessagePlan(Enums.RequestType requestType, byte requestID)
     {
         _signSetTextFrameTaskCompletion = new TaskCompletionSource<SignSetTextFrame>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _signSetGraphicsFrameTaskCompletion = new TaskCompletionSource<SignSetGraphicsFrame>(TaskCreationOptions.RunContinuationsAsynchronously);
         _rejectReplyCompletion = new TaskCompletionSource<RejectReply>(TaskCreationOptions.RunContinuationsAsynchronously);
         _signSetMessageTaskCompletion = new TaskCompletionSource<SignSetMessage>(TaskCreationOptions.RunContinuationsAsynchronously);
 
@@ -880,14 +981,19 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
 
         await _tcpClient.SendAsync(message);
 
-        // Wait for either the fault log reply to be received or a timeout after 3 seconds.
+        // Wait for either the reply to be received or a timeout after 3 seconds.
         var delayTask = Task.Delay(TimeSpan.FromSeconds(3));
 
-        var completedTask = await Task.WhenAny(_signSetTextFrameTaskCompletion.Task, _signSetMessageTaskCompletion.Task, _rejectReplyCompletion.Task, delayTask);
+        var completedTask = await Task.WhenAny(
+            _signSetTextFrameTaskCompletion.Task,
+            _signSetGraphicsFrameTaskCompletion.Task,
+            _signSetMessageTaskCompletion.Task,
+            _rejectReplyCompletion.Task,
+            delayTask);
 
         if (completedTask == delayTask)
         {
-            throw new TimeoutException("Fault log reply timed out.");
+            throw new TimeoutException("Sign request stored frame/message/plan timed out.");
         }
 
         if (completedTask == _rejectReplyCompletion.Task)
@@ -904,6 +1010,11 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         if (completedTask == _signSetTextFrameTaskCompletion.Task)
         {
             return await _signSetTextFrameTaskCompletion.Task;
+        }
+
+        if (completedTask == _signSetGraphicsFrameTaskCompletion.Task)
+        {
+            return await _signSetGraphicsFrameTaskCompletion.Task;
         }
 
         throw new InvalidOperationException("Unexpected execution path.");
