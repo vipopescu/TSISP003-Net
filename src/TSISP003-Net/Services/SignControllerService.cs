@@ -458,19 +458,31 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
     /// <summary>
     /// Send system reset command
     /// </summary>
-    /// <param name="groupId"></param>
-    /// <param name="resetLevel"></param>
-    /// <returns></returns>
-    public async Task SystemReset(byte groupId, byte resetLevel)
+    /// <param name="groupId">Group ID - zero for device controller or non-zero for a specific device or group of devices</param>
+    /// <param name="resetLevel">Reset level (0, 1, 2, 3, or 255 for factory reset)</param>
+    /// <returns>AckReply on success</returns>
+    /// <exception cref="TimeoutException">Thrown when the request times out</exception>
+    /// <exception cref="SignRequestRejectedException">Thrown when the request is rejected</exception>
+    /// <exception cref="ArgumentException">Thrown when an invalid reset level is provided</exception>
+    public async Task<AckReply> SystemReset(byte groupId, byte resetLevel)
     {
-        // Todo: validate data
+        // Validate reset level
+        if (!IsValidResetLevel(resetLevel))
+        {
+            throw new ArgumentException($"Invalid reset level: {resetLevel}. Valid values are 0, 1, 2, 3, or 255.", nameof(resetLevel));
+        }
+
+        _ackReplyCompletion = new TaskCompletionSource<AckReply>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _rejectReplyCompletion = new TaskCompletionSource<RejectReply>(TaskCreationOptions.RunContinuationsAsynchronously);
 
         // build body
         string message = SignControllerServiceConfig.SOH // Start of header
                     + NS.ToString("X2") + NR.ToString("X2") // NS and NR
                     + _deviceSettings.Address // ADDR
                     + SignControllerServiceConfig.STX
-                    + SignControllerServiceConfig.MI_END_SESSION.ToString("X2");
+                    + SignControllerServiceConfig.MI_SYSTEM_RESET.ToString("X2")
+                    + groupId.ToString("X2")
+                    + resetLevel.ToString("X2");
 
         // append crc and end of message
         message = message
@@ -478,6 +490,24 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
                     + SignControllerServiceConfig.ETX;
 
         await _tcpClient.SendAsync(message);
+
+        // Wait for either the ack reply to be received or a timeout after 3 seconds.
+        var delayTask = Task.Delay(TimeSpan.FromSeconds(3));
+
+        var completedTask = await Task.WhenAny(_ackReplyCompletion.Task, _rejectReplyCompletion.Task, delayTask);
+
+        if (completedTask == delayTask)
+        {
+            throw new TimeoutException("System reset request timed out.");
+        }
+
+        if (completedTask == _rejectReplyCompletion.Task)
+        {
+            RejectReply rejectReply = await _rejectReplyCompletion.Task;
+            throw new SignRequestRejectedException(rejectReply);
+        }
+
+        return await _ackReplyCompletion.Task;
     }
 
     public Task UpdateTime()

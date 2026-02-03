@@ -168,3 +168,9 @@ public class RejectReplyDto
     public byte ApplicationErrorCode { get; set; }
     public string? ApplicationErrorDescription { get; set; }
 }
+
+public class SystemResetCommandDto
+{
+    public byte GroupID { get; set; }
+    public byte ResetLevel { get; set; }
+}
