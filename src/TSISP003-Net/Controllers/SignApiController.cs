@@ -460,12 +460,45 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
         }
     }
 
+    /// <summary>
+    /// Sets the dimming level for specified groups.
+    /// DimmingMode: 0 = Automatic, 1 = Manual.
+    /// LuminanceLevel: 1-16 (1 = minimum, 16 = maximum intensity). Ignored when DimmingMode is Automatic.
+    /// GroupID 0 applies to all groups.
+    /// </summary>
     [HttpPost]
     [Route("{device}/SignSetDimmingLevel")]
-    public async Task<IActionResult> SignSetDimmingLevel(string device)
+    public async Task<IActionResult> SignSetDimmingLevel(string device, [FromBody] SignSetDimmingLevelCommandDto request)
     {
-        // TODO: Implement
-        return Ok();
+        try
+        {
+            if (!_signControllerServiceFactory.ContainsSignController(device))
+                return NotFound("Device not found");
+
+            var entries = request.Entries
+                .Select(e => (e.GroupID, e.DimmingMode, e.LuminanceLevel))
+                .ToList();
+
+            var ackReply = await _signControllerServiceFactory.GetSignControllerService(device)
+                .SignSetDimmingLevel(entries);
+
+            return Ok();
+        }
+        catch (TimeoutException ex)
+        {
+            _logger.LogWarning(ex, "Sign Set Dimming Level timed out for device {Device}", device);
+            return StatusCode(StatusCodes.Status408RequestTimeout, "Sign Set Dimming Level timed out.");
+        }
+        catch (SignRequestRejectedException ex)
+        {
+            _logger.LogError("Sign Set Dimming Level rejected: {ErrorCode}", ex.RejectReply.ApplicationErrorCode);
+            return StatusCode(StatusCodes.Status400BadRequest, ex.RejectReply.AsDto());
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error setting dimming level for device {Device}", device);
+            return StatusCode(StatusCodes.Status500InternalServerError, "Error setting dimming level.");
+        }
     }
 
     [HttpPost]

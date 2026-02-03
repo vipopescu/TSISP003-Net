@@ -1144,10 +1144,61 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         return await _reportEnabledPlansTaskCompletion.Task;
     }
 
-    public Task SignSetDimmingLevel()
+    /// <summary>
+    /// Set the dimming level for specified groups
+    /// </summary>
+    /// <param name="entries">List of tuples containing (groupId, dimmingMode, luminanceLevel).
+    /// DimmingMode: 0 = Automatic, 1 = Manual.
+    /// LuminanceLevel: 1-16 (ignored when dimmingMode is 0/Automatic).
+    /// GroupID 0 applies to all groups.</param>
+    /// <returns>AckReply on success</returns>
+    /// <exception cref="TimeoutException">Thrown when the request times out</exception>
+    /// <exception cref="SignRequestRejectedException">Thrown when the request is rejected</exception>
+    public async Task<AckReply> SignSetDimmingLevel(List<(byte groupId, byte dimmingMode, byte luminanceLevel)> entries)
     {
-        // TODO
-        throw new NotImplementedException();
+        _ackReplyCompletion = new TaskCompletionSource<AckReply>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _rejectReplyCompletion = new TaskCompletionSource<RejectReply>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        // build body
+        string message = SignControllerServiceConfig.SOH // Start of header
+                    + NS.ToString("X2") + NR.ToString("X2") // NS and NR
+                    + _deviceSettings.Address // ADDR
+                    + SignControllerServiceConfig.STX
+                    + SignControllerServiceConfig.MI_SIGN_SET_DIMMING_LEVEL.ToString("X2")
+                    + ((byte)entries.Count).ToString("X2"); // number of entries
+
+        // Add each entry: groupId, dimmingMode, luminanceLevel
+        foreach (var entry in entries)
+        {
+            message += entry.groupId.ToString("X2")
+                    + entry.dimmingMode.ToString("X2")
+                    + entry.luminanceLevel.ToString("X2");
+        }
+
+        // append crc and end of message
+        message = message
+                    + Functions.PacketCRC(Encoding.ASCII.GetBytes(message))
+                    + SignControllerServiceConfig.ETX;
+
+        await _tcpClient.SendAsync(message);
+
+        // Wait for either the ack reply to be received or a timeout after 3 seconds.
+        var delayTask = Task.Delay(TimeSpan.FromSeconds(3));
+
+        var completedTask = await Task.WhenAny(_ackReplyCompletion.Task, _rejectReplyCompletion.Task, delayTask);
+
+        if (completedTask == delayTask)
+        {
+            throw new TimeoutException("Sign set dimming level request timed out.");
+        }
+
+        if (completedTask == _rejectReplyCompletion.Task)
+        {
+            RejectReply rejectReply = await _rejectReplyCompletion.Task;
+            throw new SignRequestRejectedException(rejectReply);
+        }
+
+        return await _ackReplyCompletion.Task;
     }
 
     public async Task<AckReply> PowerOnOff(byte groupId, bool powerOn)

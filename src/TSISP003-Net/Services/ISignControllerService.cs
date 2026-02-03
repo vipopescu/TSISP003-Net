@@ -29,7 +29,7 @@ public interface ISignControllerService : IHostedService
     Task<AckReply> EnablePlan(byte groupId, byte planId);
     Task<AckReply> DisablePlan(byte groupId, byte planId);
     Task<ReportEnabledPlans> RequestEnabledPlans();
-    Task SignSetDimmingLevel();
+    Task<AckReply> SignSetDimmingLevel(List<(byte groupId, byte dimmingMode, byte luminanceLevel)> entries);
     Task<AckReply> PowerOnOff(byte groupId, bool powerOn);
     Task DisableEnableDevice();
     Task<ISignResponse> SignRequestStoredFrameMessagePlan(RequestType requestType, byte requestID);

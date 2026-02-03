@@ -238,6 +238,33 @@ public class EnabledPlanEntryDto
     public byte PlanID { get; set; }
 }
 
+public class SignSetDimmingLevelCommandDto
+{
+    /// <summary>
+    /// List of dimming level entries for different groups
+    /// </summary>
+    public List<DimmingLevelEntryDto> Entries { get; set; } = [];
+}
+
+public class DimmingLevelEntryDto
+{
+    /// <summary>
+    /// Group ID - zero applies to all groups
+    /// </summary>
+    public byte GroupID { get; set; }
+
+    /// <summary>
+    /// Dimming mode: 0 = Automatic, 1 = Manual
+    /// </summary>
+    public byte DimmingMode { get; set; }
+
+    /// <summary>
+    /// Luminance level (1-16). Ignored when DimmingMode is Automatic (0).
+    /// 1 = minimum sign intensity, 16 = maximum sign intensity.
+    /// </summary>
+    public byte LuminanceLevel { get; set; }
+}
+
 public class SignSetHighResolutionGraphicsFrameDto
 {
     public byte FrameID { get; set; }
