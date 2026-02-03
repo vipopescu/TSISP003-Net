@@ -459,6 +459,24 @@ public static class Extensions
         };
     }
 
+    public static ReportEnabledPlansDto AsDto(this ReportEnabledPlans reportEnabledPlans)
+    {
+        return new ReportEnabledPlansDto
+        {
+            Entries = reportEnabledPlans.Entries.Select(e => e.AsDto()).ToList()
+        };
+    }
+
+    public static EnabledPlanEntryDto AsDto(this EnabledPlanEntry enabledPlanEntry)
+    {
+        return new EnabledPlanEntryDto
+        {
+            GroupID = enabledPlanEntry.GroupID,
+            PlanID = enabledPlanEntry.PlanID
+        };
+    }
+
 }
+
 
 

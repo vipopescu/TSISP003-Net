@@ -426,12 +426,38 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
         }
     }
 
-    [HttpPost]
+    /// <summary>
+    /// Requests which plans are currently enabled in the device controller.
+    /// </summary>
+    [HttpGet]
     [Route("{device}/RequestEnabledPlans")]
     public async Task<IActionResult> RequestEnabledPlans(string device)
     {
-        // TODO: Implement
-        return Ok();
+        try
+        {
+            if (!_signControllerServiceFactory.ContainsSignController(device))
+                return NotFound("Device not found");
+
+            var reportEnabledPlans = await _signControllerServiceFactory.GetSignControllerService(device)
+                .RequestEnabledPlans();
+
+            return Ok(reportEnabledPlans.AsDto());
+        }
+        catch (TimeoutException ex)
+        {
+            _logger.LogWarning(ex, "Request Enabled Plans timed out for device {Device}", device);
+            return StatusCode(StatusCodes.Status408RequestTimeout, "Request Enabled Plans timed out.");
+        }
+        catch (SignRequestRejectedException ex)
+        {
+            _logger.LogError("Request Enabled Plans rejected: {ErrorCode}", ex.RejectReply.ApplicationErrorCode);
+            return StatusCode(StatusCodes.Status400BadRequest, ex.RejectReply.AsDto());
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error requesting enabled plans for device {Device}", device);
+            return StatusCode(StatusCodes.Status500InternalServerError, "Error requesting enabled plans.");
+        }
     }
 
     [HttpPost]

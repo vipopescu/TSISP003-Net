@@ -17,6 +17,7 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
     private TaskCompletionSource<SignSetHighResolutionGraphicsFrame>? _signSetHighResGraphicsFrameTaskCompletion;
     private TaskCompletionSource<SignSetMessage>? _signSetMessageTaskCompletion;
     private TaskCompletionSource<SignSetPlan>? _signSetPlanTaskCompletion;
+    private TaskCompletionSource<ReportEnabledPlans>? _reportEnabledPlansTaskCompletion;
     private TaskCompletionSource<RejectReply>? _rejectReplyCompletion;
     private TaskCompletionSource<AckReply>? _ackReplyCompletion;
 
@@ -1099,10 +1100,48 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         return await _ackReplyCompletion.Task;
     }
 
-    public Task RequestEnabledPlans()
+    /// <summary>
+    /// Request which plans are enabled in the device controller
+    /// </summary>
+    /// <returns>ReportEnabledPlans containing the list of enabled plans</returns>
+    /// <exception cref="TimeoutException">Thrown when the request times out</exception>
+    /// <exception cref="SignRequestRejectedException">Thrown when the request is rejected</exception>
+    public async Task<ReportEnabledPlans> RequestEnabledPlans()
     {
-        // TODO
-        throw new NotImplementedException();
+        _reportEnabledPlansTaskCompletion = new TaskCompletionSource<ReportEnabledPlans>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _rejectReplyCompletion = new TaskCompletionSource<RejectReply>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        // build body - just MI code, no additional data
+        string message = SignControllerServiceConfig.SOH // Start of header
+                    + NS.ToString("X2") + NR.ToString("X2") // NS and NR
+                    + _deviceSettings.Address // ADDR
+                    + SignControllerServiceConfig.STX
+                    + SignControllerServiceConfig.MI_REQUEST_ENABLED_PLANS.ToString("X2");
+
+        // append crc and end of message
+        message = message
+                    + Functions.PacketCRC(Encoding.ASCII.GetBytes(message))
+                    + SignControllerServiceConfig.ETX;
+
+        await _tcpClient.SendAsync(message);
+
+        // Wait for either the reply to be received or a timeout after 3 seconds.
+        var delayTask = Task.Delay(TimeSpan.FromSeconds(3));
+
+        var completedTask = await Task.WhenAny(_reportEnabledPlansTaskCompletion.Task, _rejectReplyCompletion.Task, delayTask);
+
+        if (completedTask == delayTask)
+        {
+            throw new TimeoutException("Request enabled plans timed out.");
+        }
+
+        if (completedTask == _rejectReplyCompletion.Task)
+        {
+            RejectReply rejectReply = await _rejectReplyCompletion.Task;
+            throw new SignRequestRejectedException(rejectReply);
+        }
+
+        return await _reportEnabledPlansTaskCompletion.Task;
     }
 
     public Task SignSetDimmingLevel()
@@ -1501,10 +1540,50 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         return Task.CompletedTask;
     }
 
+    /// <summary>
+    /// Process the report enabled plans response
+    /// </summary>
+    /// <param name="applicationData">The application data from the response</param>
+    /// <returns></returns>
     public Task ProcessReportEnabledPlans(string applicationData)
     {
-        // TODO
-        throw new NotImplementedException();
+        try
+        {
+            ReportEnabledPlans reportEnabledPlans = new ReportEnabledPlans();
+
+            // Parse the application data according to the protocol:
+            // Position 1: MI Code (13) - already parsed by dispatcher
+            // Position 2: Number of entries (1 byte)
+            // Position 3+: Entries (2 bytes each: group ID, plan ID)
+
+            byte numberOfEntries = Convert.ToByte(applicationData[2..4], 16);
+
+            for (int i = 0; i < numberOfEntries; i++)
+            {
+                int baseIndex = 4 + (i * 4); // 4 hex chars per entry (2 bytes)
+
+                if (baseIndex + 4 > applicationData.Length)
+                    break;
+
+                var entry = new EnabledPlanEntry
+                {
+                    GroupID = Convert.ToByte(applicationData[baseIndex..(baseIndex + 2)], 16),
+                    PlanID = Convert.ToByte(applicationData[(baseIndex + 2)..(baseIndex + 4)], 16)
+                };
+
+                reportEnabledPlans.Entries.Add(entry);
+            }
+
+            _reportEnabledPlansTaskCompletion?.TrySetResult(reportEnabledPlans);
+
+            return Task.CompletedTask;
+        }
+        catch (Exception ex)
+        {
+            Console.WriteLine("Failed to process report enabled plans: " + ex.Message);
+        }
+
+        return Task.CompletedTask;
     }
 
     public Task ProcessSignExtendedStatusReply(string applicationData)

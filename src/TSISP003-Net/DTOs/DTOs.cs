@@ -217,6 +217,27 @@ public class DisablePlanCommandDto
     public byte PlanID { get; set; }
 }
 
+public class ReportEnabledPlansDto
+{
+    /// <summary>
+    /// List of enabled plan entries
+    /// </summary>
+    public List<EnabledPlanEntryDto> Entries { get; set; } = [];
+}
+
+public class EnabledPlanEntryDto
+{
+    /// <summary>
+    /// Group ID - identifies the group where the plan is enabled
+    /// </summary>
+    public byte GroupID { get; set; }
+
+    /// <summary>
+    /// Plan ID - identifies the plan as stored in the device controller's memory
+    /// </summary>
+    public byte PlanID { get; set; }
+}
+
 public class SignSetHighResolutionGraphicsFrameDto
 {
     public byte FrameID { get; set; }
