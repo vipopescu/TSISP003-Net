@@ -29,6 +29,12 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
     private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
     private SignStatusReply? _signController;
 
+    /// <summary>
+    /// Flag to indicate whether the session was manually stopped via EndSession().
+    /// When true, prevents automatic session restart after heartbeat failures.
+    /// </summary>
+    private volatile bool _sessionManuallyStopped = false;
+
     public bool SignConfigurationReceived { get; set; } = false;
 
     // Lock object for thread-safe access to NS and NR sequence numbers
@@ -255,11 +261,18 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
             }
         }
 
-        // If we reach the max attempts, we restart the session
+        // If we reach the max attempts, restart the session only if not manually stopped
         if (!cancellationToken.IsCancellationRequested && failedAttempts >= maxAttempts)
         {
-            Console.WriteLine($"Cancelling the pool. Restarting the session...");
-            startSessionTask = Task.Run(() => StartSessionTask(_cancellationTokenSource.Token));
+            if (_sessionManuallyStopped)
+            {
+                Console.WriteLine("Session was manually stopped. Not restarting automatically.");
+            }
+            else
+            {
+                Console.WriteLine("Heartbeat failed. Restarting the session...");
+                startSessionTask = Task.Run(() => StartSessionTask(_cancellationTokenSource.Token));
+            }
         }
     }
 
@@ -436,11 +449,15 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
     }
 
     /// <summary>
-    /// Start a session
+    /// Start a session. This resets the manually stopped flag,
+    /// allowing automatic restart after heartbeat failures.
     /// </summary>
     /// <returns></returns>
     public async Task StartSession()
     {
+        // Reset the manually stopped flag since we're starting a new session
+        _sessionManuallyStopped = false;
+
         // build body
         string message = SignControllerServiceConfig.SOH // Start of header
                     + "00" + "00" // NS and NR
@@ -480,12 +497,15 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
     }
 
     /// <summary>
-    /// End the current session
+    /// End the current session. This marks the session as manually stopped,
+    /// preventing automatic restart after heartbeat failures.
     /// </summary>
     /// <returns></returns>
-    /// TODO: We need a logic here to not start again the session if we manually stopped it
     public async Task EndSession()
     {
+        // Mark session as manually stopped to prevent automatic restart
+        _sessionManuallyStopped = true;
+
         // build body
         string message = SignControllerServiceConfig.SOH // Start of header
                     + NS.ToString("X2") + NR.ToString("X2") // NS and NR
