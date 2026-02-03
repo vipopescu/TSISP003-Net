@@ -189,6 +189,34 @@ public class SystemResetCommandDto
     public byte ResetLevel { get; set; }
 }
 
+public class EnablePlanCommandDto
+{
+    /// <summary>
+    /// Group ID - the group where the plan is to be enabled
+    /// </summary>
+    public byte GroupID { get; set; }
+
+    /// <summary>
+    /// Plan ID - identifies the plan as stored in the device controller's memory.
+    /// Plan ID 0 disables all enabled plans on the specified group (except active plan).
+    /// </summary>
+    public byte PlanID { get; set; }
+}
+
+public class DisablePlanCommandDto
+{
+    /// <summary>
+    /// Group ID - the group where the plan is to be disabled
+    /// </summary>
+    public byte GroupID { get; set; }
+
+    /// <summary>
+    /// Plan ID - identifies the plan as stored in the device controller's memory.
+    /// Plan ID 0 disables all enabled plans on the specified group (except active plan).
+    /// </summary>
+    public byte PlanID { get; set; }
+}
+
 public class SignSetHighResolutionGraphicsFrameDto
 {
     public byte FrameID { get; set; }

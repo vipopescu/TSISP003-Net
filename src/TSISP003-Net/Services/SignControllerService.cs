@@ -1001,16 +1001,102 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         return await _ackReplyCompletion.Task;
     }
 
-    public Task EnablePlan()
+    /// <summary>
+    /// Enable a pre-stored plan in a specified group
+    /// </summary>
+    /// <param name="groupId">Group ID - the group where the plan is to be enabled</param>
+    /// <param name="planId">Plan ID - identifies the plan as stored in the device controller's memory.
+    /// Plan ID 0 disables all enabled plans on the specified group (except active plan).</param>
+    /// <returns>AckReply on success</returns>
+    /// <exception cref="TimeoutException">Thrown when the request times out</exception>
+    /// <exception cref="SignRequestRejectedException">Thrown when the request is rejected</exception>
+    public async Task<AckReply> EnablePlan(byte groupId, byte planId)
     {
-        // TODO
-        throw new NotImplementedException();
+        _ackReplyCompletion = new TaskCompletionSource<AckReply>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _rejectReplyCompletion = new TaskCompletionSource<RejectReply>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        // build body
+        string message = SignControllerServiceConfig.SOH // Start of header
+                    + NS.ToString("X2") + NR.ToString("X2") // NS and NR
+                    + _deviceSettings.Address // ADDR
+                    + SignControllerServiceConfig.STX
+                    + SignControllerServiceConfig.MI_ENABLE_PLAN.ToString("X2")
+                    + groupId.ToString("X2")
+                    + planId.ToString("X2");
+
+        // append crc and end of message
+        message = message
+                    + Functions.PacketCRC(Encoding.ASCII.GetBytes(message))
+                    + SignControllerServiceConfig.ETX;
+
+        await _tcpClient.SendAsync(message);
+
+        // Wait for either the ack reply to be received or a timeout after 3 seconds.
+        var delayTask = Task.Delay(TimeSpan.FromSeconds(3));
+
+        var completedTask = await Task.WhenAny(_ackReplyCompletion.Task, _rejectReplyCompletion.Task, delayTask);
+
+        if (completedTask == delayTask)
+        {
+            throw new TimeoutException("Enable plan request timed out.");
+        }
+
+        if (completedTask == _rejectReplyCompletion.Task)
+        {
+            RejectReply rejectReply = await _rejectReplyCompletion.Task;
+            throw new SignRequestRejectedException(rejectReply);
+        }
+
+        return await _ackReplyCompletion.Task;
     }
 
-    public Task DisablePlan()
+    /// <summary>
+    /// Disable a pre-stored plan in a specified group
+    /// </summary>
+    /// <param name="groupId">Group ID - the group where the plan is to be disabled</param>
+    /// <param name="planId">Plan ID - identifies the plan as stored in the device controller's memory.
+    /// Plan ID 0 disables all enabled plans on the specified group (except active plan).</param>
+    /// <returns>AckReply on success</returns>
+    /// <exception cref="TimeoutException">Thrown when the request times out</exception>
+    /// <exception cref="SignRequestRejectedException">Thrown when the request is rejected</exception>
+    public async Task<AckReply> DisablePlan(byte groupId, byte planId)
     {
-        // TODO
-        throw new NotImplementedException();
+        _ackReplyCompletion = new TaskCompletionSource<AckReply>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _rejectReplyCompletion = new TaskCompletionSource<RejectReply>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        // build body
+        string message = SignControllerServiceConfig.SOH // Start of header
+                    + NS.ToString("X2") + NR.ToString("X2") // NS and NR
+                    + _deviceSettings.Address // ADDR
+                    + SignControllerServiceConfig.STX
+                    + SignControllerServiceConfig.MI_DISABLE_PLAN.ToString("X2")
+                    + groupId.ToString("X2")
+                    + planId.ToString("X2");
+
+        // append crc and end of message
+        message = message
+                    + Functions.PacketCRC(Encoding.ASCII.GetBytes(message))
+                    + SignControllerServiceConfig.ETX;
+
+        await _tcpClient.SendAsync(message);
+
+        // Wait for either the ack reply to be received or a timeout after 3 seconds.
+        var delayTask = Task.Delay(TimeSpan.FromSeconds(3));
+
+        var completedTask = await Task.WhenAny(_ackReplyCompletion.Task, _rejectReplyCompletion.Task, delayTask);
+
+        if (completedTask == delayTask)
+        {
+            throw new TimeoutException("Disable plan request timed out.");
+        }
+
+        if (completedTask == _rejectReplyCompletion.Task)
+        {
+            RejectReply rejectReply = await _rejectReplyCompletion.Task;
+            throw new SignRequestRejectedException(rejectReply);
+        }
+
+        return await _ackReplyCompletion.Task;
     }
 
     public Task RequestEnabledPlans()

@@ -355,20 +355,75 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
         }
     }
 
+    /// <summary>
+    /// Enables a pre-stored plan in a specified group.
+    /// Plan ID 0 disables all enabled plans on the specified group (except active plan).
+    /// </summary>
     [HttpPost]
     [Route("{device}/EnablePlan")]
-    public async Task<IActionResult> EnablePlan(string device)
+    public async Task<IActionResult> EnablePlan(string device, [FromBody] EnablePlanCommandDto request)
     {
-        // TODO: Implement
-        return Ok();
+        try
+        {
+            if (!_signControllerServiceFactory.ContainsSignController(device))
+                return NotFound("Device not found");
+
+            var ackReply = await _signControllerServiceFactory.GetSignControllerService(device)
+                .EnablePlan(request.GroupID, request.PlanID);
+
+            return Ok();
+        }
+        catch (TimeoutException ex)
+        {
+            _logger.LogWarning(ex, "Enable Plan timed out for device {Device}", device);
+            return StatusCode(StatusCodes.Status408RequestTimeout, "Enable Plan timed out.");
+        }
+        catch (SignRequestRejectedException ex)
+        {
+            _logger.LogError("Enable Plan rejected: {ErrorCode}", ex.RejectReply.ApplicationErrorCode);
+            return StatusCode(StatusCodes.Status400BadRequest, ex.RejectReply.AsDto());
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error enabling plan for device {Device}", device);
+            return StatusCode(StatusCodes.Status500InternalServerError, "Error enabling plan.");
+        }
     }
 
+    /// <summary>
+    /// Disables a pre-stored plan in a specified group.
+    /// Plan ID 0 disables all enabled plans on the specified group (except active plan).
+    /// An active plan cannot be disabled.
+    /// </summary>
     [HttpPost]
     [Route("{device}/DisablePlan")]
-    public async Task<IActionResult> DisablePlan(string device)
+    public async Task<IActionResult> DisablePlan(string device, [FromBody] DisablePlanCommandDto request)
     {
-        // TODO: Implement
-        return Ok();
+        try
+        {
+            if (!_signControllerServiceFactory.ContainsSignController(device))
+                return NotFound("Device not found");
+
+            var ackReply = await _signControllerServiceFactory.GetSignControllerService(device)
+                .DisablePlan(request.GroupID, request.PlanID);
+
+            return Ok();
+        }
+        catch (TimeoutException ex)
+        {
+            _logger.LogWarning(ex, "Disable Plan timed out for device {Device}", device);
+            return StatusCode(StatusCodes.Status408RequestTimeout, "Disable Plan timed out.");
+        }
+        catch (SignRequestRejectedException ex)
+        {
+            _logger.LogError("Disable Plan rejected: {ErrorCode}", ex.RejectReply.ApplicationErrorCode);
+            return StatusCode(StatusCodes.Status400BadRequest, ex.RejectReply.AsDto());
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error disabling plan for device {Device}", device);
+            return StatusCode(StatusCodes.Status500InternalServerError, "Error disabling plan.");
+        }
     }
 
     [HttpPost]
