@@ -1083,10 +1083,57 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         return await _signStatusReplyTaskCompletion.Task;
     }
 
+    /// <summary>
+    /// Send the SIGN DISPLAY FRAME command to display a pre-stored frame on all signs in a group.
+    /// Note: The SignID field in the request is used as the GroupID per the protocol specification.
+    /// </summary>
+    /// <param name="request">The request containing GroupID (as SignID) and FrameID</param>
+    /// <returns>AckReply on success</returns>
+    /// <exception cref="TimeoutException">Thrown when the request times out</exception>
+    /// <exception cref="SignRequestRejectedException">Thrown when the request is rejected</exception>
     public async Task<AckReply> SignDisplayFrame(SignDisplayFrame request)
     {
-        // TODO
-        throw new NotImplementedException();
+        _ackReplyCompletion = new TaskCompletionSource<AckReply>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _rejectReplyCompletion = new TaskCompletionSource<RejectReply>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        // build body - MI Code 0x0E (Sign Display Frame)
+        // Note: SignID is used as GroupID per protocol spec (displays same frame on all signs in group)
+        string message = SignControllerServiceConfig.SOH // Start of header
+                    + NS.ToString("X2") + NR.ToString("X2") // NS and NR
+                    + _deviceSettings.Address // ADDR
+                    + SignControllerServiceConfig.STX
+                    + SignControllerServiceConfig.MI_SIGN_DISPLAY_FRAME.ToString("X2")
+                    + request.SignID.ToString("X2")  // GroupID in protocol
+                    + request.FrameID.ToString("X2");
+
+        // append crc and end of message
+        message = message
+                    + Functions.PacketCRC(Encoding.ASCII.GetBytes(message))
+                    + SignControllerServiceConfig.ETX;
+
+        await _tcpClient.SendAsync(message);
+
+        // Wait for either the reply to be received or a timeout after 3 seconds.
+        var delayTask = Task.Delay(TimeSpan.FromSeconds(3));
+
+        var completedTask = await Task.WhenAny(_ackReplyCompletion.Task, _rejectReplyCompletion.Task, delayTask);
+
+        if (completedTask == delayTask)
+        {
+            throw new TimeoutException("Sign Display Frame request timed out.");
+        }
+
+        if (completedTask == _rejectReplyCompletion.Task)
+        {
+            throw new SignRequestRejectedException(await _rejectReplyCompletion.Task);
+        }
+
+        if (completedTask == _ackReplyCompletion.Task)
+        {
+            return await _ackReplyCompletion.Task;
+        }
+
+        throw new InvalidOperationException("Unexpected execution path.");
     }
 
     public async Task<AckReply> SignDisplayMessage(SignDisplayMessage request)

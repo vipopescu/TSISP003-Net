@@ -187,7 +187,16 @@ public class SignDisplayMessageDto
 
 public class SignDisplayFrameDto
 {
+    /// <summary>
+    /// For SignDisplayFrame command: This is the GroupID (displays same frame on all signs in the group).
+    /// For SignDisplayAtomicFrames: This is the SignID (specifies which sign in the group).
+    /// </summary>
     public byte SignID { get; set; }
+
+    /// <summary>
+    /// Frame ID - identifies the frame stored in the controller's memory.
+    /// Frame ID 0 reinstates display from current active plan or blanks the sign if no plan is active.
+    /// </summary>
     public byte FrameID { get; set; }
 }
 
