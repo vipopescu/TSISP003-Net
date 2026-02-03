@@ -35,7 +35,7 @@ public interface ISignControllerService : IHostedService
     Task<ISignResponse> SignRequestStoredFrameMessagePlan(RequestType requestType, byte requestID);
     Task<SignExtendedStatusReply> SignExtendedStatusRequest();
     Task<List<FaultLogEntry>> RetrieveFaultLog();
-    Task ResetFaultLog();
+    Task<AckReply> ResetFaultLog();
     Task HARSetVoiceDataIncomplete();
     Task HARSetVoiceDataComplete();
     Task HARSetStrategy();

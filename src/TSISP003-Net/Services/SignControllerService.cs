@@ -1463,9 +1463,52 @@ public class SignControllerService(TCPClient tcpClient, SignControllerConnection
         return await _faultLogReplyTaskCompletion.Task;
     }
 
-    public Task ResetFaultLog()
+    /// <summary>
+    /// Send a command to reset the fault log stored in the controller's memory
+    /// </summary>
+    /// <returns>AckReply on success</returns>
+    /// <exception cref="TimeoutException">Thrown when the request times out</exception>
+    /// <exception cref="SignRequestRejectedException">Thrown when the request is rejected</exception>
+    public async Task<AckReply> ResetFaultLog()
     {
-        throw new NotImplementedException();
+        _ackReplyCompletion = new TaskCompletionSource<AckReply>(TaskCreationOptions.RunContinuationsAsynchronously);
+        _rejectReplyCompletion = new TaskCompletionSource<RejectReply>(TaskCreationOptions.RunContinuationsAsynchronously);
+
+        // build body - MI Code 0x1A (Reset Fault Log)
+        string message = SignControllerServiceConfig.SOH // Start of header
+                    + NS.ToString("X2") + NR.ToString("X2") // NS and NR
+                    + _deviceSettings.Address // ADDR
+                    + SignControllerServiceConfig.STX
+                    + SignControllerServiceConfig.MI_RESET_FAULT_LOG.ToString("X2");
+
+        // append crc and end of message
+        message = message
+                    + Functions.PacketCRC(Encoding.ASCII.GetBytes(message))
+                    + SignControllerServiceConfig.ETX;
+
+        await _tcpClient.SendAsync(message);
+
+        // Wait for either the reply to be received or a timeout after 3 seconds.
+        var delayTask = Task.Delay(TimeSpan.FromSeconds(3));
+
+        var completedTask = await Task.WhenAny(_ackReplyCompletion.Task, _rejectReplyCompletion.Task, delayTask);
+
+        if (completedTask == delayTask)
+        {
+            throw new TimeoutException("Reset Fault Log request timed out.");
+        }
+
+        if (completedTask == _rejectReplyCompletion.Task)
+        {
+            throw new SignRequestRejectedException(await _rejectReplyCompletion.Task);
+        }
+
+        if (completedTask == _ackReplyCompletion.Task)
+        {
+            return await _ackReplyCompletion.Task;
+        }
+
+        throw new InvalidOperationException("Unexpected execution path.");
     }
 
     public Task HARSetVoiceDataIncomplete()

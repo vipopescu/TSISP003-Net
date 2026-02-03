@@ -685,8 +685,31 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
     [Route("{device}/ResetFaultLog")]
     public async Task<IActionResult> ResetFaultLog(string device)
     {
-        // TODO: Implement
-        return Ok();
+        try
+        {
+            if (!_signControllerServiceFactory.ContainsSignController(device))
+                return NotFound("Device not found");
+
+            var controllerResponse = await _signControllerServiceFactory.GetSignControllerService(device)
+                .ResetFaultLog();
+
+            return Ok(controllerResponse.AsDto());
+        }
+        catch (TimeoutException ex)
+        {
+            _logger.LogWarning(ex, "Reset Fault Log request timed out for device {Device}", device);
+            return StatusCode(StatusCodes.Status408RequestTimeout, "Reset Fault Log request timed out.");
+        }
+        catch (SignRequestRejectedException ex)
+        {
+            _logger.LogWarning(ex, "Reset Fault Log request rejected for device {Device}", device);
+            return StatusCode(StatusCodes.Status400BadRequest, ex.RejectReply.AsDto());
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error resetting fault log for device {Device}", device);
+            return StatusCode(StatusCodes.Status500InternalServerError, "Error resetting fault log.");
+        }
     }
 
     [HttpGet]
