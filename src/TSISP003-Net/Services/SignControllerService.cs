@@ -44,6 +44,24 @@ public class SignControllerService(
     /// </summary>
     private SignController? _signConfiguration;
 
+    // Rolling ID management for ExtendedRequestMessage (cycles MinId to MaxId)
+    private int _currentExtendedRequestId = MinExtendedRequestId;
+    private const int MinExtendedRequestId = 80;
+    private const int MaxExtendedRequestId = 254;
+    private readonly object _idLock = new();
+
+    private byte GetNextExtendedRequestId()
+    {
+        lock (_idLock)
+        {
+            var id = _currentExtendedRequestId;
+            _currentExtendedRequestId = _currentExtendedRequestId >= MaxExtendedRequestId
+                ? MinExtendedRequestId
+                : _currentExtendedRequestId + 1;
+            return (byte)id;
+        }
+    }
+
     /// <summary>
     /// Flag to indicate whether the session was manually stopped via EndSession().
     /// When true, prevents automatic session restart after heartbeat failures.
@@ -3078,12 +3096,11 @@ public class SignControllerService(
     public async Task<bool> ExtendedRequestMessage(ExtendedRequestMessageDto request)
     {
         bool result = false;
-        byte currentId = 80;
         try
         {
             SignSetMessage signSetMessage = new SignSetMessage
             {
-                MessageID = currentId
+                MessageID = GetNextExtendedRequestId()
             };
 
             if (request.Frame1 != null)
@@ -3092,7 +3109,7 @@ public class SignControllerService(
 
                 SignSetTextFrame signSetTextFrame1 = new SignSetTextFrame
                 {
-                    FrameID = currentId++,
+                    FrameID = GetNextExtendedRequestId(),
                     Revision = 0,
                     Font = request.Frame1.Font,
                     Colour = request.Frame1.Colour,
@@ -3112,7 +3129,7 @@ public class SignControllerService(
 
                 SignSetTextFrame signSetTextFrame2 = new SignSetTextFrame
                 {
-                    FrameID = currentId++,
+                    FrameID = GetNextExtendedRequestId(),
                     Revision = 0,
                     Font = request.Frame2.Font,
                     Colour = request.Frame2.Colour,
@@ -3132,7 +3149,7 @@ public class SignControllerService(
 
                 SignSetTextFrame signSetTextFrame3 = new SignSetTextFrame
                 {
-                    FrameID = currentId++,
+                    FrameID = GetNextExtendedRequestId(),
                     Revision = 0,
                     Font = request.Frame3.Font,
                     Colour = request.Frame3.Colour,
@@ -3152,7 +3169,7 @@ public class SignControllerService(
 
                 SignSetTextFrame signSetTextFrame4 = new SignSetTextFrame
                 {
-                    FrameID = currentId++,
+                    FrameID = GetNextExtendedRequestId(),
                     Revision = 0,
                     Font = request.Frame4.Font,
                     Colour = request.Frame4.Colour,
@@ -3172,7 +3189,7 @@ public class SignControllerService(
 
                 SignSetTextFrame signSetTextFrame5 = new SignSetTextFrame
                 {
-                    FrameID = currentId++,
+                    FrameID = GetNextExtendedRequestId(),
                     Revision = 0,
                     Font = request.Frame5.Font,
                     Colour = request.Frame5.Colour,
@@ -3192,7 +3209,7 @@ public class SignControllerService(
 
                 SignSetTextFrame signSetTextFrame6 = new SignSetTextFrame
                 {
-                    FrameID = currentId++,
+                    FrameID = GetNextExtendedRequestId(),
                     Revision = 0,
                     Font = request.Frame6.Font,
                     Colour = request.Frame6.Colour,
