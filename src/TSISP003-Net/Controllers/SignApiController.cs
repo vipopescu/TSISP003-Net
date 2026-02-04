@@ -18,6 +18,21 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
 
     private readonly SignControllerServiceFactory _signControllerServiceFactory = signControllerServiceFactory;
 
+    // Rolling ID management for ExtendedRequestMessage (per device)
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, int> _deviceIds = new();
+    private const byte MinId = 120;
+    private const byte MaxId = 254;
+
+    private static byte GetNextId(string device)
+    {
+        var newId = _deviceIds.AddOrUpdate(
+            device,
+            MinId,
+            (_, currentId) => currentId >= MaxId ? MinId : currentId + 1
+        );
+        return (byte)newId;
+    }
+
     /// <summary>
     /// Resets the system for the specified device.
     /// Reset levels:
@@ -793,12 +808,9 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
 
             var controllerService = _signControllerServiceFactory.GetSignControllerService(device);
 
-            // TODO Parameterize
-            byte currentId = 120;
-
             SignSetMessageDto signSetMessage = new SignSetMessageDto
             {
-                MessageID = currentId++
+                MessageID = GetNextId(device)
             };
 
             if (extendedRequestMessage.Frame1 != null)
@@ -807,7 +819,7 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
 
                 SignSetTextFrameDto signSetTextFrame1 = new SignSetTextFrameDto
                 {
-                    FrameID = currentId++,
+                    FrameID = GetNextId(device),
                     Revision = 0,
                     Font = extendedRequestMessage.Frame1.Font,
                     Colour = extendedRequestMessage.Frame1.Colour,
@@ -826,7 +838,7 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
 
                 SignSetTextFrameDto signSetTextFrame2 = new SignSetTextFrameDto
                 {
-                    FrameID = currentId++,
+                    FrameID = GetNextId(device),
                     Revision = 0,
                     Font = extendedRequestMessage.Frame2.Font,
                     Colour = extendedRequestMessage.Frame2.Colour,
@@ -845,7 +857,7 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
 
                 SignSetTextFrameDto signSetTextFrame3 = new SignSetTextFrameDto
                 {
-                    FrameID = currentId++,
+                    FrameID = GetNextId(device),
                     Revision = 0,
                     Font = extendedRequestMessage.Frame3.Font,
                     Colour = extendedRequestMessage.Frame3.Colour,
@@ -864,7 +876,7 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
 
                 SignSetTextFrameDto signSetTextFrame4 = new SignSetTextFrameDto
                 {
-                    FrameID = currentId++,
+                    FrameID = GetNextId(device),
                     Revision = 0,
                     Font = extendedRequestMessage.Frame4.Font,
                     Colour = extendedRequestMessage.Frame4.Colour,
@@ -883,7 +895,7 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
 
                 SignSetTextFrameDto signSetTextFrame5 = new SignSetTextFrameDto
                 {
-                    FrameID = currentId++,
+                    FrameID = GetNextId(device),
                     Revision = 0,
                     Font = extendedRequestMessage.Frame5.Font,
                     Colour = extendedRequestMessage.Frame5.Colour,
@@ -902,7 +914,7 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
 
                 SignSetTextFrameDto signSetTextFrame6 = new SignSetTextFrameDto
                 {
-                    FrameID = currentId++,
+                    FrameID = GetNextId(device),
                     Revision = 0,
                     Font = extendedRequestMessage.Frame6.Font,
                     Colour = extendedRequestMessage.Frame6.Colour,
