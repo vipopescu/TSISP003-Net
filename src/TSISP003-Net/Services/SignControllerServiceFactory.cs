@@ -1,4 +1,4 @@
-
+using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using TSISP003.Configuration;
 using TSISP003.Infrastructure.Tcp;
@@ -12,11 +12,15 @@ namespace TSISP003.Services;
 public class SignControllerServiceFactory : IHostedService
 {
     private readonly IOptions<SignControllerServiceOptions> _options;
+    private readonly ILoggerFactory _loggerFactory;
+    private readonly ILogger<SignControllerServiceFactory> _logger;
     private readonly Dictionary<string, ISignControllerService> _services;
 
-    public SignControllerServiceFactory(IOptions<SignControllerServiceOptions> options)
+    public SignControllerServiceFactory(IOptions<SignControllerServiceOptions> options, ILoggerFactory loggerFactory)
     {
         _options = options;
+        _loggerFactory = loggerFactory;
+        _logger = loggerFactory.CreateLogger<SignControllerServiceFactory>();
         _services = new Dictionary<string, ISignControllerService>();
 
     }
@@ -25,10 +29,13 @@ public class SignControllerServiceFactory : IHostedService
     /// Create a new instance of SignControllerService for a device
     /// </summary>
     /// <param name="deviceSettings"></param>
+    /// <param name="deviceName"></param>
     /// <returns></returns>
     private ISignControllerService CreateServiceForDevice(SignControllerConnectionOptions deviceSettings, string deviceName)
     {
-        return new SignControllerService(new TCPClient(deviceSettings.IpAddress, deviceSettings.Port, deviceName), deviceSettings);
+        var tcpLogger = _loggerFactory.CreateLogger<TCPClient>();
+        var serviceLogger = _loggerFactory.CreateLogger<SignControllerService>();
+        return new SignControllerService(new TCPClient(deviceSettings.IpAddress, deviceSettings.Port, deviceName, tcpLogger), deviceSettings, serviceLogger);
     }
 
     /// <summary>
@@ -62,19 +69,27 @@ public class SignControllerServiceFactory : IHostedService
     /// <returns></returns>
     public Task StartAsync(CancellationToken cancellationToken)
     {
+        _logger.LogInformation("Starting SignControllerServiceFactory with {DeviceCount} configured devices", _options.Value.Devices.Count);
+
         // Start all services
         foreach (var deviceName in _options.Value.Devices.Keys)
         {
             var serviceOptions = _options.Value.Devices[deviceName];
+            _logger.LogInformation("Creating service for device {DeviceName} at {IpAddress}:{Port}",
+                deviceName, serviceOptions.IpAddress, serviceOptions.Port);
+
             var service = CreateServiceForDevice(serviceOptions, deviceName);
             _services.Add(deviceName, service);
 
             // Start service
             if (service is IHostedService hostedService)
             {
+                _logger.LogInformation("Starting service for device {DeviceName}", deviceName);
                 hostedService.StartAsync(cancellationToken);
             }
         }
+
+        _logger.LogInformation("SignControllerServiceFactory started successfully");
         return Task.CompletedTask;
     }
 
@@ -85,6 +100,8 @@ public class SignControllerServiceFactory : IHostedService
     /// <returns></returns>
     public Task StopAsync(CancellationToken cancellationToken)
     {
+        _logger.LogInformation("Stopping SignControllerServiceFactory");
+
         foreach (var service in _services.Values)
         {
             if (service is IHostedService hostedService)
@@ -92,6 +109,8 @@ public class SignControllerServiceFactory : IHostedService
                 hostedService.StopAsync(cancellationToken);
             }
         }
+
+        _logger.LogInformation("SignControllerServiceFactory stopped");
         return Task.CompletedTask;
     }
 }

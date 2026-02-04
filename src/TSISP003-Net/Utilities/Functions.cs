@@ -1,4 +1,5 @@
 using System.Text;
+using Microsoft.Extensions.Logging;
 using TSISP003.Services;
 
 namespace TSISP003.Utilities;
@@ -6,11 +7,12 @@ namespace TSISP003.Utilities;
 public class Functions
 {
     /// <summary>
-    /// Prints a message packet to the console
+    /// Logs a message packet for debugging purposes
     /// </summary>
-    /// <param name="packet"></param>
-    /// <param name="direction"></param>
-    public static void PrintMessagePacket(string packet, string direction)
+    /// <param name="packet">The packet data</param>
+    /// <param name="direction">Direction indicator (e.g., "=>" or "<=")</param>
+    /// <param name="logger">Optional logger instance</param>
+    public static void PrintMessagePacket(string packet, string direction, ILogger? logger = null)
     {
         packet = packet.Replace("\u0001", "<SOH>");
         packet = packet.Replace("\u0002", "<STX>");
@@ -21,8 +23,8 @@ public class Functions
 
         string dateTimeNow = DateTime.Now.ToString("yyyy-MM-dd HH:mm:ss.fff");
 
-        // Output the modified string with the current date and time
-        Console.WriteLine($"[{dateTimeNow}] {direction} {packet}");
+        // Log the modified string with the current date and time
+        logger?.LogDebug("[{DateTime}] {Direction} {Packet}", dateTimeNow, direction, packet);
     }
 
     /// <summary>
