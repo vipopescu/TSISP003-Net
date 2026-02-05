@@ -172,6 +172,75 @@ public static class Extensions
         };
     }
 
+    public static SignExtendedStatusReplyDto AsDto(this SignExtendedStatusReply signExtendedStatusReply)
+    {
+        // Attempt to parse the DateTime
+        DateTime dateTime;
+        try
+        {
+            dateTime = new DateTime(
+                signExtendedStatusReply.Year,
+                signExtendedStatusReply.Month,
+                signExtendedStatusReply.Day,
+                signExtendedStatusReply.Hour,
+                signExtendedStatusReply.Minute,
+                signExtendedStatusReply.Second);
+        }
+        catch
+        {
+            dateTime = new DateTime(1900, 1, 1);
+        }
+
+        return new SignExtendedStatusReplyDto
+        {
+            OnlineStatus = signExtendedStatusReply.OnlineStatus,
+            ApplicationErrorCode = signExtendedStatusReply.ApplicationErrorCode,
+            ApplicationError = ErrorCodes.ApplicationErrorCodes.GetValueOrDefault(signExtendedStatusReply.ApplicationErrorCode, "Unknown error code"),
+            ManufacturerCode = signExtendedStatusReply.ManufacturerCode,
+            DateTime = dateTime,
+            ControllerErrorCode = signExtendedStatusReply.ControllerErrorCode,
+            ControllerError = ErrorCodes.ControllerDeviceErrorCodes.GetValueOrDefault(signExtendedStatusReply.ControllerErrorCode, "Unknown error code"),
+            NumberOfSigns = signExtendedStatusReply.NumberOfSigns,
+            Signs = signExtendedStatusReply.Signs.ToDictionary(
+                kvp => kvp.Key,
+                kvp => kvp.Value.AsDto()
+            )
+        };
+    }
+
+    public static SignExtendedStatusDto AsDto(this SignExtendedStatus signExtendedStatus)
+    {
+        string signTypeDescription = signExtendedStatus.SignType switch
+        {
+            0 => "Text",
+            1 => "Graphics",
+            2 => "Advanced Graphics",
+            _ => "Unknown"
+        };
+
+        string dimmingModeDescription = signExtendedStatus.DimmingMode switch
+        {
+            0 => "Automatic",
+            1 => "Manual",
+            _ => "Unknown"
+        };
+
+        return new SignExtendedStatusDto
+        {
+            SignID = signExtendedStatus.SignID,
+            SignType = signExtendedStatus.SignType,
+            SignTypeDescription = signTypeDescription,
+            NumberOfRows = signExtendedStatus.NumberOfRows,
+            NumberOfColumns = signExtendedStatus.NumberOfColumns,
+            SignErrorCode = signExtendedStatus.SignErrorCode,
+            SignError = ErrorCodes.ControllerDeviceErrorCodes.GetValueOrDefault(signExtendedStatus.SignErrorCode, "Unknown error code"),
+            DimmingMode = signExtendedStatus.DimmingMode,
+            DimmingModeDescription = dimmingModeDescription,
+            LuminanceLevel = signExtendedStatus.LuminanceLevel,
+            LampLedStatus = signExtendedStatus.LampLedStatus
+        };
+    }
+
     public static SignSetTextFrameDto AsDto(this SignSetTextFrame signSetTextFrame)
     {
         string asciiText = "";
@@ -345,4 +414,235 @@ public static class Extensions
         };
     }
 
+    public static SignSetGraphicsFrameDto AsDto(this SignSetGraphicsFrame signSetGraphicsFrame)
+    {
+        return new SignSetGraphicsFrameDto
+        {
+            FrameID = signSetGraphicsFrame.FrameID,
+            Revision = signSetGraphicsFrame.Revision,
+            NumberOfRows = signSetGraphicsFrame.NumberOfRows,
+            NumberOfColumns = signSetGraphicsFrame.NumberOfColumns,
+            Colour = signSetGraphicsFrame.Colour,
+            Conspicuity = signSetGraphicsFrame.Conspicuity,
+            GraphicsData = signSetGraphicsFrame.GraphicsData
+        };
+    }
+
+    public static SignSetGraphicsFrame AsEntity(this SignSetGraphicsFrameDto signSetGraphicsFrameDto)
+    {
+        // Graphics data should already be in hex format
+        string graphicsData = signSetGraphicsFrameDto.GraphicsData ?? string.Empty;
+        ushort graphicsLength = (ushort)(graphicsData.Length / 2);
+
+        return new SignSetGraphicsFrame
+        {
+            FrameID = signSetGraphicsFrameDto.FrameID,
+            Revision = signSetGraphicsFrameDto.Revision,
+            NumberOfRows = signSetGraphicsFrameDto.NumberOfRows,
+            NumberOfColumns = signSetGraphicsFrameDto.NumberOfColumns,
+            Colour = signSetGraphicsFrameDto.Colour,
+            Conspicuity = signSetGraphicsFrameDto.Conspicuity,
+            GraphicsLength = graphicsLength,
+            GraphicsData = graphicsData
+        };
+    }
+
+    public static SignSetHighResolutionGraphicsFrameDto AsDto(this SignSetHighResolutionGraphicsFrame signSetHighResolutionGraphicsFrame)
+    {
+        return new SignSetHighResolutionGraphicsFrameDto
+        {
+            FrameID = signSetHighResolutionGraphicsFrame.FrameID,
+            Revision = signSetHighResolutionGraphicsFrame.Revision,
+            NumberOfRows = signSetHighResolutionGraphicsFrame.NumberOfRows,
+            NumberOfColumns = signSetHighResolutionGraphicsFrame.NumberOfColumns,
+            Colour = signSetHighResolutionGraphicsFrame.Colour,
+            Conspicuity = signSetHighResolutionGraphicsFrame.Conspicuity,
+            GraphicsData = signSetHighResolutionGraphicsFrame.GraphicsData
+        };
+    }
+
+    public static SignSetHighResolutionGraphicsFrame AsEntity(this SignSetHighResolutionGraphicsFrameDto signSetHighResolutionGraphicsFrameDto)
+    {
+        // Graphics data should already be in hex format
+        string graphicsData = signSetHighResolutionGraphicsFrameDto.GraphicsData ?? string.Empty;
+        uint graphicsLength = (uint)(graphicsData.Length / 2);
+
+        return new SignSetHighResolutionGraphicsFrame
+        {
+            FrameID = signSetHighResolutionGraphicsFrameDto.FrameID,
+            Revision = signSetHighResolutionGraphicsFrameDto.Revision,
+            NumberOfRows = signSetHighResolutionGraphicsFrameDto.NumberOfRows,
+            NumberOfColumns = signSetHighResolutionGraphicsFrameDto.NumberOfColumns,
+            Colour = signSetHighResolutionGraphicsFrameDto.Colour,
+            Conspicuity = signSetHighResolutionGraphicsFrameDto.Conspicuity,
+            GraphicsLength = graphicsLength,
+            GraphicsData = graphicsData
+        };
+    }
+
+    public static SignSetPlanDto AsDto(this SignSetPlan signSetPlan)
+    {
+        return new SignSetPlanDto
+        {
+            PlanID = signSetPlan.PlanID,
+            Revision = signSetPlan.Revision,
+            DayOfWeek = signSetPlan.DayOfWeek,
+            Entries = signSetPlan.Entries.Select(e => e.AsDto()).ToList()
+        };
+    }
+
+    public static SignSetPlanEntryDto AsDto(this SignSetPlanEntry signSetPlanEntry)
+    {
+        return new SignSetPlanEntryDto
+        {
+            FrameMessageType = signSetPlanEntry.FrameMessageType,
+            FrameMessageID = signSetPlanEntry.FrameMessageID,
+            StartHour = signSetPlanEntry.StartHour,
+            StartMinute = signSetPlanEntry.StartMinute,
+            StopHour = signSetPlanEntry.StopHour,
+            StopMinute = signSetPlanEntry.StopMinute
+        };
+    }
+
+    public static SignSetPlan AsEntity(this SignSetPlanDto signSetPlanDto)
+    {
+        return new SignSetPlan
+        {
+            PlanID = signSetPlanDto.PlanID,
+            Revision = signSetPlanDto.Revision,
+            DayOfWeek = signSetPlanDto.DayOfWeek,
+            Entries = signSetPlanDto.Entries.Select(e => e.AsEntity()).ToList()
+        };
+    }
+
+    public static SignSetPlanEntry AsEntity(this SignSetPlanEntryDto signSetPlanEntryDto)
+    {
+        return new SignSetPlanEntry
+        {
+            FrameMessageType = signSetPlanEntryDto.FrameMessageType,
+            FrameMessageID = signSetPlanEntryDto.FrameMessageID,
+            StartHour = signSetPlanEntryDto.StartHour,
+            StartMinute = signSetPlanEntryDto.StartMinute,
+            StopHour = signSetPlanEntryDto.StopHour,
+            StopMinute = signSetPlanEntryDto.StopMinute
+        };
+    }
+
+    public static ReportEnabledPlansDto AsDto(this ReportEnabledPlans reportEnabledPlans)
+    {
+        return new ReportEnabledPlansDto
+        {
+            Entries = reportEnabledPlans.Entries.Select(e => e.AsDto()).ToList()
+        };
+    }
+
+    public static EnabledPlanEntryDto AsDto(this EnabledPlanEntry enabledPlanEntry)
+    {
+        return new EnabledPlanEntryDto
+        {
+            GroupID = enabledPlanEntry.GroupID,
+            PlanID = enabledPlanEntry.PlanID
+        };
+    }
+
+    // ================== HAR Extensions ==================
+
+    public static HARStatusReplyDto AsDto(this HARStatusReply harStatusReply)
+    {
+        string strategyStatusDescription = harStatusReply.StrategyStatus switch
+        {
+            1 => "Strategy is playing",
+            2 => "Strategy is preparing to play",
+            3 => "Strategy is not playing",
+            _ => "Unknown"
+        };
+
+        return new HARStatusReplyDto
+        {
+            OnlineStatus = harStatusReply.OnlineStatus,
+            ApplicationErrorCode = harStatusReply.ApplicationErrorCode,
+            ApplicationError = ErrorCodes.ApplicationErrorCodes.GetValueOrDefault(harStatusReply.ApplicationErrorCode, "Unknown error code"),
+            DateTime = harStatusReply.DateTime,
+            ControllerChecksum = harStatusReply.ControllerChecksum,
+            ControllerErrorCode = harStatusReply.ControllerErrorCode,
+            ControllerError = ErrorCodes.ControllerDeviceErrorCodes.GetValueOrDefault(harStatusReply.ControllerErrorCode, "Unknown error code"),
+            HAREnabled = harStatusReply.HAREnabled,
+            VoiceIDPlaying = harStatusReply.VoiceIDPlaying,
+            VoiceRevision = harStatusReply.VoiceRevision,
+            StrategyIDActive = harStatusReply.StrategyIDActive,
+            StrategyRevision = harStatusReply.StrategyRevision,
+            StrategyStatus = harStatusReply.StrategyStatus,
+            StrategyStatusDescription = strategyStatusDescription
+        };
+    }
+
+    public static HARSetStrategyReplyDto AsDto(this HARSetStrategy harSetStrategy)
+    {
+        return new HARSetStrategyReplyDto
+        {
+            StrategyID = harSetStrategy.StrategyID,
+            Revision = harSetStrategy.Revision,
+            VoiceIDs = harSetStrategy.VoiceIDs.ToList()
+        };
+    }
+
+    public static HARSetStrategy AsEntity(this HARSetStrategyCommandDto harSetStrategyCommandDto)
+    {
+        return new HARSetStrategy
+        {
+            StrategyID = harSetStrategyCommandDto.StrategyID,
+            Revision = harSetStrategyCommandDto.Revision,
+            VoiceIDs = harSetStrategyCommandDto.VoiceIDs.ToList()
+        };
+    }
+
+    public static HARSetPlanReplyDto AsDto(this HARSetPlan harSetPlan)
+    {
+        return new HARSetPlanReplyDto
+        {
+            PlanID = harSetPlan.PlanID,
+            Revision = harSetPlan.Revision,
+            DayOfWeek = harSetPlan.DayOfWeek,
+            Entries = harSetPlan.Entries.Select(e => e.AsDto()).ToList()
+        };
+    }
+
+    public static HARSetPlanEntryDto AsDto(this HARSetPlanEntry harSetPlanEntry)
+    {
+        return new HARSetPlanEntryDto
+        {
+            StrategyID = harSetPlanEntry.StrategyID,
+            StartHour = harSetPlanEntry.StartHour,
+            StartMinute = harSetPlanEntry.StartMinute,
+            StopHour = harSetPlanEntry.StopHour,
+            StopMinute = harSetPlanEntry.StopMinute
+        };
+    }
+
+    public static HARSetPlan AsEntity(this HARSetPlanCommandDto harSetPlanCommandDto)
+    {
+        return new HARSetPlan
+        {
+            PlanID = harSetPlanCommandDto.PlanID,
+            Revision = harSetPlanCommandDto.Revision,
+            DayOfWeek = harSetPlanCommandDto.DayOfWeek,
+            Entries = harSetPlanCommandDto.Entries.Select(e => e.AsEntity()).ToList()
+        };
+    }
+
+    public static HARSetPlanEntry AsEntity(this HARSetPlanEntryDto harSetPlanEntryDto)
+    {
+        return new HARSetPlanEntry
+        {
+            StrategyID = harSetPlanEntryDto.StrategyID,
+            StartHour = harSetPlanEntryDto.StartHour,
+            StartMinute = harSetPlanEntryDto.StartMinute,
+            StopHour = harSetPlanEntryDto.StopHour,
+            StopMinute = harSetPlanEntryDto.StopMinute
+        };
+    }
+
 }
+
+
+

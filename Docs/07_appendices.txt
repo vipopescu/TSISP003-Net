@@ -1,0 +1,778 @@
+APPENDIX A – CRC CALCULATION
+
+The following is Pascal code to carry out the CRC calculation.
+function packetCRC: string; {this function sends a packet of bytes to the CRC generator to}
+{find the CRC of the packet}
+var
+i: array[1..11] of byte;
+Accumulator: word; {16 bit}
+Index: integer;
+begin
+i[1] := $0A;
+i[2] := $03;
+i[3] := $3E;
+i[4] := $44;
+i[5] := $46;
+i[6] := $48;
+i[7] := $4A;
+i[8] := $B3;
+i[9] := $BE;
+i[10] := $DC;
+i[11] := $DD;
+Accumulator := 0;
+for Index := 1 to 11 do
+Accumulator := CRCGenerator(i[index], Accumulator);{do this for each byte in the packet}
+packetCRC := IntToHex(Accumulator, 4); {the result is a string of 4 hex characters. This is}
+{the CRC of the packet}
+end;
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 100 of 110 pages
+
+function CRCGenerator(Data: Word; Accum: Word): Word;
+const
+CRC_CCITT = $1021; {This is the CRC-CCITT polynomial}
+var
+index: integer;
+begin
+Data := Data SHL 8; {the incoming byte becomes the high order byte in the register}
+for index := 0 to 7 do
+begin
+if((Data xor Accum) and $8000) = $8000 then {check msb}
+Accum := (Accum SHL 1) xor CRC_CCITT
+else
+Accum := Accum SHL 1;
+Data := Data SHL 1;
+end;
+CRCGenerator := Accum;
+end;
+
+********
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 101 of 110 pages
+
+APPENDIX B – PASSWORD GENERATION
+The following is Pascal code to carry out the password generation procedure.
+function password: string;
+
+{Generates a password in reply to a password seed of 43 Hex}
+
+var
+xordbits, count, l_reply: Word;
+
+{16 bit}
+
+bit5, bit7, bit8: Boolean;
+begin
+l_reply := ($43 +$22) mod 256;
+for count := 1 to 16 do
+begin
+if ((l_reply and $20) = $0) then
+bit5 := FALSE
+else
+bit5 := TRUE;
+if ((l_reply and $80) = $0) then
+bit7 := FALSE
+else
+bit7 := TRUE;
+if ((l_reply and $100)= $0) then
+bit8 := FALSE
+else
+bit8 := TRUE;
+if (bit5 xor bit7 xor bit8) then
+xordbits := 1
+else
+xordbits := 0;
+l_reply := l_reply SHL 1;
+l_reply := l_reply + xordbits;
+end;{for}
+l_reply := l_reply + $5A5A;
+
+{add the password parameter}
+
+password := IntToHex(Loword(l_reply), 4);
+end;
+
+********
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 102 of 110 pages
+
+APPENDIX C – ERROR CODES
+
+C.1
+
+APPLICATION ERROR CODES
+Error Number
+
+Description
+
+00
+
+No error
+
+01
+
+Device controller off-line
+
+02
+
+Syntax error in command
+
+03
+
+Length error in command - Application message is too long or
+too short
+
+04
+
+Data checksum error
+
+05
+
+Text with non ASCII characters
+
+06
+
+Frame too large for sign - The number of characters sent
+exceeds the number of characters capable of being displayed
+by the sign in that font; or the length of the graphics frame
+exceeds the graphics frame capabilities of the sign.
+
+07
+
+Unknown MI Code
+
+08
+
+MI Code not supported by device controller
+
+09
+
+Power is OFF
+
+0A
+
+Undefined device number
+
+0B
+
+Font not supported
+
+0C
+
+Colour not supported
+
+0D
+
+Overlaps/overlays not supported
+
+0E
+
+Dimming level not supported
+
+0F
+
+Frame, message, plan, voice or strategy currently active
+
+10
+
+Facility Switch override
+
+11
+
+Conspicuity device definition not supported by device controller
+
+12
+
+Transition time not supported
+
+13
+
+Frame, message or plan undefined
+
+14
+
+Plan not enabled
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 103 of 110 pages
+
+Error Number
+
+Description
+
+15
+
+Plan enabled
+
+16
+
+Size mismatch - The number of pixel rows or the number of
+pixel columns required by the message do not match the
+respective pixel row/column display capabilities of the sign.
+
+17
+
+Frame too small - The number of characters sent equals 0; or
+the length of a graphics frame equals 0; or the length of the
+graphics frame is less than the graphics frame display
+capabilities of the sign.
+
+18
+
+HAR strategy stopped by master
+
+19
+
+HAR voice or strategy undefined
+
+1A
+
+HAR error in strategy definition
+
+1B
+
+HAR voice data error
+
+1C
+
+HAR voice format not supported by device controller
+
+1D
+
+HAR hardware error
+
+1E
+
+Time expired
+
+1F
+
+Colour depth not supported
+
+20
+
+Incomplete colour frame definition
+
+21
+
+Incorrect password
+
+22
+
+Interlocking reject (invalid settings)
+
+23
+
+Interlocking reject (missing signs)
+
+24
+
+Interlocking not active
+
+25
+
+Interlocking active
+
+26 to 9F
+
+Not allocated
+
+A0 to FF
+
+Reserved (see below)
+
+Error Codes A0 Hex to FF Hex are reserved but unallocated.
+Manufacturers may request the definition of other errors by
+contacting RMS. At the discretion of RMS, RMS may agree to the
+request and provide an error number from the list of reserved error
+codes.
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+C.2
+
+Page 104 of 110 pages
+
+CONTROLLER AND DEVICE ERROR CODES
+Error Number
+
+Description
+
+00
+
+No error
+
+01
+
+Power failure
+
+02
+
+Communications time-out error (communications failure with
+host)
+
+03
+
+Memory error
+
+04
+
+Battery failure
+
+05
+
+Internal communications failure
+
+06
+
+Sign lamp failure
+
+07
+
+Sign single-LED failure
+
+08
+
+Sign multi-LED failure
+
+09
+
+Over-temperature alarm (fan failure)
+
+0A
+
+Under-temperature alarm (heater failure)
+
+0B
+
+Conspicuity device failure
+
+0C
+
+Sign luminance controller failure
+
+0D
+
+Controller reset (via watchdog)
+
+0E
+
+Battery low
+
+0F
+
+Powered off by command
+
+10
+
+Facility Switch override
+
+11
+
+Sign display driver failure
+
+12
+
+Sign firmware mismatch
+
+13
+
+Sign lamp pair failure
+
+14
+
+Equipment over-temperature
+
+15
+
+No response from sensor
+
+16
+
+Cut sensor cable
+
+17
+
+Sensor short circuit
+
+18
+
+Sensor dirty lens
+
+19
+
+HAR hardware error
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 105 of 110 pages
+
+Error Number
+
+Description
+
+1A
+
+HAR radio fault
+
+1B
+
+HAR voice data error
+
+1C
+
+Display time-out error
+
+1D
+
+Backup controller unavailable
+
+1E
+
+Not allocated (used incorrectly by SA TS 5719:2017)
+
+1F
+
+Not allocated (used incorrectly by SA TS 5719:2017)
+
+20
+
+Under local control
+
+21
+
+Main processor communications error
+
+22
+
+Mimic state error
+
+23
+
+Sign moved from set location
+
+24
+
+Cabinet door open
+
+25
+
+Sign tilted
+
+26
+
+Sign orientation changed
+
+27
+
+Battery charger/regulator fault
+
+28
+
+Internal power supply fault
+
+29
+
+Vibration alarm
+
+2A
+
+Operating on secondary power
+
+2B to 9F
+
+Not allocated
+
+A0 to FE
+
+Reserved (see below)
+
+FF
+
+Pre-existing or reoccurring fault exists
+
+NOTE:
+
+Refer to Clauses 3.6.3.7 and 3.6.3.29 for use of Error Code
+FF Hex. Furthermore SA TS 5719 uses this error code to
+indicate “Undefined fault exists”.
+
+Error Codes A0 Hex to FE Hex are reserved but unallocated.
+Manufacturers may request the definition of other errors by
+contacting RMS. At the discretion of RMS, RMS may agree to the
+request and provide an error number from the list of reserved error
+codes.
+Comments:
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 106 of 110 pages
+
+•
+
+All fault occurrences and fault clearances are entered into the
+Fault Log, in addition to the updating of the corresponding fields
+in the Status Reply and Extended Status Reply messages
+(controller and sign error code fields).
+
+•
+
+A fault occurrence is deemed to occur when the fault is detected.
+A fault clearance is deemed to occur when the fault is rectified
+(automatically or manually). For multiple faults of the one type
+(i.e.: the same error number), only the first fault shall be logged,
+and only when all faults of this type are cleared shall a fault
+clearance be logged.
+
+•
+
+For each fault that occurs, when the fault is cleared it shall be
+entered into the Fault Log. For example, a communications timeout error occurs when there has been no communications with
+the master for a set time after the link was established. At this
+time, the fault occurrence is logged. When the link is reestablished, the communications time-out error is cleared and it is
+at this time, the clearance logged.
+
+********
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 107 of 110 pages
+
+APPENDIX D – MESSAGE EXAMPLE
+To transmit SIGN SET TEXT FRAME with the text 'SLOW DOWN' as stored message
+1 in the sign controller with address 02, the data packet is constructed as follows:
+
+<SOH> 00 00 02 <STX> 0A 4A 08 05 03 01 09 53 4C 4F 57 20 44 4F 57 4E C8 B7 BE 44 <ETX>
+
+where:
+•
+
+N(S) and N(R) are both 00
+
+•
+
+02 is the sign controller address
+
+•
+
+0A is the MI Code
+
+•
+
+4A is the frame ID as it is stored in the sign controller's memory
+
+•
+
+08 is the revision number
+
+•
+
+05 is the code for the font
+
+•
+
+03 is the code for the colour
+
+•
+
+01 is the code for conspicuity devices
+
+•
+
+09 is the length of the text frame
+
+•
+
+ASCII 'SLOW DOWN' represented in Hex is 53 4C 4F 57 20 44
+4F 57 4E.
+
+•
+
+C8B7 is the application message CRC represented in Hex
+(calculated on 16 bytes).
+
+•
+
+BE44 is the CRC of the data packet represented in Hex
+(calculated on 44 bytes)
+
+The complete transmission would be:
+
+Header
+
+Application Message
+
+End of block
+
+01 30 30 30 30 30 32 02
+
+30 41 34 41 30 38 30 35 30 33 30 31 30 39 35 33 34 43
+34 46 35 37 32 30 34 34 34 46 35 37 34 45 43 38 42 37
+
+42 45 34 34 03
+
+********
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 108 of 110 pages
+
+APPENDIX E – ENVIRONMENTAL/WEATHER STATION CRC CALCULATION
+The Controller Hardware Checksum in the Environmental/Weather Status Reply
+(Clause 3.6.3.42) is calculated according to Appendix A - CRC Calculation.
+The checksum is calculated across the series of bytes as defined in the
+Environmental/Weather Threshold Definition (Clause 3.6.3.45) for each and every
+environmental/weather threshold type, but in the following order:
+•
+
+Environmental/Weather Parameter Type
+
+•
+
+Number of Thresholds
+
+•
+
+Threshold Value 1 (least significant byte)
+
+•
+
+Threshold Value 1 (most significant byte)
+
+•
+
+Rising/Falling
+
+•
+
+Threshold Value 2 (least significant byte)
+
+•
+
+Threshold Value 2 (most significant byte)
+
+•
+
+Rising/Falling
+
+•
+
+Etc.
+
+NOTE:
+
+For calculating the Controller Hardware Checksum in the
+Environmental/Weather Status Reply (Clause 3.6.3.42), the least
+significant byte of the threshold value is placed before the most
+significant byte.
+
+The checksum is calculated in ascending order of environmental/weather parameter
+types and includes all parameter types. If no thresholds are defined for a parameter
+type, then the first two bytes as specified above are used for that type, with the second
+byte, the Number of Thresholds, being zero. Also, when calculating the checksum, the
+order of the thresholds within each environmental/weather parameter type is the order
+in which they were sent by the master in the Environmental/Weather Threshold
+Definition for that particular environmental/weather parameter type.
+If the environmental/weather station does not support threshold types, then the value
+of the checksum in the Environmental/Weather Status Reply (Clause 3.6.3.42) shall be
+set to zero and is ignored by the master.
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 109 of 110 pages
+
+The following is an example checksum calculation:
+If the two threshold pairs (rising and falling) for 1 Hour Precipitation (i.e.
+environmental/weather parameter type 34, or 22h) are defined as:
+•
+
+03E8h rising (value (a)), 0ABEh rising (value (b))
+
+•
+
+05DCh falling (value (c)), 0000h falling (value (d))
+
+and the three threshold pairs for Surface 24 Hour
+environmental/weather parameter type 35, or 23h) are defined as:
+
+Precipitation
+
+•
+
+03E8h rising (value (e)), 07D0h rising (value(f)), 0BB8h rising (value (g))
+
+•
+
+09C4h falling (value (h)), 05DCh falling (value (i)), 0000h falling (value (j))
+
+(i.e.
+
+and were sent in the order values (a), (d), (b), (c), and values (e), (j), (f), i), (g), (h) (all
+in hex), the application messages for the Threshold Definition would be:
+83 22 04 03 E8 00 00 00 01 0A BE 00 05 DC 01
+and
+83 23 06 03 E8 00 00 00 01 07 D0 00 05 DC 01 0B B8 00 09 C4 01
+respectively.
+The Controller Hardware Checksum would be calculated on the following series of
+bytes (assuming all other environmental/weather parameter types have no thresholds):
+
+01 00 0A 00 0B 00 0C 00 0D 00 0E 00 14 00 15 00 1E 00 1F 00 20 00 21 00 22 04 E8 03 00 00 00
+01 BE 0A 00 DC 05 01 23 06 E8 03 00 00 00 01 D0 07 00 DC 05 01 B8 0B 00 C4 09 01 28 00 29
+00 2A 00 2B 00 32 00 33 00 34 00 35 00 3C 00 3D 00 3E 00 3F 00 40 00 42 00
+
+with a resultant checksum of F352h;
+
+However, if the threshold values were sent in the order values (a), (b), (c), (d), and
+values (e), (f), (g), (h), (i), (j) (all in hex), the application messages for the Threshold
+Definition would be:
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 110 of 110 pages
+
+83 22 04 03 E8 00 0A BE 00 05 DC 01 00 00 01
+and
+83 23 06 03 E8 00 07 D0 00 0B B8 00 09 C4 01 05 DC 01 00 00 01
+respectively.
+The Controller Hardware Checksum would be calculated on the following series of
+bytes:
+
+01 00 0A 00 0B 00 0C 00 0D 00 0E 00 14 00 15 00 1E 00 1F 00 20 00 21 00 22 04 E8 03 00 BE
+0A 00 DC 05 01 00 00 01 23 06 E8 03 00 D0 07 00 B8 0B 00 C4 09 01 DC 05 01 00 00 01 28 00
+29 00 2A 00 2B 00 32 00 33 00 34 00 35 00 3C 00 3D 00 3E 00 3F 00 40 00 42 00
+
+with a resultant checksum of 2158h.
+
+********
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+

@@ -1,0 +1,1554 @@
+
+Summary of Commands and Responses .................................................................96
+
+3.6.6
+
+Example of Application Layer Exchange ..................................................................98
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+1.
+
+Page 9 of 110 pages
+
+INTRODUCTION
+1.1
+
+Purpose
+This Specification covers a standard communications protocol for use
+by the Roads and Maritime Services for its deployment of roadside
+devices, including variable message signs (VMS), variable speed
+limit signs (VSLS), integrated speed limit and lane use signs (ISLUS),
+environmental and weather stations, and highways advisory radio
+(HAR).
+The roadside device communications protocol is an asynchronous,
+half-duplex protocol designed to be independent of the
+communications medium. This enables operation on different types of
+data circuits such as multipoint/point-to-point and switched/nonswitched systems.
+The roadside device communications protocol provides the following:
+
+1.2
+
+•
+
+Link establishment and verification of the parties at each end of
+the link (session management).
+
+•
+
+Message sequencing.
+
+•
+
+A suite of application messages to cover all message types used
+for a variety of roadside ITS devices.
+
+•
+
+Transfer of application messages including error detection and
+correction (by the use of checksums and re-transmission).
+
+Scope
+This Specification defines the protocol to be used to communicate
+with variable message signs (VMS), variable speed limit signs
+(VSLS), integrated speed limit and lane use signs (ISLUS),
+environmental/weather stations and highways advisory radio (HAR).
+Where necessary, the functionality required to implement the
+protocol is described.
+
+1.3
+
+Overview
+This Specification contains the following main sections:
+•
+
+Section 2 provides a background description of a system
+incorporating variable message signs (VMS) and gives examples
+of some possible physical arrangements. The key issues
+considered in the design of the communications protocol are then
+discussed. These issues include the roles of the master and the
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 10 of 110 pages
+
+slaves, system security, sign address and broadcast address,
+protocol adaptability and transparency, and error-free operation.
+•
+
+Section 3 describes the various protocol layers based on the OSI
+reference model. This includes definitions of the physical layer,
+and detailed descriptions of the data-link protocol and the
+mechanism for connection establishment. A definition of a suite of
+application messages is given, followed by a number of
+examples.
+
+The protocol defined in this Specification applies to both multi-drop
+and point-to-point communications links (refer to Clause 3.2).
+1.4
+
+Compatibility with Other Specifications and Systems
+An earlier version of this specification formed the basis for Australian
+Technical Specification SA TS 5719:2017 “Communications protocol
+for dynamic message signs and road weather information systems”.
+As far as possible additions to this specification are intended to be
+compatible with SA TS 5719:2017.
+The clause items pertaining to Environmental/Weather Stations are
+generally in conformance with NTCIP1204 v2.06 (2002)
+“Environmental Sensor Station (ESS) Interface Protocol”.
+A major exception is the format used for the representation of
+negative values. Sign-magnitude format is used to represent negative
+values, particularly negative temperatures. This differs from the
+NTCIP standards which use two’s complement format for consistency
+with SNMP, upon which the NTCIP standards are based.
+The RMS Communications Protocol TSI-SP-003 uses the signmagnitude format to provide backwards compatibility with existing
+environmental stations and weather stations which report 65535
+(0xFFFF) or 255 (0xFF) signed integer values to indicate a sensor as
+“not present of faulty”.
+The following are some more examples:
+Temperature
+
+Decimal value
+
+Hexadecimal value
+
++30.5º C
+
+305
+
+0x0131
+
++0.5º C
+
+5
+
+0x0005
+
+0º C
+
+0
+
+0x0000
+
+-0.5º C
+
+-5
+
+0x8005
+
+-30.5º C
+
+-305
+
+0x8131
+
+Sensor not
+present or faulty
+
+-32767
+
+0xFFFF
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 11 of 110 pages
+
+Note that -0º C (represented by 0x8000) is numerically valid but shall
+not be used by new design equipment.
+1.5
+
+Compliance with this Specification
+Where this Specification is referenced by another RMS specification
+or document and compliance with the applicable parts of this
+Specification is required or intended, those parts of the
+communications protocol described in this Specification shall be
+implemented in full.
+NOTE:
+
+For messages/commands that the device does not support,
+the device must be able to respond appropriately in
+accordance with the Protocol.
+
+All parts of and all descriptions in this Specification relating to
+characteristics, functions and operation of the communications
+protocol, regardless of the manner in which they are expressed in
+this document, shall be construed as mandatory requirements unless
+the context explicitly shows otherwise.
+1.6
+
+Definitions and Glossary of Terms
+For the purposes of this Specification, the following definitions and
+abbreviations shall apply:
+ASCII
+
+-
+
+American Standard Code for Information
+Interchange
+
+CMCS
+
+-
+
+Central Management Computer System
+
+controller
+
+-
+
+Means device controller
+
+CRC
+
+-
+
+Cyclic redundancy check
+
+device
+controller
+
+-
+
+On-site control equipment that controls the
+roadside device of interest
+
+EIA
+
+-
+
+Electronic Industries Association
+
+group
+
+-
+
+Multiple ITS devices which are intended to be
+configured and activated together.
+Refer to Clause 3.6.2 for additional
+information.
+
+HAR
+
+-
+
+Highways advisory radio
+
+ID
+
+-
+
+Identification or identification code
+
+IMS
+
+-
+
+Incident Management System
+
+interlocking
+
+-
+
+A device controller function that prevents the
+display of particular combinations of
+information (generally across multiple ITS
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 12 of 110 pages
+
+devices) which could create a hazard to road
+users.
+For example in the case of an ISLUS, this
+could refer to particular combinations of
+symbols and/or speed limits on adjacent signs
+over a single carriageway that are considered
+to be dangerous, logically conflicting or
+ambiguous.
+NOTE: The details of such functionality and
+combinations are normally defined in the
+device specifications and are out of the scope
+of this Specification.
+ISDN
+
+-
+
+Integrated Services Digital Network
+
+ISO
+
+-
+
+International Standards Organisation
+
+ISLUS
+
+-
+
+Integrated speed and lane use signs
+
+ITS
+
+-
+
+Intelligent transport system(s), or Intelligent
+transportation system(s)
+
+master
+
+-
+
+Unless the context dictates otherwise, means
+the remote host computer system that
+communicates or in the process of
+establishing communications with the device
+controller
+
+MI Code
+
+-
+
+Message Information Code
+
+NSW
+
+-
+
+New South Wales
+
+NTCIP
+
+-
+
+National Transportation Communications for
+ITS Protocol
+
+OSI
+
+-
+
+Open System Interconnection
+
+PSTN
+
+-
+
+Public switched telephone network
+
+RDP
+
+-
+
+Road Data Processor
+
+Referencing
+Specification
+
+-
+
+The document or specification that stipulates
+or requires compliance with this Specification
+(TSI-SP-003) in full or in part
+
+RMS
+
+-
+
+Roads and Maritime Services, which is a New
+South Wales Government agency
+
+RTA
+
+-
+
+The former Roads and Traffic Authority of
+New South Wales, which was replaced by
+Roads and Maritime Services
+
+sign
+controller
+
+-
+
+A device controller for sign(s)
+
+TIA
+
+-
+
+Telecommunications Industry Association
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 13 of 110 pages
+
+TMC
+
+-
+
+Transport Management Centre
+
+VMS
+
+-
+
+Variable message sign
+
+VSLS
+
+-
+
+Variable speed limit sign
+
+Word
+
+-
+
+In the context of this specification, a “word”
+comprises 2 bytes.
+
+RMS has deployed a variety of signs which are capable of displaying
+text and/or graphics. Signs capable of displaying graphics fall into
+three categories and are distinguished by their supported display
+dimensions and method of reporting these to the control system.
+These three categories are as follows:
+Graphics sign
+
+-
+
+A type of sign capable of displaying graphics
+with dimensions of up to 255 x 255 pixels.
+Refer to Clause 3.6.3.29 for additional
+information.
+
+Advanced
+graphics sign
+
+-
+
+A type of sign capable of displaying graphics
+with dimensions specified not in pixels, but in
+characters. This permits displays of size up to
+255 x 255 characters based on the sign’s
+default character matrix and inter-character
+spacing.
+Refer to Clause 3.6.3.29 for additional
+information.
+
+High
+resolution
+graphics sign
+
+-
+
+A type of sign capable of displaying graphics
+with dimensions of up to 65535 x 65535
+pixels.
+Refer to Clauses 3.6.3.30 to 3.6.3.32 for
+additional information.
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+2.
+
+Page 14 of 110 pages
+
+GENERAL DESCRIPTION
+2.1
+
+Physical System Layout
+The complete system consists of:
+a) a management and control system (master),
+b) communications link,
+c) roadside ITS device controllers (slaves) and their dependent
+ITS devices.
+Examples of management and control systems include but are not
+limited to:
+a) the NSW Transport Management Centre’s (TMC) Incident
+Management System (IMS). As of early 2017 this comprises
+the Central Management Computer System (CMCS) and the
+Road Data Processor (RDP),
+b) a road operator’s management and control system,
+c) a standalone control computer, or
+d) a local or remote engineering terminal.
+This Specification only covers the communications protocol between
+the master and slaves as defined above. The communications
+protocol between the device controller and the ITS device or devices
+is not covered by this Specification. The communications protocol
+between RMS’s RDP and CMCS are not covered by this
+Specification
+This communications protocol may be used over serial data links or
+when suitably encapsulated over IP-based networks. Details of such
+encapsulation do not form part of this Specification.
+The master communicates with the roadside device controller (slave)
+using this protocol. In turn, the device controller communicates with
+the dependent ITS device or devices. While in many cases the
+device controller may control only one ITS device, there are many
+scenarios where the device controller controls many ITS devices, e.g.
+signs. Refer to Clause 3.6.2 for more details.
+
+2.2
+
+Master and Slaves
+Communications are initiated from the master only.
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+2.3
+
+Page 15 of 110 pages
+
+System Security
+Switched links are vulnerable to deliberate or accidental connection
+to unauthorised users. To enable the master to communicate with
+device controllers via switched networks (eg, over PSTN, ISDN or
+radio using modems) without compromising the security of the
+system, a link establishment procedure is used. This link
+establishment procedure enables each party to verify the identity of
+the other before commands are actioned.
+Although it is possible to limit the access to the roadside devices
+using a distinct password for each device, this simple method can be
+compromised with relative ease. The protocol, instead, uses a link
+establishment procedure based on a password generation algorithm.
+This algorithm takes a random number generated by one side in the
+link, and performs a series of logical operations on it. This calculation
+is performed by the master and the device controller simultaneously.
+The communications link is established only if the two parties
+produce the same password. This method of password protection
+means that every time the link is established a different password is
+used. Further protection is gained by making some of the parameters
+in the password generation algorithm configurable by the system
+owner.
+A detailed description of the link establishment procedure is given in
+Clause 3.4. An example password generation code is shown in
+Appendix B.
+
+2.4
+
+Protocol Attributes
+
+2.4.1
+
+Device Controller Address
+As a consequence of having multiple destinations, some form of
+addressing is needed in order to specify the desired destination.
+To support multiple roadside device arrangements on the same
+communication link, each device controller has a unique address. A
+device controller is required to acknowledge and respond to
+messages from the master containing its address and ignore
+messages containing other addresses. In addition, each device
+controller is required to respond to broadcast messages as described
+in Clause 2.4.2.
+The address of each device controller is configurable by software or
+hardware means.
+The maximum number of addressable devices is 256 (addresses 0 to
+255), less any addresses assigned by the system owner to be
+broadcast addresses.
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+2.4.2
+
+Page 16 of 110 pages
+
+Broadcast Messages
+A number of roadside devices of the same type (e.g., VSLSs,
+ISLUSs) connected on the same link may have to change their status
+simultaneously in response to an event. This is accomplished by
+means of a broadcast message.
+A broadcast is a message sent by the master simultaneously to all
+the device controllers on a link. In response to a broadcast message
+the device controllers are required to take action but must not
+respond with an acknowledge. Typically, after a broadcast message
+requesting a certain action is sent, the master will poll each of the
+device controllers to confirm that the broadcast message has been
+accepted (i.e. actioned upon). Any application message can be sent
+with a broadcast address.
+The roadside device controllers have a broadcast address. When a
+broadcast message is sent by the master, the ADDR field in the
+packet contains the broadcast address instead of a specific device
+controller address. The broadcast address of each device controller
+is configurable by software or hardware means.
+More than one broadcast address may be assigned by the system
+owner in the network of connected devices. For example on a
+motorway, westbound VMSs may be assigned a particular broadcast
+address while eastbound VMSs may be assigned a different
+broadcast address.
+
+2.4.3
+
+Transparency
+The protocol has been designed to be independent of the
+communications media. This allows a single set of application
+messages to be used to exchange data with all device controllers
+regardless of the physical arrangement. As a result, the messages
+passed on a permanent multi-drop link are the same as those used
+over a point-to-point switched link.
+
+2.4.4
+
+Data Integrity
+Error control is implemented using checksum checks for every data
+packet at both the source and the destination. The correct order of
+messages sent and received is preserved using sequencing fields
+included in every transmitted packet. Error correction is
+accomplished by re-transmission of unacknowledged data packets.
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+3.
+
+Page 17 of 110 pages
+
+PROTOCOL LAYERS
+3.1
+
+Introduction
+The International Standards Organisation (ISO) Standard 7498
+defines the ‘Open System Interconnection (OSI) Reference Model’.
+This model outlines seven layers for data transmission:
+1) Physical Layer - Deals with mechanical and electrical
+interfaces. The physical layer is described in Clause 3.2.
+2) Data Link Layer - The Data Link Layer deals with the
+mechanism for communicating data over the link. It breaks the
+input data up into data packets, transmits the packets
+sequentially and processes the acknowledgment fields sent
+back by the other party. This is discussed in Clause 3.3.
+3) Network Layer - Attaches network address and provides
+suitable routing. This is treated in Clause 3.3.2.
+4) Transport Layer - Provides reliable, in-sequence, transfer of
+data regardless of reliability of lower levels. This is treated in
+Clause 3.3.2.
+5) Session Layer - Establishes, manages and maintains
+connections between cooperating applications. The session
+layer is considered in Clause 3.4.
+6) Presentation Layer - Deals with the syntax or semantics of the
+information transmitted. This is considered in Clause 3.3.1.
+7) Application Layer -. Describes the mapping of application level
+information to message level data and describes the role of the
+application in the link. The application layer is described in
+Clause 3.6.
+
+3.2
+
+Physical Link
+The logical, electrical and mechanical aspects of the communications
+interface shall be in accordance with the requirements of the
+Referencing Specification.
+
+3.3
+
+Data-Link Protocol
+The data link shall be configured as per the table below:
+Parameter
+
+Value
+
+Baud Rate
+
+300, 1,200, 2,400, 4,800, 9,600, 19,200, 38,400, 57,600,
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+Parameter
+
+Page 18 of 110 pages
+Value
+115,200 bps selectable
+
+3.3.1
+
+Data Bits
+
+7, 8 selectable
+
+Stop Bits
+
+1, 2 selectable
+
+Start Bits
+
+1
+
+Parity
+
+None
+
+Bit Sequence
+
+LSB first (bits numbered 1 to 8)
+
+Sync
+
+Asynchronous
+
+Line Usage
+
+Half Duplex
+
+Data Presentation
+All data except for ASCII control characters shall be ASCII Hex
+encoded using upper case characters. Refer to Appendix D for a
+message example.
+Valid ASCII for transmission of ASCII Hex is 0 to 9 and A to F.
+Note: When using ASCII Hex, a one byte field is transmitted in two
+bytes. eg, the byte 1A Hex is transmitted as ASCII 1 and ASCII A.
+Any word value field is transmitted with the most significant byte first.
+The following ASCII Control characters are used for management of
+data transactions:
+Hex
+
+Mnemonic
+
+Description
+
+01
+
+“SOH”
+
+Start of Header
+
+02
+
+“STX”
+
+Start of Text
+
+03
+
+“ETX”
+
+End of Text
+
+04
+
+“EOT”
+
+End of Transmission
+
+06
+
+“ACK”
+
+Acknowledge
+
+15
+
+“NAK”
+
+Negative Acknowledge
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+3.3.2
+
+Page 19 of 110 pages
+
+Data Transfer
+There are two types of packets that can be sent during the data
+transfer phase: data packets and non-data packets. Both types of
+packets contain control characters, message sequencing fields, an
+address field and a checksum field. Data packets also contain the
+application message (as detailed in Clause 3.5)
+All exchanges of data between the master and a slave, the device
+controller, are processed upon request of the master (as detailed in
+Clause 2.4.2).
+
+3.3.2.1
+
+Message Sequencing
+The protocol described in this Specification uses two distinct packet
+sequence numbers, designated N(R) and N(S).
+N(R) and N(S) are one byte fields in the range 0-255.
+The sequence number N(R) is used by both the master and slave in
+their messages to the other party. Since if a transmission by one
+party to another is not successful then it is repeated until successful,
+N(R) signifies the number of valid data packets that have been
+successfully received by each party. Refer to Clause 3.5 for an
+example of an exchange of datalink messages.
+Specifically, for transmitted data packets and non-data packets from
+the slave to the master, N(R) signifies the number of valid data
+packets that have been successfully received from the master and
+that the next packet to be received from the master is expected to
+have this field set to this value.
+For transmitted data packets from the master to the slave, N(R)
+signifies the number of valid data packets that have been
+successfully received from the slave and that the next packet to be
+received from the slave is expected to have this field set to this value
+plus one. The exception to this rule is that when the value of N(R) in
+the received packet is 255, the expected value of N(R) in the next
+packet to be received is 1, not 0.
+Data packets (only) also have a sequence number field, N(S). N(S)
+contains the sequence number of the data packet being transmitted
+(sent).
+The sequence numbers N(R) and N(S) are checked by both the
+master and the slave when a session is active, except for the Start
+Session command. A session is only active after the master receives
+an application layer Acknowledge from the slave in response to a
+Password command. If a session is not active, N(R) and N(S) are
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 20 of 110 pages
+
+ignored. If a session is not active (i.e. the slave is off-line), N(R) and
+N(S) may be set to zero.
+The sequence numbers are reset to zero each time a link is
+established and then cycle between 1 and 255.
+For broadcast messages, the slave checks sequence numbers. Both
+the master and slave ignore sequencing with the master not
+incrementing the sequence number for broadcasts.
+
+3.3.2.2
+
+Address Field
+All data packets have an address field (referred to as ‘ADDR’). This is
+a one byte field containing the address of the destination slave.
+Packets sent from the master to the slave and from the slave to the
+master both contain the address of the slave.
+The ADDR field may also contain a broadcast address that is shared
+by some or all slaves on a multi-drop link.
+
+3.3.2.3
+
+Cyclic Redundancy Check (CRC)
+All packets have a 16 bit Checksum field. The Checksum method
+used in the roadside device protocol is the CRC-CCITT polynomial.
+This method of error detection was designed to catch all single and
+double errors, all errors with an odd number of bits, all burst errors of
+length 16 or less, 99.997% of 17-bit error bursts and 99.998% of 18bit and longer bursts.
+During data transfer, the originator calculates the CRC on all data
+bytes in the packet except the ETX control byte and the CRC bytes
+themselves, and appends the result to the end of the packet. The
+destination calculates the CRC on all the bytes including the CRC
+bytes but excluding the ETX control character. If the data is received
+correctly the result of the CRC calculation at the receiving end should
+be 0000 Hex.
+A procedure to perform the CRC-CCITT calculation is given below:
+Packets are fed to the CRC generator one byte at a time. At the start
+of a new packet the accumulator is reset and the calculation
+proceeds using a 16-bit data register and a 16-bit accumulator.
+When a new data byte is received, all the bits in the data register are
+reset and the data byte is loaded into the high order byte of the
+register.
+•
+
+An ‘exclusive OR’ operation is performed between the data
+register and the accumulator.
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 21 of 110 pages
+
+•
+
+If the most significant bit of the result is ‘logic 0’, the contents of
+the accumulator is shifted left logical to form the new
+accumulator.
+
+•
+
+If the most significant bit of the result is ‘logic 1’, the contents of
+the accumulator is shifted left logical and ‘exclusively ORed’ with
+the polynomial X16 + X12 + X5 + X0 to form the new accumulator.
+
+•
+
+The content of the data register is shifted left logical.
+
+The process is cycled 8 times (one for each bit of the received byte)
+for each byte in the byte stream. The result in the accumulator after
+the last byte has been completely processed is the CRC.
+As an example, if the data bytes are:
+(0AH), (03H), (3EH), (44H), (46H), (48H), (4AH), (B3H), (BEH),
+(DCH) and (DDH), the CRC would be 440EH, with the most
+significant byte in the CRC (44H) transmitted first.
+The code to perform the CRC calculation (including the above
+example) is given in Appendix A.
+3.3.2.4
+
+Data Packets
+Data to be exchanged is framed into packets. Each packet is
+comprised of a header, a data body and an end of block information.
+The header starts with ‘SOH’ (Start of Header) followed by the two
+sequence numbers N(S) and N(R) as detailed in Clause 3.3.2.1, and
+the address of the slave. The end of the header is an ‘STX’ (Start of
+Text) to indicate that data follows. The data is placed after the ‘STX’
+character and ended with a two byte CRC. The ‘ETX’ (End of Text)
+character marks the end of the data packet.
+All data packets are of the following format:
+SOH
+
+N(S)
+
+N(R) ADDR
+
+Header
+
+STX
+
+Application Message
+
+Data body
+
+CRC
+
+ETX
+
+End of Block
+
+Refer to Appendix D for an example of a complete data packet.
+3.3.2.5
+
+Non-Data Packets
+There are two types of Non-Data packets, the ACK packet and the
+NAK packet. Both these packets contain a sequencing character
+(N(R)) followed by the address of the slave. The non-data packets
+also contain a CRC field to ensure that the address field is received
+correctly. The ‘ETX’ character marks the end of the packet.
+1) Packet acknowledgment - Sent by the slave only when a data
+packet from the master has been received correctly.
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 22 of 110 pages
+
+ACK N(R) ADDR CRC
+
+Header
+
+ETX
+
+End of Block
+
+2) Packet Reject - Sent when a packet is rejected eg, because of
+a sequence error or corrupted data. A packet reject can be
+sent by both the master and the slave.
+NAK N(R) ADDR CRC
+
+Header
+
+3.3.2.6
+
+ETX
+
+End of Block
+
+Re-Transmission
+A packet acknowledgment timer T0 is used by the master to
+determine if a data packet has not been acknowledged. This timer is
+restarted each time a data packet is sent by the master to the slave.
+Data packets are re-transmitted if:
+•
+
+Timer T0 expires before an acknowledgment is received.
+
+•
+
+A negative acknowledge is received.
+
+A configurable ‘window size’ N specifies the maximum number of
+times that a data packet can be re-transmitted. If the limit is
+exceeded, the master disconnects the link.
+The master re-transmits the last transmitted data packet if it receives
+a negative acknowledge from the slave. The slave depends on the
+master to initiate time-out recovery.
+The values of T0 and N typically depend on the physical
+arrangements, the quality of the transmission line as well as the type
+of device. A T0 value of 360 ms with N = 3 is appropriate for a simple
+point-to-point connection at 9,600 bps for a text-only VMS.
+3.4
+
+Session Management
+
+3.4.1
+
+Data Link Establishment
+A valid link establishment procedure must be completed before data,
+other than heartbeat polling and heartbeat poll response, can be
+exchanged between the master and the device controller.
+The master initiates the data link establishment sequence by sending
+a ‘START SESSION’ command to the device controller. The device
+controller responds with a ‘PASSWORD SEED’ message, which
+contains an 8 bit randomly generated number (between 0 and 255).
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 23 of 110 pages
+
+The password generation algorithm converts the eight bit 'password
+seed' into a sixteen bit password as follows:
+(a) An 8 bit 'Seed Offset' is added to the password seed.
+(b) The new 8 bit password seed is placed in a 16 bit register with
+bits 9 to 16 set to zero.
+(c) Bits 6, 8 and 9 are exclusively ORed and the result is set
+aside.
+(d) The register is shifted left one position.
+(e) The one bit result of the exclusive OR calculation is added to
+the modified seed to generate an interim password.
+(f) The interim password is then used again as the input of the
+algorithm.
+(g) The process (steps (c) to (f) above) is cycled 16 times before a
+‘Password Offset is added to it to form the final password.
+(h) The ‘Password Offset’ is a 16 bit number, which can be
+configured at the device controller by hardware or software
+means.
+The ‘Seed Offset’ and ‘Password Offset’ are provided by RMS for
+configuration at the time of installation/commissioning.
+EXAMPLE
+An 8 bit password seed of 43 Hex will result in the following
+operations:
+A 'seed offset' of 22 Hex is added to 43 Hex to give 65 Hex. This
+number is cycled 16 times as shown below
+Cycle
+
+Binary
+
+Hex
+
+Bit 6
+
+Bit 8
+
+Bit 9
+
+EX OR
+
+0
+
+0000000001100101
+
+65
+
+1
+
+0
+
+0
+
+1
+
+1
+
+0000000011001011
+
+CB
+
+0
+
+1
+
+0
+
+1
+
+2
+
+0000000110010111
+
+197
+
+0
+
+1
+
+1
+
+0
+
+3
+
+0000001100101110
+
+32E
+
+1
+
+0
+
+1
+
+0
+
+4
+
+0000011001011100
+
+65C
+
+0
+
+0
+
+0
+
+0
+
+5
+
+0000110010111000
+
+CB8
+
+1
+
+1
+
+0
+
+0
+
+6
+
+0001100101110000
+
+1970
+
+1
+
+0
+
+1
+
+0
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+Cycle
+
+Page 24 of 110 pages
+
+Binary
+
+Hex
+
+Bit 6
+
+Bit 8
+
+Bit 9
+
+EX OR
+
+7
+
+0011001011100000
+
+32E0
+
+1
+
+1
+
+0
+
+0
+
+8
+
+0110010111000000
+
+65C0
+
+0
+
+1
+
+1
+
+0
+
+9
+
+1100101110000000
+
+CB80
+
+0
+
+1
+
+1
+
+0
+
+10
+
+1001011100000000
+
+9700
+
+0
+
+0
+
+1
+
+1
+
+11
+
+0010111000000001
+
+2E01
+
+0
+
+0
+
+0
+
+0
+
+12
+
+0101110000000010
+
+5C02
+
+0
+
+0
+
+0
+
+0
+
+13
+
+1011100000000100
+
+B804
+
+0
+
+0
+
+0
+
+0
+
+14
+
+0111000000001000
+
+7008
+
+0
+
+0
+
+0
+
+0
+
+15
+
+1110000000010000
+
+E010
+
+0
+
+0
+
+0
+
+0
+
+16
+
+1100000000100000
+
+C020
+
+Assuming the ‘password offset is 5A5A Hexadecimal, C020H +
+5A5AH = 11A7A. The 16 bit password is thus 1A7A (take the 16 least
+significant bits).
+The final password is sent to the device controller in a ‘PASSWORD’
+command as a response to the ‘PASSWORD SEED’ message. The
+device controller performs the same calculation and if it receives the
+correct password the link is established. Once the link is established,
+the sequencing numbers N(S) and N(R) are set to zero and the
+device controller is considered ‘on-line’.
+Examples of code to perform the link establishment algorithm are
+given in appendix B.
+3.4.2
+
+Data Link Termination
+On completion of a communications session, the master sends the
+‘END SESSION’ command to the device controller. Once this
+command has been received, the device controller is considered 'offline' and the link establishment procedure must be completed before
+a new session can begin.
+In addition, the device controller has a timer T1 that is restarted each
+time a packet is received. If the timer expires the device controller
+changes its status to 'off-line' (i.e. the session terminates). The timer
+shall be configurable and has a default value of 120 seconds.
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+3.4.3
+
+Page 25 of 110 pages
+
+Heartbeat Polling
+A HEARTBEAT POLLING message is sent repeatedly by the master
+to each slave in the link. The slave responds with a device specific
+STATUS REPLY message which contains status information.
+Heartbeat polling is sent to all devices in the link regardless of
+whether they are ‘on-line’ or not. The frequency of heartbeat polling
+depends on the type of link and device types on the link
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+3.5
+
+Page 26 of 110 pages
+
+Example of Datalink Message Exchange
+
+Master To Device Controller
+
+Device Controller To Master
+
+Comment
+Network link established
+
+START SESSION Command
+
+Request to start session
+ACK
+
+Protocol ACK
+
+PASSWORD SEED Message
+
+Slave responds with password
+seed
+
+PASSWORD Command
+
+Master sends password
+ACK
+
+Protocol ACK
+
+*ACK
+
+Application layer ACK
+
+Data, N(S) = 0 N(R) = 0
+
+First data exchanged with N(R)
+and N(S) set to zero
+ACK, N(R) = 1
+
+Protocol ACK
+
+*ACK, N(S) = 0 N(R) = 1
+
+Application layer ACK, slave is
+on-line
+
+Data, N(S) = 1 N(R) = 1
+
+Master sends data packet
+ACK, N(R) = 2
+
+Protocol ACK
+
+Data, N(S) = 1 N(R) = 2
+
+Slave responds with data packet
+
+Data, N(S) = 3 N(R) = 2
+
+Sequence error
+NAK, N(R) = 2
+
+Data, N(S) = 2 N(R) = 2
+
+NAK (protocol layer only)
+Data re-sent
+
+ACK, N(R) = 3
+
+Protocol ACK
+
+*ACK, N(S) = 2 N(R) = 3
+
+Application layer ACK, slave is
+still on-line
+
+Data, N(S) = 3 N(R) = 3
+
+Master sends data packet
+Slave fails to respond OR
+response message fails to reach
+master before timer T0 expires
+
+Data, N(S) = 3 N(R) = 3
+
+Master resends data packet after
+timer T0 expires
+ACK, N(R) = 4
+
+Protocol ACK
+
+*ACK, N(S) = 3 N(R) = 4
+
+Application layer ACK, slave is
+still on-line
+
+END SESSION Command,
+N(S) = 4 N(R) = 4
+
+Terminate session
+ACK, N(R) = 5
+
+Protocol ACK
+
+*ACK, N(S) = 4 N(R) = 5
+
+Application layer ACK, slave is
+off-line
+
+Note: *ACK represents an application layer acknowledge, while ACK is the protocol layer acknowledge.
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 27 of 110 pages
+
+3.6
+
+Application Layer
+
+3.6.1
+
+Introduction
+The following clauses describe the functions available to monitor and
+control roadside devices. This includes the format of each command
+sent by the master, and the possible responses from the slaves.
+NOTE:
+
+3.6.2
+
+The messages used for environmental stations and weather
+stations have been derived from objects documented in the
+NTCIP (National Transportation Communications for ITS
+Protocol) standard applicable at the time. That NTCIP
+standard has since been significantly revised which in turn
+has led to some revisions to this Specification.
+
+General Requirements
+The following
+descriptions:
+
+requirements
+
+apply
+
+throughout
+
+the
+
+message
+
+•
+
+All data is based on an octet which is defined as 8 bits where bit
+1 (LSB) is the first bit transmitted in the octet and bit 8 (MSB) is
+the last bit transmitted in the octet.
+
+•
+
+All application layer messages start with a one byte Message
+Information (MI Code).
+
+•
+
+A device controller may control a number of devices, either as a
+single individual device, or as part of a group of devices. Note
+that a device controller may control a combination of individual
+devices and device groups. For signs, the sign ID field refers to
+the actual signs whereas the group ID refers to signs that have
+been grouped together so that all signs in the same group shall
+display the same information via one single command. The same
+applies for other types of devices. In the protocol, commands to
+the device controller include the group ID field (eg, sign group 1),
+while device controller replies include the individual device ID
+fields (eg, sign 1 & 2).
+
+•
+
+For a device controller with only one device, the group ID and
+sign ID are both one (usually for Variable Message Signs).
+Where a device controller has many devices, but with one device
+per group, the group ID always equals the device ID (usually for
+Variable Message Signs). For a device controller with four
+devices but grouped in pairs, two group IDs and four device Ids
+exist (if group 1 is defined to be devices 1 and 2, then group 2
+would be defined as devices 3 and 4). Note that the grouping of
+devices usually applies to Variable Speed Limit Signs where the
+two signs on each side of the carriageway are grouped together
+so that both signs show identical displays. Unless otherwise
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 28 of 110 pages
+
+stated for a particular command, a group ID of zero shall apply to
+all groups, that is, all devices.
+•
+
+The following terminology is used to describe the type of
+messages used:
+Command
+
+a message requiring a reply.
+
+Reply
+
+a message responding to a command.
+
+3.6.3
+
+Application Layer Messages
+

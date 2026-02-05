@@ -4,7 +4,7 @@ This file provides guidance to Claude Code (claude.ai/code) when working with co
 
 ## Project Overview
 
-TSISP003-Net is a .NET 8 web API application that implements the TSI-SP-003 communications protocol for managing roadside devices like Variable Message Signs (VMS) and Variable Speed Limit Signs (VSLS). The application serves as a bridge between HTTP requests and TCP-based sign controllers.
+TSISP003-Net is a .NET 10 web API application that implements the TSI-SP-003 communications protocol for managing roadside devices like Variable Message Signs (VMS) and Variable Speed Limit Signs (VSLS). The application serves as a bridge between HTTP requests and TCP-based sign controllers.
 
 ## Development Commands
 

@@ -18,15 +18,99 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
 
     private readonly SignControllerServiceFactory _signControllerServiceFactory = signControllerServiceFactory;
 
+    // Rolling ID management for ExtendedRequestMessage (per device)
+    private static readonly System.Collections.Concurrent.ConcurrentDictionary<string, int> _deviceIds = new();
+    private const byte MinId = 120;
+    private const byte MaxId = 254;
+
+    private static byte GetNextId(string device)
+    {
+        var newId = _deviceIds.AddOrUpdate(
+            device,
+            MinId,
+            (_, currentId) => currentId >= MaxId ? MinId : currentId + 1
+        );
+        return (byte)newId;
+    }
+
     /// <summary>
     /// Resets the system for the specified device.
+    /// Reset levels:
+    /// - 0: Blank display, turn off conspicuity devices, set to automatic dimming, deactivate active frame/message, enable sign group
+    /// - 1: Level 0 + disable all plans
+    /// - 2: Level 1 + reset all faults and fault log
+    /// - 3: Level 2 + clear all frames, messages, and plans
+    /// - 255: Level 3 + restore factory settings (except device address)
     /// </summary>
     [HttpPost]
     [Route("{device}/SystemReset")]
-    public async Task<IActionResult> SystemReset(string device)
+    public async Task<IActionResult> SystemReset(string device, [FromBody] SystemResetCommandDto request)
     {
-        // TODO: Implement
-        return Ok();
+        try
+        {
+            if (!_signControllerServiceFactory.ContainsSignController(device))
+                return NotFound("Device not found");
+
+            var ackReply = await _signControllerServiceFactory.GetSignControllerService(device)
+                .SystemReset(request.GroupID, request.ResetLevel);
+
+            return Ok();
+        }
+        catch (ArgumentException ex)
+        {
+            _logger.LogWarning(ex, "Invalid reset level for device {Device}", device);
+            return BadRequest(ex.Message);
+        }
+        catch (TimeoutException ex)
+        {
+            _logger.LogWarning(ex, "System Reset timed out for device {Device}", device);
+            return StatusCode(StatusCodes.Status408RequestTimeout, "System Reset timed out.");
+        }
+        catch (SignRequestRejectedException ex)
+        {
+            _logger.LogError("System Reset rejected: {ErrorCode}", ex.RejectReply.ApplicationErrorCode);
+            return StatusCode(StatusCodes.Status400BadRequest, ex.RejectReply.AsDto());
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error performing System Reset for device {Device}", device);
+            return StatusCode(StatusCodes.Status500InternalServerError, "Error performing System Reset.");
+        }
+    }
+
+    /// <summary>
+    /// Updates the real time clock in the device controller.
+    /// If no DateTime is provided in the request body, the current server time is used.
+    /// </summary>
+    [HttpPost]
+    [Route("{device}/UpdateTime")]
+    public async Task<IActionResult> UpdateTime(string device, [FromBody] UpdateTimeCommandDto? request = null)
+    {
+        try
+        {
+            if (!_signControllerServiceFactory.ContainsSignController(device))
+                return NotFound("Device not found");
+
+            var ackReply = await _signControllerServiceFactory.GetSignControllerService(device)
+                .UpdateTime(request?.DateTime);
+
+            return Ok(ackReply.AsDto());
+        }
+        catch (TimeoutException ex)
+        {
+            _logger.LogWarning(ex, "Update Time timed out for device {Device}", device);
+            return StatusCode(StatusCodes.Status408RequestTimeout, "Update Time timed out.");
+        }
+        catch (SignRequestRejectedException ex)
+        {
+            _logger.LogWarning(ex, "Update Time rejected for device {Device}", device);
+            return StatusCode(StatusCodes.Status400BadRequest, ex.RejectReply.AsDto());
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error updating time for device {Device}", device);
+            return StatusCode(StatusCodes.Status500InternalServerError, "Error updating time.");
+        }
     }
 
     /// <summary>
@@ -63,22 +147,74 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
         }
     }
 
+    /// <summary>
+    /// Sends a graphics frame to the specified device.
+    /// Used for signs with dimensions up to 255 x 255 pixels.
+    /// </summary>
     [HttpPost]
     [Route("{device}/SignSetGraphicsFrame")]
-    public async Task<IActionResult> SignSetGraphicsFrame(string device)
+    public async Task<IActionResult> SignSetGraphicsFrame(string device, [FromBody] SignSetGraphicsFrameDto request)
     {
-        // TODO: Implement
-        return Ok();
+        try
+        {
+            if (!_signControllerServiceFactory.ContainsSignController(device))
+                return NotFound("Device not found");
+
+            var controller = await _signControllerServiceFactory.GetSignControllerService(device)
+                .SignSetGraphicsFrame(request.AsEntity());
+
+            return Ok(controller.AsDto());
+        }
+        catch (TimeoutException ex)
+        {
+            _logger.LogWarning(ex, "Sign Set Graphics Frame timed out for device {Device}", device);
+            return StatusCode(StatusCodes.Status408RequestTimeout, "Sign Set Graphics Frame timed out.");
+        }
+        catch (SignRequestRejectedException ex)
+        {
+            _logger.LogError("Sign Set Graphics Frame rejected: {ErrorCode}", ex.RejectReply.ApplicationErrorCode);
+            return StatusCode(StatusCodes.Status400BadRequest, ex.RejectReply.AsDto());
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error setting graphics frame for device {Device}", device);
+            return StatusCode(StatusCodes.Status500InternalServerError, "Error setting graphics frame.");
+        }
     }
 
+    /// <summary>
+    /// Sends a high resolution graphics frame to the specified device.
+    /// Used for signs with dimensions up to 65535 x 65535 pixels.
+    /// </summary>
     [HttpPost]
     [Route("{device}/SignSetHighResolutionGraphicsFrame")]
-    public async Task<IActionResult> SignSetHighResolutionGraphicsFrame(string device)
+    public async Task<IActionResult> SignSetHighResolutionGraphicsFrame(string device, [FromBody] SignSetHighResolutionGraphicsFrameDto request)
     {
-        // TODO: Implement  
+        try
+        {
+            if (!_signControllerServiceFactory.ContainsSignController(device))
+                return NotFound("Device not found");
 
+            var controller = await _signControllerServiceFactory.GetSignControllerService(device)
+                .SignSetHighResolutionGraphicsFrame(request.AsEntity());
 
-        return Ok();
+            return Ok(controller.AsDto());
+        }
+        catch (TimeoutException ex)
+        {
+            _logger.LogWarning(ex, "Sign Set High Resolution Graphics Frame timed out for device {Device}", device);
+            return StatusCode(StatusCodes.Status408RequestTimeout, "Sign Set High Resolution Graphics Frame timed out.");
+        }
+        catch (SignRequestRejectedException ex)
+        {
+            _logger.LogError("Sign Set High Resolution Graphics Frame rejected: {ErrorCode}", ex.RejectReply.ApplicationErrorCode);
+            return StatusCode(StatusCodes.Status400BadRequest, ex.RejectReply.AsDto());
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error setting high resolution graphics frame for device {Device}", device);
+            return StatusCode(StatusCodes.Status500InternalServerError, "Error setting high resolution graphics frame.");
+        }
     }
 
     [HttpGet]
@@ -131,7 +267,7 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
         }
         catch (SignRequestRejectedException ex)
         {
-            Console.WriteLine($"Request rejected: {ex.RejectReply.ApplicationErrorCode}");
+            _logger.LogWarning("Request rejected: {ErrorCode}", ex.RejectReply.ApplicationErrorCode);
             return StatusCode(StatusCodes.Status400BadRequest, ex.RejectReply.AsDto());
         }
         catch (Exception ex)
@@ -162,7 +298,7 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
         }
         catch (SignRequestRejectedException ex)
         {
-            Console.WriteLine($"Request rejected: {ex.RejectReply.ApplicationErrorCode}");
+            _logger.LogWarning("Request rejected: {ErrorCode}", ex.RejectReply.ApplicationErrorCode);
             return StatusCode(StatusCodes.Status400BadRequest, ex.RejectReply.AsDto());
         }
         catch (Exception ex)
@@ -172,12 +308,39 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
         }
     }
 
+    /// <summary>
+    /// Sends a plan to the specified device.
+    /// A plan can contain up to 6 frames or messages scheduled by time and day of week.
+    /// </summary>
     [HttpPost]
     [Route("{device}/SignSetPlan")]
-    public async Task<IActionResult> SignSetPlan(string device)
+    public async Task<IActionResult> SignSetPlan(string device, [FromBody] SignSetPlanDto request)
     {
-        // TODO: Implement
-        return Ok();
+        try
+        {
+            if (!_signControllerServiceFactory.ContainsSignController(device))
+                return NotFound("Device not found");
+
+            var controller = await _signControllerServiceFactory.GetSignControllerService(device)
+                .SignSetPlan(request.AsEntity());
+
+            return Ok(controller.AsDto());
+        }
+        catch (TimeoutException ex)
+        {
+            _logger.LogWarning(ex, "Sign Set Plan timed out for device {Device}", device);
+            return StatusCode(StatusCodes.Status408RequestTimeout, "Sign Set Plan timed out.");
+        }
+        catch (SignRequestRejectedException ex)
+        {
+            _logger.LogError("Sign Set Plan rejected: {ErrorCode}", ex.RejectReply.ApplicationErrorCode);
+            return StatusCode(StatusCodes.Status400BadRequest, ex.RejectReply.AsDto());
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error setting plan for device {Device}", device);
+            return StatusCode(StatusCodes.Status500InternalServerError, "Error setting plan.");
+        }
     }
 
     [HttpPost]
@@ -201,7 +364,7 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
         }
         catch (SignRequestRejectedException ex)
         {
-            Console.WriteLine($"Request rejected: {ex.RejectReply.ApplicationErrorCode}");
+            _logger.LogWarning("Request rejected: {ErrorCode}", ex.RejectReply.ApplicationErrorCode);
             return StatusCode(StatusCodes.Status400BadRequest, ex.RejectReply.AsDto());
         }
         catch (Exception ex)
@@ -232,7 +395,7 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
         }
         catch (SignRequestRejectedException ex)
         {
-            Console.WriteLine($"Request rejected: {ex.RejectReply.ApplicationErrorCode}");
+            _logger.LogWarning("Request rejected: {ErrorCode}", ex.RejectReply.ApplicationErrorCode);
             return StatusCode(StatusCodes.Status400BadRequest, ex.RejectReply.AsDto());
         }
         catch (Exception ex)
@@ -242,36 +405,150 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
         }
     }
 
+    /// <summary>
+    /// Enables a pre-stored plan in a specified group.
+    /// Plan ID 0 disables all enabled plans on the specified group (except active plan).
+    /// </summary>
     [HttpPost]
     [Route("{device}/EnablePlan")]
-    public async Task<IActionResult> EnablePlan(string device)
+    public async Task<IActionResult> EnablePlan(string device, [FromBody] EnablePlanCommandDto request)
     {
-        // TODO: Implement
-        return Ok();
+        try
+        {
+            if (!_signControllerServiceFactory.ContainsSignController(device))
+                return NotFound("Device not found");
+
+            var ackReply = await _signControllerServiceFactory.GetSignControllerService(device)
+                .EnablePlan(request.GroupID, request.PlanID);
+
+            return Ok();
+        }
+        catch (TimeoutException ex)
+        {
+            _logger.LogWarning(ex, "Enable Plan timed out for device {Device}", device);
+            return StatusCode(StatusCodes.Status408RequestTimeout, "Enable Plan timed out.");
+        }
+        catch (SignRequestRejectedException ex)
+        {
+            _logger.LogError("Enable Plan rejected: {ErrorCode}", ex.RejectReply.ApplicationErrorCode);
+            return StatusCode(StatusCodes.Status400BadRequest, ex.RejectReply.AsDto());
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error enabling plan for device {Device}", device);
+            return StatusCode(StatusCodes.Status500InternalServerError, "Error enabling plan.");
+        }
     }
 
+    /// <summary>
+    /// Disables a pre-stored plan in a specified group.
+    /// Plan ID 0 disables all enabled plans on the specified group (except active plan).
+    /// An active plan cannot be disabled.
+    /// </summary>
     [HttpPost]
     [Route("{device}/DisablePlan")]
-    public async Task<IActionResult> DisablePlan(string device)
+    public async Task<IActionResult> DisablePlan(string device, [FromBody] DisablePlanCommandDto request)
     {
-        // TODO: Implement
-        return Ok();
+        try
+        {
+            if (!_signControllerServiceFactory.ContainsSignController(device))
+                return NotFound("Device not found");
+
+            var ackReply = await _signControllerServiceFactory.GetSignControllerService(device)
+                .DisablePlan(request.GroupID, request.PlanID);
+
+            return Ok();
+        }
+        catch (TimeoutException ex)
+        {
+            _logger.LogWarning(ex, "Disable Plan timed out for device {Device}", device);
+            return StatusCode(StatusCodes.Status408RequestTimeout, "Disable Plan timed out.");
+        }
+        catch (SignRequestRejectedException ex)
+        {
+            _logger.LogError("Disable Plan rejected: {ErrorCode}", ex.RejectReply.ApplicationErrorCode);
+            return StatusCode(StatusCodes.Status400BadRequest, ex.RejectReply.AsDto());
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error disabling plan for device {Device}", device);
+            return StatusCode(StatusCodes.Status500InternalServerError, "Error disabling plan.");
+        }
     }
 
-    [HttpPost]
+    /// <summary>
+    /// Requests which plans are currently enabled in the device controller.
+    /// </summary>
+    [HttpGet]
     [Route("{device}/RequestEnabledPlans")]
     public async Task<IActionResult> RequestEnabledPlans(string device)
     {
-        // TODO: Implement
-        return Ok();
+        try
+        {
+            if (!_signControllerServiceFactory.ContainsSignController(device))
+                return NotFound("Device not found");
+
+            var reportEnabledPlans = await _signControllerServiceFactory.GetSignControllerService(device)
+                .RequestEnabledPlans();
+
+            return Ok(reportEnabledPlans.AsDto());
+        }
+        catch (TimeoutException ex)
+        {
+            _logger.LogWarning(ex, "Request Enabled Plans timed out for device {Device}", device);
+            return StatusCode(StatusCodes.Status408RequestTimeout, "Request Enabled Plans timed out.");
+        }
+        catch (SignRequestRejectedException ex)
+        {
+            _logger.LogError("Request Enabled Plans rejected: {ErrorCode}", ex.RejectReply.ApplicationErrorCode);
+            return StatusCode(StatusCodes.Status400BadRequest, ex.RejectReply.AsDto());
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error requesting enabled plans for device {Device}", device);
+            return StatusCode(StatusCodes.Status500InternalServerError, "Error requesting enabled plans.");
+        }
     }
 
+    /// <summary>
+    /// Sets the dimming level for specified groups.
+    /// DimmingMode: 0 = Automatic, 1 = Manual.
+    /// LuminanceLevel: 1-16 (1 = minimum, 16 = maximum intensity). Ignored when DimmingMode is Automatic.
+    /// GroupID 0 applies to all groups.
+    /// </summary>
     [HttpPost]
     [Route("{device}/SignSetDimmingLevel")]
-    public async Task<IActionResult> SignSetDimmingLevel(string device)
+    public async Task<IActionResult> SignSetDimmingLevel(string device, [FromBody] SignSetDimmingLevelCommandDto request)
     {
-        // TODO: Implement
-        return Ok();
+        try
+        {
+            if (!_signControllerServiceFactory.ContainsSignController(device))
+                return NotFound("Device not found");
+
+            var entries = request.Entries
+                .Select(e => (e.GroupID, e.DimmingMode, e.LuminanceLevel))
+                .ToList();
+
+            var ackReply = await _signControllerServiceFactory.GetSignControllerService(device)
+                .SignSetDimmingLevel(entries);
+
+            return Ok();
+        }
+        catch (TimeoutException ex)
+        {
+            _logger.LogWarning(ex, "Sign Set Dimming Level timed out for device {Device}", device);
+            return StatusCode(StatusCodes.Status408RequestTimeout, "Sign Set Dimming Level timed out.");
+        }
+        catch (SignRequestRejectedException ex)
+        {
+            _logger.LogError("Sign Set Dimming Level rejected: {ErrorCode}", ex.RejectReply.ApplicationErrorCode);
+            return StatusCode(StatusCodes.Status400BadRequest, ex.RejectReply.AsDto());
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error setting dimming level for device {Device}", device);
+            return StatusCode(StatusCodes.Status500InternalServerError, "Error setting dimming level.");
+        }
     }
 
     [HttpPost]
@@ -295,7 +572,7 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
         }
         catch (SignRequestRejectedException ex)
         {
-            Console.WriteLine($"Request rejected: {ex.RejectReply.ApplicationErrorCode}");
+            _logger.LogWarning("Request rejected: {ErrorCode}", ex.RejectReply.ApplicationErrorCode);
             return StatusCode(StatusCodes.Status400BadRequest, ex.RejectReply.AsDto());
         }
         catch (Exception ex)
@@ -307,10 +584,34 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
 
     [HttpPost]
     [Route("{device}/DisableEnableDevice")]
-    public async Task<IActionResult> DisableEnableDevice(string device)
+    public async Task<IActionResult> DisableEnableDevice(string device, [FromBody] DisableEnableDeviceCommandDto request)
     {
-        // TODO: Implement
-        return Ok();
+        try
+        {
+            if (!_signControllerServiceFactory.ContainsSignController(device))
+                return NotFound("Device not found");
+
+            var entries = request.Entries.Select(e => (e.GroupID, e.Enabled)).ToList();
+            var controllerResponse = await _signControllerServiceFactory.GetSignControllerService(device)
+                .DisableEnableDevice(entries);
+
+            return Ok(controllerResponse.AsDto());
+        }
+        catch (TimeoutException ex)
+        {
+            _logger.LogWarning(ex, "Disable/Enable Device request timed out for device {Device}", device);
+            return StatusCode(StatusCodes.Status408RequestTimeout, "Disable/Enable Device request timed out.");
+        }
+        catch (SignRequestRejectedException ex)
+        {
+            _logger.LogWarning(ex, "Disable/Enable Device request rejected for device {Device}", device);
+            return StatusCode(StatusCodes.Status400BadRequest, ex.RejectReply.AsDto());
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error disabling/enabling device for {Device}", device);
+            return StatusCode(StatusCodes.Status500InternalServerError, "Error disabling/enabling device.");
+        }
     }
 
     [HttpPost]
@@ -333,6 +634,18 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
             {
                 return Ok(signSetTextFrame.AsDto());
             }
+            else if (controllerResponse is SignSetGraphicsFrame signSetGraphicsFrame)
+            {
+                return Ok(signSetGraphicsFrame.AsDto());
+            }
+            else if (controllerResponse is SignSetHighResolutionGraphicsFrame signSetHighResGraphicsFrame)
+            {
+                return Ok(signSetHighResGraphicsFrame.AsDto());
+            }
+            else if (controllerResponse is SignSetPlan signSetPlan)
+            {
+                return Ok(signSetPlan.AsDto());
+            }
 
             return StatusCode(StatusCodes.Status500InternalServerError, "Unexpected response type.");
         }
@@ -343,7 +656,7 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
         }
         catch (SignRequestRejectedException ex)
         {
-            Console.WriteLine($"Request rejected: {ex.RejectReply.ApplicationErrorCode}");
+            _logger.LogWarning("Request rejected: {ErrorCode}", ex.RejectReply.ApplicationErrorCode);
             return StatusCode(StatusCodes.Status400BadRequest, ex.RejectReply.AsDto());
         }
         catch (Exception ex)
@@ -357,8 +670,31 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
     [Route("{device}/SignExtendedStatusRequest")]
     public async Task<IActionResult> SignExtendedStatusRequest(string device)
     {
-        // TODO: Implement
-        return Ok();
+        try
+        {
+            if (!_signControllerServiceFactory.ContainsSignController(device))
+                return NotFound("Device not found");
+
+            var controllerResponse = await _signControllerServiceFactory.GetSignControllerService(device)
+                .SignExtendedStatusRequest();
+
+            return Ok(controllerResponse.AsDto());
+        }
+        catch (TimeoutException ex)
+        {
+            _logger.LogWarning(ex, "Sign Extended Status Request timed out for device {Device}", device);
+            return StatusCode(StatusCodes.Status408RequestTimeout, "Sign Extended Status Request timed out.");
+        }
+        catch (SignRequestRejectedException ex)
+        {
+            _logger.LogWarning(ex, "Sign Extended Status Request rejected for device {Device}", device);
+            return StatusCode(StatusCodes.Status400BadRequest, ex.RejectReply.AsDto());
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error requesting extended status for device {Device}", device);
+            return StatusCode(StatusCodes.Status500InternalServerError, "Error requesting extended status.");
+        }
     }
 
     [HttpGet]
@@ -399,8 +735,31 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
     [Route("{device}/ResetFaultLog")]
     public async Task<IActionResult> ResetFaultLog(string device)
     {
-        // TODO: Implement
-        return Ok();
+        try
+        {
+            if (!_signControllerServiceFactory.ContainsSignController(device))
+                return NotFound("Device not found");
+
+            var controllerResponse = await _signControllerServiceFactory.GetSignControllerService(device)
+                .ResetFaultLog();
+
+            return Ok(controllerResponse.AsDto());
+        }
+        catch (TimeoutException ex)
+        {
+            _logger.LogWarning(ex, "Reset Fault Log request timed out for device {Device}", device);
+            return StatusCode(StatusCodes.Status408RequestTimeout, "Reset Fault Log request timed out.");
+        }
+        catch (SignRequestRejectedException ex)
+        {
+            _logger.LogWarning(ex, "Reset Fault Log request rejected for device {Device}", device);
+            return StatusCode(StatusCodes.Status400BadRequest, ex.RejectReply.AsDto());
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error resetting fault log for device {Device}", device);
+            return StatusCode(StatusCodes.Status500InternalServerError, "Error resetting fault log.");
+        }
     }
 
     [HttpGet]
@@ -449,12 +808,9 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
 
             var controllerService = _signControllerServiceFactory.GetSignControllerService(device);
 
-            // TODO Parameterize
-            byte currentId = 120;
-
             SignSetMessageDto signSetMessage = new SignSetMessageDto
             {
-                MessageID = currentId++
+                MessageID = GetNextId(device)
             };
 
             if (extendedRequestMessage.Frame1 != null)
@@ -463,7 +819,7 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
 
                 SignSetTextFrameDto signSetTextFrame1 = new SignSetTextFrameDto
                 {
-                    FrameID = currentId++,
+                    FrameID = GetNextId(device),
                     Revision = 0,
                     Font = extendedRequestMessage.Frame1.Font,
                     Colour = extendedRequestMessage.Frame1.Colour,
@@ -482,7 +838,7 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
 
                 SignSetTextFrameDto signSetTextFrame2 = new SignSetTextFrameDto
                 {
-                    FrameID = currentId++,
+                    FrameID = GetNextId(device),
                     Revision = 0,
                     Font = extendedRequestMessage.Frame2.Font,
                     Colour = extendedRequestMessage.Frame2.Colour,
@@ -501,7 +857,7 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
 
                 SignSetTextFrameDto signSetTextFrame3 = new SignSetTextFrameDto
                 {
-                    FrameID = currentId++,
+                    FrameID = GetNextId(device),
                     Revision = 0,
                     Font = extendedRequestMessage.Frame3.Font,
                     Colour = extendedRequestMessage.Frame3.Colour,
@@ -520,7 +876,7 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
 
                 SignSetTextFrameDto signSetTextFrame4 = new SignSetTextFrameDto
                 {
-                    FrameID = currentId++,
+                    FrameID = GetNextId(device),
                     Revision = 0,
                     Font = extendedRequestMessage.Frame4.Font,
                     Colour = extendedRequestMessage.Frame4.Colour,
@@ -539,7 +895,7 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
 
                 SignSetTextFrameDto signSetTextFrame5 = new SignSetTextFrameDto
                 {
-                    FrameID = currentId++,
+                    FrameID = GetNextId(device),
                     Revision = 0,
                     Font = extendedRequestMessage.Frame5.Font,
                     Colour = extendedRequestMessage.Frame5.Colour,
@@ -558,7 +914,7 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
 
                 SignSetTextFrameDto signSetTextFrame6 = new SignSetTextFrameDto
                 {
-                    FrameID = currentId++,
+                    FrameID = GetNextId(device),
                     Revision = 0,
                     Font = extendedRequestMessage.Frame6.Font,
                     Colour = extendedRequestMessage.Frame6.Colour,
@@ -599,11 +955,162 @@ public class SignApiController(ILogger<SignApiController> logger, SignController
         // Get the elapsed time as a TimeSpan value
         TimeSpan ts = stopwatch.Elapsed;
 
-        // Format and display the TimeSpan value
-        Console.WriteLine("Elapsed Time: {0:00}:{1:00}:{2:00}.{3:00}",
+        // Log the elapsed time
+        _logger.LogDebug("Elapsed Time: {Hours:00}:{Minutes:00}:{Seconds:00}.{Milliseconds:00}",
             ts.Hours, ts.Minutes, ts.Seconds, ts.Milliseconds / 10);
 
         return Ok();
 
+    }
+
+    // ================== HAR Endpoints ==================
+
+    /// <summary>
+    /// Store a voice strategy in the HAR controller's memory.
+    /// A strategy is an ordered sequence of voice IDs that make up a message.
+    /// </summary>
+    [HttpPost]
+    [Route("{device}/HARSetStrategy")]
+    public async Task<IActionResult> HARSetStrategy(string device, [FromBody] HARSetStrategyCommandDto request)
+    {
+        try
+        {
+            if (!_signControllerServiceFactory.ContainsSignController(device))
+                return NotFound("Device not found");
+
+            var harStatusReply = await _signControllerServiceFactory.GetSignControllerService(device)
+                .HARSetStrategy(request.AsEntity());
+
+            return Ok(harStatusReply.AsDto());
+        }
+        catch (TimeoutException ex)
+        {
+            _logger.LogWarning(ex, "HAR Set Strategy request timed out for device {Device}", device);
+            return StatusCode(StatusCodes.Status408RequestTimeout, "HAR Set Strategy request timed out.");
+        }
+        catch (SignRequestRejectedException ex)
+        {
+            _logger.LogWarning(ex, "HAR Set Strategy rejected for device {Device}", device);
+            return StatusCode(StatusCodes.Status400BadRequest, ex.RejectReply.AsDto());
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error setting HAR strategy for device {Device}", device);
+            return StatusCode(StatusCodes.Status500InternalServerError, "Error setting HAR strategy.");
+        }
+    }
+
+    /// <summary>
+    /// Activate a voice strategy stored in the HAR controller's memory.
+    /// Strategy ID 0 stops the current strategy.
+    /// </summary>
+    [HttpPost]
+    [Route("{device}/HARActivateStrategy")]
+    public async Task<IActionResult> HARActivateStrategy(string device, [FromBody] HARActivateStrategyCommandDto request)
+    {
+        try
+        {
+            if (!_signControllerServiceFactory.ContainsSignController(device))
+                return NotFound("Device not found");
+
+            var ackReply = await _signControllerServiceFactory.GetSignControllerService(device)
+                .HARActivateStrategy(request.StrategyID);
+
+            return Ok(ackReply.AsDto());
+        }
+        catch (TimeoutException ex)
+        {
+            _logger.LogWarning(ex, "HAR Activate Strategy request timed out for device {Device}", device);
+            return StatusCode(StatusCodes.Status408RequestTimeout, "HAR Activate Strategy request timed out.");
+        }
+        catch (SignRequestRejectedException ex)
+        {
+            _logger.LogWarning(ex, "HAR Activate Strategy rejected for device {Device}", device);
+            return StatusCode(StatusCodes.Status400BadRequest, ex.RejectReply.AsDto());
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error activating HAR strategy for device {Device}", device);
+            return StatusCode(StatusCodes.Status500InternalServerError, "Error activating HAR strategy.");
+        }
+    }
+
+    /// <summary>
+    /// Store a plan of up to six strategies in the HAR controller's memory.
+    /// A plan can be programmed on a daily or weekly basis.
+    /// </summary>
+    [HttpPost]
+    [Route("{device}/HARSetPlan")]
+    public async Task<IActionResult> HARSetPlan(string device, [FromBody] HARSetPlanCommandDto request)
+    {
+        try
+        {
+            if (!_signControllerServiceFactory.ContainsSignController(device))
+                return NotFound("Device not found");
+
+            var harStatusReply = await _signControllerServiceFactory.GetSignControllerService(device)
+                .HARSetPlan(request.AsEntity());
+
+            return Ok(harStatusReply.AsDto());
+        }
+        catch (TimeoutException ex)
+        {
+            _logger.LogWarning(ex, "HAR Set Plan request timed out for device {Device}", device);
+            return StatusCode(StatusCodes.Status408RequestTimeout, "HAR Set Plan request timed out.");
+        }
+        catch (SignRequestRejectedException ex)
+        {
+            _logger.LogWarning(ex, "HAR Set Plan rejected for device {Device}", device);
+            return StatusCode(StatusCodes.Status400BadRequest, ex.RejectReply.AsDto());
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error setting HAR plan for device {Device}", device);
+            return StatusCode(StatusCodes.Status500InternalServerError, "Error setting HAR plan.");
+        }
+    }
+
+    /// <summary>
+    /// Request a stored voice, strategy, or plan from the HAR controller.
+    /// RequestType: 0 = Voice, 1 = Strategy, 2 = Plan
+    /// </summary>
+    [HttpPost]
+    [Route("{device}/HARRequestStoredVoiceStrategyPlan")]
+    public async Task<IActionResult> HARRequestStoredVoiceStrategyPlan(string device, [FromBody] HARRequestStoredCommandDto request)
+    {
+        try
+        {
+            if (!_signControllerServiceFactory.ContainsSignController(device))
+                return NotFound("Device not found");
+
+            var response = await _signControllerServiceFactory.GetSignControllerService(device)
+                .HARRequestStoredVoiceStrategyPlan(request.RequestType, request.RequestID, request.SequenceNumber);
+
+            if (response is HARSetStrategy harSetStrategy)
+            {
+                return Ok(harSetStrategy.AsDto());
+            }
+            else if (response is HARSetPlan harSetPlan)
+            {
+                return Ok(harSetPlan.AsDto());
+            }
+
+            return StatusCode(StatusCodes.Status500InternalServerError, "Unexpected response type.");
+        }
+        catch (TimeoutException ex)
+        {
+            _logger.LogWarning(ex, "HAR Request Stored Voice/Strategy/Plan timed out for device {Device}", device);
+            return StatusCode(StatusCodes.Status408RequestTimeout, "HAR Request Stored Voice/Strategy/Plan timed out.");
+        }
+        catch (SignRequestRejectedException ex)
+        {
+            _logger.LogWarning(ex, "HAR Request Stored Voice/Strategy/Plan rejected for device {Device}", device);
+            return StatusCode(StatusCodes.Status400BadRequest, ex.RejectReply.AsDto());
+        }
+        catch (Exception ex)
+        {
+            _logger.LogError(ex, "Error requesting HAR stored data for device {Device}", device);
+            return StatusCode(StatusCodes.Status500InternalServerError, "Error requesting HAR stored data.");
+        }
     }
 }

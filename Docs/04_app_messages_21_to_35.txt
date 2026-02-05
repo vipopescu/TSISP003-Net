@@ -1,0 +1,2000 @@
+Content:
+Position
+
+Bytes
+
+Value
+
+Description
+
+1
+
+1
+
+MI Code
+
+15h
+
+2
+
+1
+
+BYTE
+
+number of entries to follow
+
+3
+
+1
+
+BYTE
+
+*group ID
+
+4
+
+1
+
+BYTE
+
+*turn power OFF/ON (0/1)
+
+*field may be repeated depending on the number of entries.
+Comments:
+
+3.6.3.23
+
+•
+
+For HAR, the group ID is always zero.
+
+•
+
+For Environmental/Weather Stations, the group ID indicates
+which sensor to power on or off as defined in Fault Log Reply
+(3.6.3.26).
+
+•
+
+For a device controller with multiple device groups, a group ID of
+zero applies to all groups, that is, all devices.
+
+Disable/Enable Device
+Direction: Master to Controller
+Message Size: variable
+Description: The DISABLE/ENABLE DEVICE command is used to
+instruct the device controller to disable or enable the specified
+groups.
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 51 of 110 pages
+
+Content:
+Position
+
+Bytes
+
+Value
+
+Description
+
+1
+
+1
+
+MI Code
+
+16h
+
+1
+
+1
+
+BYTE
+
+number of entries to follow
+
+2
+
+1
+
+BYTE
+
+*group ID
+
+3
+
+1
+
+BYTE
+
+*disable/enable device group (0/1)
+
+*field may be repeated depending on the number of entries.
+Comments:
+
+3.6.3.24
+
+•
+
+For HAR, the group ID is always zero.
+
+•
+
+For Environmental/Weather Stations, the group ID indicates
+which sensor to enable or disable as defined in Fault Log Reply
+(3.6.3.26).
+
+•
+
+For a device controller with multiple device groups, a group ID of
+zero applies to all groups, that is, all devices.
+
+•
+
+For a disabled group , all controller and device group operations
+are as normal except for the following: the display for the sign
+group is blanked and for HAR, no broadcasts are permitted . In
+this instance, for signs, the controller still reports the current
+active frame, message and/or plan, and accepts commands to set
+the signs in the group while maintaining a blank display for the
+disabled group or sign.
+
+Sign Request Stored Frame/Message/Plan
+Direction: Master to Sign Controller
+Message Size: 3 bytes
+Description: The SIGN REQUEST STORED FRAME/MESSAGE
+/PLAN command is used to instruct the sign controller to send the
+master the content of a stored frame, message or plan. The sign
+controller shall respond with a SIGN SET TEXT FRAME, a SIGN SET
+GRAPHICS FRAME, a SIGN SET HIGH RESOLUTION GRAPHICS
+FRAME, a SIGN SET MESSAGE or a SIGN SET PLAN.
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 52 of 110 pages
+
+Content:
+Position
+
+Bytes
+
+Value
+
+Description
+
+1
+
+1
+
+MI Code
+
+17h
+
+2
+
+1
+
+BYTE
+
+frame/message/plan (0/1/2)
+
+3
+
+1
+
+BYTE
+
+frame/message/plan ID
+
+Comments:
+•
+
+3.6.3.25
+
+The response from the sign controller shall be identical to the
+original frame, message or plan as transmitted previously by the
+master. Under no circumstances shall the sign controller convert
+text frames to graphic frames, graphic frames to text frames, or
+character and line justification to the stored frame.
+
+Retrieve Fault Log
+Direction: Master to Controller
+Message Size: 1 byte
+Description: The RETRIEVE LOG ENTRY command is used to
+retrieve the fault log stored in the device controller's memory.
+Content:
+
+3.6.3.26
+
+Position
+
+Bytes
+
+Value
+
+Description
+
+1
+
+1
+
+MI Code
+
+18h
+
+Fault Log Reply
+Direction: Controller to Master
+Message Size: variable
+Description: The FAULT LOG REPLY message is a list of the last (up
+to 20) recorded entries in the fault log, stored in the device
+controller's memory.
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 53 of 110 pages
+
+Content:
+Position
+
+Bytes
+
+Value
+
+Description
+
+1
+
+1
+
+MI Code
+
+19h
+
+2
+
+1
+
+BYTE
+
+number of entries to follow (0-20)
+
+3
+
+1
+
+BYTE
+
+*ID – depends on controller type, see
+comment below
+
+4
+
+1
+
+BYTE
+
+*entry number field - cycles between 0
+and 255
+
+5
+
+1
+
+BYTE
+
+*day of month (1-31)
+
+6
+
+1
+
+BYTE
+
+*month (1-12)
+
+7
+
+2
+
+WORD
+
+*year (1-9999)
+
+9
+
+1
+
+BYTE
+
+*hour (0-23)
+
+10
+
+1
+
+BYTE
+
+*minute (1-59)
+
+11
+
+1
+
+BYTE
+
+*second (1-59)
+
+12
+
+1
+
+BYTE
+
+*error code (see appendix C)
+
+13
+
+1
+
+BYTE
+
+*fault clearance/fault onset (0/1)
+
+*field may be repeated depending on the number of entries.
+Comments:
+•
+
+ID depends on the type of controller as follows:
+Signs
+
+Sign Controller Fault - ID is zero;
+Specific Sign Fault - ID is non-zero.
+
+HAR
+
+ID is always 0.
+
+Environmental/Weather ID indicates which sensor the fault is
+associated with, according to the
+following:
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 54 of 110 pages
+
+Value
+
+Sensor
+
+0
+
+Environmental/Weather station itself
+
+1
+
+Pressure sensor
+
+2
+
+Temperature sensor
+
+3
+
+Visibility sensor
+
+4
+
+Precipitation sensor
+
+5
+
+Air quality sensor
+
+6
+
+Pavement sensor
+
+7
+
+Wind sensor
+
+8
+
+Water Depth sensor
+
+•
+
+A maximum of only twenty entries is allowed in the Fault Log
+Reply, with the most recent entry appearing first in the list and the
+oldest appearing last.
+
+•
+
+The fault list is a historical (archive) log of fault occurrences and
+clearances. The log is a first-in-first-out log. When the log is full
+and a new entry is added to the list, the oldest entry is removed.
+
+•
+
+Each time an entry is added to the log, the entry number field is
+incremented. The entry number starts at zero, increments to 255,
+then rolls over to zero and continues. The entry number field may
+be used to determine how many new fault log entries have been
+added since the log was last retrieved, or how many fault log
+entries have been lost (i.e.: more than 20 fault entries have been
+added).
+
+•
+
+Note that the current sign or controller fault error code is
+available in the SIGN STATUS REPLY and SIGN EXTENDED
+STATUS
+REPLY,
+HAR
+Status
+Reply
+and
+ENVIRONMENTAL/WEATHER STATUS REPLY messages. In
+the event that some messages have been lost, the only indication
+that the master will ever see that certain faults have been cleared
+may be when the current sign or fault error code is set to zero,
+meaning that no faults are active on the relevant device. If the
+master finds that this error code is zero it should automatically
+clear any outstanding faults.
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+3.6.3.27
+
+Page 55 of 110 pages
+
+Reset Fault Log
+Direction: Master to Controller
+Message Size: 1 byte
+Description: The RESET FAULT LOG command is used to reset the
+fault log stored in the device controller's memory.
+Content:
+
+3.6.3.28
+
+Position
+
+Bytes
+
+Value
+
+Description
+
+1
+
+1
+
+MI Code
+
+1Ah
+
+Sign Extended Status Request
+Direction: Master to Sign Controller
+Message Size: 1 byte
+Description: The SIGN EXTENDED STATUS REQUEST command is
+used to instruct the sign controller to provide a detailed (i.e.
+“extended”) status report. The sign controller shall respond with a
+SIGN EXTENDED STATUS REPLY message.
+Content:
+
+3.6.3.29
+
+Position
+
+Bytes
+
+Value
+
+Description
+
+1
+
+1
+
+MI Code
+
+1Bh
+
+Sign Extended Status Reply
+Direction: Sign Controller to Master
+Message Size: Variable
+Description: The SIGN EXTENDED STATUS REPLY message is
+used to report the complete status of the sign controller and its
+attached signs.
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 56 of 110 pages
+
+Content:
+Position
+
+Bytes
+
+Value
+
+Description
+
+1
+
+1
+
+MI Code
+
+1Ch
+
+2
+
+1
+
+BYTE
+
+'off-line'/'on-line' status (0/1)
+
+3
+
+1
+
+BYTE
+
+application error code (see appendix C)
+
+4
+
+10
+
+BYTE
+
+manufacturer code details
+
+14
+
+1
+
+BYTE
+
+day (1-31)
+
+15
+
+1
+
+BYTE
+
+month (1-12)
+
+16
+
+2
+
+WORD
+
+year (1-9999)
+
+18
+
+1
+
+BYTE
+
+hours (0-23)
+
+19
+
+1
+
+BYTE
+
+minutes (0-59)
+
+20
+
+1
+
+BYTE
+
+seconds (0-59)
+
+21
+
+1
+
+BYTE
+
+controller error code (see appendix C)
+
+22
+
+1
+
+BYTE
+
+number of signs
+
+23
+
+1
+
+BYTE
+
+*sign ID
+
+24
+
+1
+
+BYTE
+
+*sign type -
+
+25
+
+1
+
+BYTE
+
+*For text sign:
+Number of lines of characters;
+
+text (0),
+graphics (1)
+advanced graphics (2).
+
+*For graphics sign:
+Number of rows of pixels (where the
+graphics sign is based on a 7x5 (vertical
+x horizontal) character matrix and 2pixel inter-line spacing);
+*For advanced graphics signs:
+Number of lines of characters (based on
+the sign’s default character matrix and
+inter-line spacing)
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 57 of 110 pages
+
+Position
+
+Bytes
+
+Value
+
+Description
+
+26
+
+1
+
+BYTE
+
+*For text signs:
+Number of columns of characters;
+*For graphics sign:
+Number of columns of pixels (where the
+graphics sign is based on a 7x5 (vertical
+x horizontal) character matrix and 2pixel inter-character spacing);
+*For advanced graphics sign:
+Number of columns of characters (based
+on the sign’s default character matrix
+and inter-character spacing)
+
+27
+
+1
+
+BYTE
+
+*sign error code (see appendix C)
+
+28
+
+1
+
+BYTE
+
+*automatic/manual dimming mode (0-1)
+
+29
+
+1
+
+BYTE
+
+*luminance level
+
+30
+
+1
+
+BYTE
+
+*For text and graphics signs:
+Length of lamp/LED status field in bytes;
+*For advanced graphics sign:
+Length of display attributes and faulty
+pixel count, and lamp/LED status, in
+bytes
+
+31
+
+variable
+
+BYTE
+
+*For text and graphics signs:
+Lamp/LED status;
+*For advanced graphics sign:
+Display attributes and faulty pixel count,
+and lamp/LED status
+
+…
+
+2
+
+WORD
+
+message CRC - calculated for all the
+bytes in the application message
+
+*field may be repeated depending on the number of signs attached to
+the sign controller.
+Comments:
+•
+
+The ‘off-line’/’on-line’ status field shall always have the value
+01 Hex as the SIGN EXTENDED STATUS REPLY can be
+retrieved only when the sign is on-line.
+
+•
+
+The application error code field indicates the current application
+error. If no error exists, this field is set to zero.
+
+•
+
+The manufacturer code details are abbreviated and indicates the
+supplier’s name, sign type and firmware version.
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 58 of 110 pages
+
+•
+
+The controller and sign error code fields indicate the current error
+(fault) present in the controller and sign respectively. When a
+change in fault status occurs (fault occurrence or clearance), the
+error code field shall be updated to trigger the retrieval of the fault
+log by the master. If no error (fault) exists, this field is set to zero,
+and indicates to the master that all faults are cleared for the
+respective controller or sign. If other faults are still active, the
+error code field shall be set to one of those error codes. If the
+error code cannot be set to a different value, FF Hex shall be
+used.
+
+•
+
+A sign type of text (consisting of character modules only)
+indicates that the sign supports only text frames.
+
+•
+
+A sign type of graphics (consisting of matrix modules) indicates
+that the sign supports both text and graphics frames.
+
+•
+
+A sign type of advanced graphics (consisting of matrix modules)
+indicates that the sign supports both text and graphics frames.
+This type of sign supports graphics frames but is dimensioned in
+characters, rather than in pixels. This sign type permits displays
+of size up to 255 x 255 characters based on the sign’s default
+character matrix and inter-character spacing.
+
+•
+
+A sign type of high resolution graphics shall respond as if it was
+an advanced graphics sign.
+
+•
+
+The display attributes and faulty pixel count data are required
+only for advanced graphics signs, and are to be transmitted
+immediately before the lamp/LED status in the following order:
+
+Order of
+Transmission
+
+Content
+
+Value
+
+1
+
+Number of pixels per horizontal
+line for the complete display
+
+WORD
+
+2
+
+Number of pixels per column for
+the complete display
+
+WORD
+
+3
+
+Number of pixels per horizontal
+line of the default character matrix
+
+BYTE
+
+4
+
+Number of pixels per column of
+the default character matrix
+
+BYTE
+
+5
+
+Inter-character spacing in pixels
+based on the default character
+matrix
+
+BYTE
+
+6
+
+Inter-line spacing in pixels based
+on the default character matrix
+
+BYTE
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+Order of
+Transmission
+
+•
+
+•
+
+Page 59 of 110 pages
+
+Content
+
+Value
+
+7
+
+Number of component colours
+(e.g. RGB, RGBW, RGBY) for
+each pixel
+
+BYTE
+
+8
+
+Overall colour depth in ‘number of
+bits’
+
+BYTE
+
+9
+
+*Total number of faulty pixels
+
+WORD
+
+10
+
+Lamp/LED status
+
+See details
+below
+
+* If the ‘Total number of faulty pixels’ is higher than can be
+stored in a WORD (2 bytes) then the maximum value of a
+WORD shall be transmitted.
+For a fibre-optic sign, the lamp/LED status field reports the status
+of each lamp. Each bit indicates the status of an individual lamp.
+A bit value of one indicates that the lamp is faulty.
+For a fibre-optic sign with ten lamps, the lamp/LED status field is
+transmitted as follows:
+Byte 1: [Zero, Zero, Zero, Lamp 5A, Lamp 4A, Lamp 3A, Lamp
+2A, Lamp 1A]
+Byte 2: [Zero, Zero, Zero, Lamp 5B, Lamp 4B, Lamp 3B, Lamp
+2B, Lamp 1B]
+
+•
+
+For a LED sign, the lamp/LED status field reports the status of
+each LED module. Each bit indicates the status of an individual
+LED module, where a module consists of a number of pixels. A bit
+value of one indicates that the LED module is faulty. A bit value of
+zero indicates that the LED module is not faulty or is not present.
+
+•
+
+For a LED sign, the bit position indicates the LED module number
+that is faulty. Therefore, for a LED sign with twenty LED modules,
+the lamp/LED status field is transmitted as follows:
+Byte 1: [Module 8, Module 7, Module 6, Module 5, Module 4,
+Module 3, Module 2, Module 1]
+Byte 2: [Module 16, Module 15, Module 14, Module 13, Module
+12, Module 11, Module 10, Module 9]
+Byte 3: [Zero, Zero, Zero, Zero, Module 20, Module 19, Module
+18, Module 17]
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+3.6.3.30
+
+Page 60 of 110 pages
+
+Sign Set High Resolution Graphics Frame
+Direction: Master to Sign Controller and Sign Controller to Master
+(bidirectional)
+Message Size: Variable
+Description: The ‘SIGN SET HIGH RESOLUTION GRAPHICS
+FRAME’ message is used to store a graphics frame in the memory of
+the sign controller where the display size is not larger than 65535 x
+65535 pixels. The number of frames that can be stored in the
+controller’s memory and the size of the frames vary according to the
+sign. The protocol allows a maximum of 255 frames, where:
+(a) Frame number 00 Hex cannot be changed and always means to
+reinstate the display from the current active plan or blank the sign if
+no plan is active.
+(b) Frames 01 up to FF Hex can be preset using the ‘SIGN SET
+HIGH RESOLUTION GRAPHICS FRAME’ command.
+Signs capable of displaying graphics are treated as a matrix of pixels
+where each pixel either has two possible states (monochrome signs
+or signs with 1-bit colour depth), or has multiple possible states in
+different colours and colour intensities (colour signs with multi-bit
+colour depths). The graphics message sent to the sign controller
+specifies for each pixel whether it is ON or OFF (for signs with two
+state pixels), or what colour to display (for multi-colour signs).
+The Graphics Message is either bitwise, two-bit-wise, nibble-wise or
+byte-wise coded with each bit, two-bit, nibble or byte representing a
+pixel.
+This message is also used by the controller to report stored high
+resolution graphics frames.
+Content:
+Position
+
+Bytes
+
+Value
+
+Description
+
+1
+
+1
+
+MI Code
+
+1Dh
+
+2
+
+1
+
+BYTE
+
+frame ID - identifies the frame as it is
+stored in the sign controller's memory
+
+3
+
+1
+
+BYTE
+
+revision - identifies the modification
+level of the frame
+
+4
+
+2
+
+WORD
+
+number of rows of pixels in sign
+
+6
+
+2
+
+WORD
+
+number of columns of pixels in sign
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 61 of 110 pages
+
+Position
+
+Bytes
+
+Value
+
+Description
+
+8
+
+1
+
+BYTE
+
+colour
+
+9
+
+1
+
+BYTE
+
+conspicuity devices
+
+10
+
+4
+
+DOUBLE
+WORD
+
+length of graphics frame in bytes
+
+14
+
+variable
+
+BYTE
+
+graphics frame
+
+…
+
+2
+
+WORD
+
+message CRC - calculated for all the
+bytes in the application message
+
+Example:
+The example display below is a 32 X 56 pixel matrix:
+
+Pixel 56
+
+Pixel 1
+
+32 Rows
+
+….
+.
+.
+
+..
+
+….
+Pixel 1737
+
+.
+56 Columns
+
+Pixel 1792
+
+Comments:
+•
+
+The codes for colour are as follows:
+Colour
+
+Value
+
+Description
+
+Default
+
+00h
+
+Monochrome with
+1-bit colour depth
+
+Red
+
+01h
+
+Monochrome with
+1-bit colour depth
+
+Yellow
+
+02h
+
+Monochrome with
+1-bit colour depth
+
+Green
+
+03h
+
+Monochrome with
+1-bit colour depth
+
+Cyan
+
+04h
+
+Monochrome with
+1-bit colour depth
+
+Blue
+
+05h
+
+Monochrome with
+1-bit colour depth
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+•
+
+Page 62 of 110 pages
+
+Colour
+
+Value
+
+Description
+
+Magenta
+
+06h
+
+Monochrome with
+1-bit colour depth
+
+White
+
+07h
+
+Monochrome with
+1-bit colour depth
+
+Orange
+
+08h
+
+Monochrome with
+1-bit colour depth
+
+Amber
+
+09h
+
+Monochrome with
+1-bit colour depth
+
+Multiple
+colours
+
+0Dh
+
+Multiple colours for
+road signs and other
+images
+
+24-bit RGB
+
+0Eh
+
+24-bit RGB (red, green
+and blue) with an 8-bit
+colour depth
+
+For monochrome signs and signs with 1-bit colour depth (i.e.
+operating with the colour values 00h to 09h), using the above
+example display, the graphics frame is transmitted as follows:
+Byte 1: [Pixel 8, Pixel 7, Pixel 6, Pixel 5, Pixel 4, Pixel 3, Pixel 2,
+Pixel 1]
+Byte 2: [Pixel 16, Pixel 15, Pixel 14, Pixel 13, Pixel 12, Pixel 11,
+Pixel 10, Pixel 9]
+.....
+Byte 223: [Pixel 1784, Pixel 1783, Pixel 1782, Pixel 1781, Pixel
+1780, Pixel 1779, Pixel 1778, Pixel 1777,]
+Byte 224: [Pixel 1792, Pixel 1791, Pixel 1790, Pixel 1789, Pixel
+1788, Pixel 1787, Pixel 1786, Pixel 1785]
+
+•
+
+Where signs are required to display ‘multiple colours’ for road
+signs and other images (i.e. operating with the colour value 0Dh),
+the codes for colour are as follows:
+Colour
+
+Value in
+nibble
+
+Pixel off
+
+0h
+
+Red
+
+1h
+
+Yellow
+
+2h
+
+Green
+
+3h
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 63 of 110 pages
+
+Colour
+
+Value in
+nibble
+
+Cyan
+
+4h
+
+Blue
+
+5h
+
+Magenta
+
+6h
+
+White
+
+7h
+
+Orange
+
+8h
+
+Amber
+
+9h
+
+Using the above example display, the graphics frame is
+transmitted as follows:
+Byte 1:
+
+[Pixel 2,
+
+Pixel 1];
+
+Byte 2:
+
+[Pixel 4,
+
+Pixel 3];
+
+…..
+Byte 896:
+•
+
+[Pixel 1792, Pixel 1791].
+
+Where signs are required to operate at an overall 24-bit RGB tricolour depth, using the above example display, the graphics
+frame shall be transmitted as follows:
+Pixel 1:
+
+Pixel 2:
+
+Red component value -
+
+Byte 1;
+
+Green component value -
+
+Byte 2;
+
+Blue component value -
+
+Byte 3;
+
+Red component value -
+
+Byte 4;
+
+Green component value -
+
+Byte 5;
+
+Blue component value -
+
+Byte 6;
+
+.....
+Pixel 1791: Red component value -
+
+•
+
+Byte 5371;
+
+Green component value -
+
+Byte 5372;
+
+Blue component value -
+
+Byte 5373;
+
+Pixel 1792: Red component value -
+
+Byte 5374;
+
+Green component value -
+
+Byte 5375;
+
+Blue component value -
+
+Byte 5376;
+
+A sign not capable of supporting the commanded colour system
+operation shall respond so accordingly to the Master. For the
+purpose of this requirement, a sign capable of supporting a
+higher colour depth shall support a commanded lower colour
+depth.
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+•
+
+Page 64 of 110 pages
+
+For monochrome signs and signs with 1-bit colour depth (i.e.
+operating with the colour values 00h to 09h), where the pixel
+matrix is not a multiple of eight pixels, the last byte of the
+graphics frame shall have any remaining bits set to zero, such
+that the number of bits in the graphics frame is a multiple of eight.
+There is no requirement for the number of pixels in a row, or the
+number of pixels in a column to be a multiple of eight.
+
+3.6.3.31
+
+•
+
+The conspicuity devices (warning lanterns) are four lanterns, one
+placed in each corner of the sign. The speed annulus is the red
+ring around the speed limit numerals.
+
+•
+
+The codes for the conspicuity devices and speed annulus are as
+follows:
+Conspicuity
+Devices
+
+Value
+
+Speed
+Annulus
+
+Value
+
+Off
+
+xxxxx000
+
+Off
+
+xxx00xxx
+
+Up/Down
+
+xxxxx001
+
+Flashing
+
+xxx01xxx
+
+Left/Right
+
+xxxxx010
+
+On
+
+xxx10xxx
+
+Wig/Wag
+
+xxxxx011
+
+All Flash
+
+xxxxx100
+
+All On
+
+xxxxx101
+
+•
+
+A frame that is active or part of an active message or an enabled
+plan shall not be changed.
+
+•
+
+The controller shall respond with this message when responding
+to a SIGN REQUEST STORED FRAME/MESSAGE/PLAN
+command from the master.
+
+Sign Configuration Request
+Direction: Master to device controller
+Message size: 1 byte
+Description: The ‘SIGN CONFIGURATION REQUEST’ requests the
+device controller to respond with its sign configuration.
+Content:
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 65 of 110 pages
+
+Position
+
+Bytes
+
+Value
+
+Description
+
+1
+
+1
+
+MI Code
+
+21h
+
+Comments:
+No additional requirements.
+
+3.6.3.32
+
+Sign Configuration Reply
+Direction: Device controller to master
+Message size: Variable
+Description: The ‘SIGN CONFIGURATION REPLY’ message is used
+to report the configuration details of the device controller and its
+attached signs.
+Content:
+Position
+
+Bytes
+
+Value
+
+Description
+
+1
+
+1
+
+MI Code
+
+22h
+
+2
+
+10
+
+BYTE
+
+Manufacturer code details
+
+12
+
+1
+
+BYTE
+
+Number of groups
+
+13
+
+1
+
+BYTE
+
+* Group ID
+
+14
+
+1
+
+BYTE
+
+* Number of signs
+
+15
+
+1
+
+BYTE
+
+** Sign ID
+
+16
+
+1
+
+BYTE
+
+** Sign type
+
+17
+
+2
+
+WORD
+
+** Sign width
+
+19
+
+2
+
+WORD
+
+** Sign height
+
+21
+
+1
+
+BYTE
+
+* Number of signature data bytes
+
+--
+
+Variable
+
+BYTE
+
+** Group signature byte (see Note)
+
+* Field may be repeated for every group.
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 66 of 110 pages
+
+** Field is repeated for each group depending on the number of sign
+IDs or signature.
+NOTE:
+
+If in interlocking mode, the signature data describes the
+interlocking rules implemented. The data is manufacturerspecific data bytes.
+If not in interlocking mode, the number of signature data
+bytes shall be zero.
+
+Comments:
+(a) All signs with the same group ID shall have the same type,
+width, and height.
+(b) The sign type field shall be encoded as:
+Value
+
+Description
+
+0
+
+Text
+
+1
+
+Sign graphics (mono)
+
+2
+
+Sign graphics (multiple colours)
+
+3
+
+Sign graphics (24-bit colour)
+
+4
+
+Reserved
+
+(c) The sign width and height fields shall configured as:
+Sign type
+
+Width
+
+Height
+
+Text
+
+Number of columns of
+characters
+
+Number of lines of
+characters
+
+Sign graphics
+(mono)
+
+Number of columns of
+pixels
+
+Number of rows of
+pixels
+
+Sign graphics
+(multiple colours)
+
+Number of columns of
+pixels
+
+Number of rows of
+pixels
+
+Sign graphics
+(24-bit colour)
+
+Number of columns of
+pixels
+
+Number of rows of
+pixels
+
+NOTE:
+
+The sign type, width and height fields differ from those of the
+the equivalent message in SA TS 5719 in that they do not
+provide support for CMSs.
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+3.6.3.33
+
+Page 67 of 110 pages
+
+Sign Display Atomic Frames
+Direction: Master to device controller
+Message size: Variable
+Description: The ‘SIGN DISPLAY ATOMIC FRAMES’ command is
+used to instruct the device controller to display the pre-stored frames
+for each of the signs in the group. The frames are displayed
+continuously.
+Content:
+Position
+
+Bytes
+
+Value
+
+Description
+
+1
+
+1
+
+MI Code
+
+2Bh
+
+2
+
+1
+
+BYTE
+
+Group ID
+
+3
+
+1
+
+BYTE
+
+Number of signs in the group
+
+4
+
+1
+
+BYTE
+
+Sign ID *
+
+5
+
+1
+
+BYTE
+
+Frame ID *
+
+* Field may be repeated depending of the number of signs.
+Comments:
+The number of signs specified shall match the configuration in the
+group controller.
+
+3.6.3.34
+
+HAR Status Reply
+Direction: HAR Controller to Master
+Message Size: 21 bytes
+Description: The HAR STATUS REPLY message is sent by the HAR
+controller to the master as a response to a HEARTBEAT POLL
+Command. The HAR STATUS REPLY Message contains the basic
+status information of the HAR controller.
+Content:
+Position
+
+Bytes
+
+Value
+
+Description
+
+1
+
+1
+
+MI Code
+
+40h
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 68 of 110 pages
+
+Position
+
+Bytes
+
+Value
+
+Description
+
+2
+
+1
+
+BYTE
+
+'off-line'/'on-line' status (0/1)
+
+3
+
+1
+
+BYTE
+
+Application error code (see Appendix C)
+
+4
+
+1
+
+BYTE
+
+Day (1-31)
+
+5
+
+1
+
+BYTE
+
+Month (1-12)
+
+6
+
+2
+
+WORD
+
+Year (1-9999)
+
+8
+
+1
+
+BYTE
+
+Hours (0-23)
+
+9
+
+1
+
+BYTE
+
+Minutes (0-59)
+
+10
+
+1
+
+BYTE
+
+Seconds (0-59)
+
+11
+
+2
+
+WORD
+
+Controller hardware checksum
+
+13
+
+1
+
+BYTE
+
+Controller error code (see Appendix C)
+
+14
+
+1
+
+BYTE
+
+HAR disabled/enabled (0/1)
+
+15
+
+2
+
+WORD
+
+Voice ID playing (0 if none)
+
+17
+
+1
+
+BYTE
+
+Revision – identifies the modification level
+of the voice data
+
+18
+
+2
+
+WORD
+
+Strategy ID active (0 if none)
+
+20
+
+1
+
+BYTE
+
+Revision – identifies the modification level
+of the strategy
+
+21
+
+1
+
+BYTE
+
+Strategy status (see below)
+
+Comments:
+•
+
+The application error code field indicates the current application
+error. If no error exists, this field is set to zero.
+
+•
+
+The controller error code field indicates the current error (fault)
+present in the controller. When a change in fault status occurs
+(fault occurrence or clearance), the error code field shall be
+updated to trigger the retrieval of the fault log by the master. If no
+error exists, this field is set to zero, and indicates to the master
+that all faults are cleared for the HAR.
+
+•
+
+The controller hardware checksum is used to check the HAR
+controller’s memory. The master uses this to verify that the HAR
+controller’s memory locations have not changed. HAR Set Voice
+Data and HAR Set Strategy return a Status Reply as these
+commands affect the HAR controller hardware checksum. Note
+that in some instances the System Reset command affects the
+
+Specification TSI-SP-003 (Copyright RMS 2017)
+
+Specification TSI-SP-003, Issue 5.0
+
+Page 69 of 110 pages
+
+hardware checksum. In these instances, the master must send a
+Heartbeat Poll to obtain the new hardware checksum.
+
+3.6.3.35
+
+•
+
+A strategy is made up of a sequence of voice files as defined by
+the HAR Set Strategy message. When a strategy is active, the
+strategy ID indicates which is active and the voice ID indicates
+which part of the strategy is currently playing. If no part is playing
+then the voice ID is zero. When no strategy is active (i.e. strategy
+ID is zero) then the voice ID must be zero.
+
+•
+
+If a strategy is active then the Strategy Status byte indicates its
+current status as follows:
+Value
+
+Status
+
+1
+
+Strategy is playing
+
+2
+
+Strategy is preparing to play
