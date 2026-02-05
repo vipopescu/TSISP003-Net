@@ -10,7 +10,7 @@ using Microsoft.Extensions.Logging;
 namespace TSISP003.Services;
 
 public class SignControllerService(
-    TCPClient tcpClient,
+    ITCPClient tcpClient,
     SignControllerConnectionOptions deviceSettings,
     ILogger<SignControllerService> logger) : ISignControllerService, IDisposable
 {
@@ -33,7 +33,7 @@ public class SignControllerService(
 
     private Task? heartBeatPollTask;
     private Task? startSessionTask;
-    private readonly TCPClient _tcpClient = tcpClient;
+    private readonly ITCPClient _tcpClient = tcpClient;
     private readonly SignControllerConnectionOptions _deviceSettings = deviceSettings;
     private CancellationTokenSource _cancellationTokenSource = new CancellationTokenSource();
     private SignStatusReply? _signController;
