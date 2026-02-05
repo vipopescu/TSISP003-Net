@@ -7,7 +7,7 @@ namespace TSISP003.Infrastructure.Tcp;
 /// <summary>
 /// Provides a TCP client with retry and timeout logic for reliable send/receive.
 /// </summary>
-public class TCPClient : IDisposable
+public class TCPClient : ITCPClient
 {
     private readonly string _ipAddress;
     private readonly int _port;
