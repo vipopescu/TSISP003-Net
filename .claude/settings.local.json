@@ -9,7 +9,12 @@
       "Bash(dotnet add:*)",
       "Bash(dotnet test:*)",
       "Bash(dotnet list:*)",
-      "Bash(dotnet clean:*)"
+      "Bash(dotnet clean:*)",
+      "Bash(dotnet --version)",
+      "Bash(dotnet workload:*)",
+      "Bash(sudo dotnet:*)",
+      "Bash(dotnet package:*)",
+      "Bash(dotnet restore:*)"
     ]
   }
 }

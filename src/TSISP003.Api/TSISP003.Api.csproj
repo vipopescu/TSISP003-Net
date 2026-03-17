@@ -11,6 +11,7 @@
   <ItemGroup>
     <ProjectReference Include="..\TSISP003.Application\TSISP003.Application.csproj" />
     <ProjectReference Include="..\TSISP003.Infrastructure\TSISP003.Infrastructure.csproj" />
+    <ProjectReference Include="..\TSISP003.ServiceDefaults\TSISP003.ServiceDefaults.csproj" />
   </ItemGroup>
 
 </Project>

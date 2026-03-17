@@ -4,6 +4,8 @@
     <Project Path="src/TSISP003.Application/TSISP003.Application.csproj" />
     <Project Path="src/TSISP003.Infrastructure/TSISP003.Infrastructure.csproj" />
     <Project Path="src/TSISP003.Api/TSISP003.Api.csproj" />
+    <Project Path="src/TSISP003.AppHost/TSISP003.AppHost.csproj" />
+    <Project Path="src/TSISP003.ServiceDefaults/TSISP003.ServiceDefaults.csproj" />
   </Folder>
   <Folder Name="/tests/">
     <Project Path="tests/TSISP003.Tests/TSISP003.Tests.csproj" />
