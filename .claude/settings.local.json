@@ -7,7 +7,9 @@
       "Bash(dotnet sln:*)",
       "Bash(dotnet sln add:*)",
       "Bash(dotnet add:*)",
-      "Bash(dotnet test:*)"
+      "Bash(dotnet test:*)",
+      "Bash(dotnet list:*)",
+      "Bash(dotnet clean:*)"
     ]
   }
 }

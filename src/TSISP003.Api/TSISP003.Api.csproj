@@ -1,0 +1,16 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <PropertyGroup>
+    <RootNamespace>TSISP003.Api</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Swashbuckle.AspNetCore" Version="10.1.1" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TSISP003.Application\TSISP003.Application.csproj" />
+    <ProjectReference Include="..\TSISP003.Infrastructure\TSISP003.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

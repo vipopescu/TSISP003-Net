@@ -1,7 +1,7 @@
 using TSISP003.Domain.Entities;
-using TSISP003.DTOs;
-using TSISP003.Utilities;
-using static TSISP003.Services.SignControllerServiceConfig;
+using TSISP003.Domain.Enums;
+using TSISP003.Application.DTOs;
+using TSISP003.Application.Mapping;
 
 namespace TSISP003.Tests.Utilities;
 
@@ -24,7 +24,7 @@ public class ExtensionsTests
             MessageRevision = 2,
             PlanID = 30,
             PlanRevision = 3,
-            SignType = SignType.SING_TYPE_TEXT,
+            SignType = SignType.Text,
             SignWidth = 100,
             SignHeight = 50
         };
@@ -42,7 +42,7 @@ public class ExtensionsTests
         Assert.Equal(sign.MessageRevision, dto.MessageRevision);
         Assert.Equal(sign.PlanID, dto.PlanID);
         Assert.Equal(sign.PlanRevision, dto.PlanRevision);
-        Assert.Equal("SING_TYPE_TEXT", dto.SignType);
+        Assert.Equal("Text", dto.SignType);
         Assert.Equal(sign.SignWidth, dto.SignWidth);
         Assert.Equal(sign.SignHeight, dto.SignHeight);
     }
@@ -51,12 +51,12 @@ public class ExtensionsTests
     public void Sign_AsDto_DifferentSignTypes()
     {
         // Test Graphics sign type
-        var graphicsSign = new Sign { SignType = SignType.SING_TYPE_GRAPHIC_MONOCOLOR };
-        Assert.Equal("SING_TYPE_GRAPHIC_MONOCOLOR", graphicsSign.AsDto().SignType);
+        var graphicsSign = new Sign { SignType = SignType.GraphicMonocolor };
+        Assert.Equal("GraphicMonocolor", graphicsSign.AsDto().SignType);
 
         // Test AdvancedGraphics sign type
-        var advancedSign = new Sign { SignType = SignType.SING_TYPE_GRAPHIC_MULTICOLOR };
-        Assert.Equal("SING_TYPE_GRAPHIC_MULTICOLOR", advancedSign.AsDto().SignType);
+        var advancedSign = new Sign { SignType = SignType.GraphicMulticolor };
+        Assert.Equal("GraphicMulticolor", advancedSign.AsDto().SignType);
     }
 
     #endregion
@@ -73,8 +73,8 @@ public class ExtensionsTests
             Signature = "TEST_SIG",
             Signs = new Dictionary<byte, Sign>
             {
-                { 1, new Sign { SignID = 1, SignType = SignType.SING_TYPE_TEXT } },
-                { 2, new Sign { SignID = 2, SignType = SignType.SING_TYPE_GRAPHIC_MONOCOLOR } }
+                { 1, new Sign { SignID = 1, SignType = SignType.Text } },
+                { 2, new Sign { SignID = 2, SignType = SignType.GraphicMonocolor } }
             }
         };
 
@@ -169,7 +169,7 @@ public class ExtensionsTests
         Assert.Equal(entry.Id, dto.Id);
         Assert.Equal(entry.EntryNumber, dto.EntryNumber);
         Assert.Equal(entry.ErrorCode, dto.ErrorCode);
-        Assert.Equal("Power failure", dto.ErrorDescription);
+        Assert.Equal("Lamp failure - one or more lamps/LEDs are defective", dto.ErrorDescription);
         Assert.Equal(entry.IsFaultCleared, dto.IsFaultCleared);
         Assert.Equal(new DateTime(2024, 6, 15, 14, 30, 45), dto.EntryDateTime);
     }
@@ -230,7 +230,7 @@ public class ExtensionsTests
 
         // Assert
         Assert.Equal(reject.ApplicationErrorCode, dto.ApplicationErrorCode);
-        Assert.Equal("Syntax error in command", dto.ApplicationErrorDescription);
+        Assert.Equal("Message Integrity error (wrong CRC)", dto.ApplicationErrorDescription);
     }
 
     [Fact]
@@ -276,7 +276,7 @@ public class ExtensionsTests
         // Assert
         Assert.Equal(status.SignID, dto.SignID);
         Assert.Equal(status.SignErrorCode, dto.SignErrorCode);
-        Assert.Equal("Sign lamp failure", dto.SignError);
+        Assert.Equal("Colour error", dto.SignError);
         Assert.Equal(status.SignEnabled, dto.SignEnabled);
         Assert.Equal(status.FrameID, dto.FrameID);
         Assert.Equal(status.FrameRevision, dto.FrameRevision);
@@ -322,7 +322,7 @@ public class ExtensionsTests
         Assert.Equal(new DateTime(2024, 6, 15, 14, 30, 45), dto.dateTime);
         Assert.Equal(reply.ControllerChecksum, dto.ControllerChecksum);
         Assert.Equal(reply.ControllerErrorCode, dto.ControllerErrorCode);
-        Assert.Equal("No error", dto.ControllerError);
+        Assert.Equal("No Error", dto.ControllerError);
         Assert.Equal(reply.NumberOfSigns, dto.NumberOfSigns);
         Assert.Single(dto.Signs);
     }

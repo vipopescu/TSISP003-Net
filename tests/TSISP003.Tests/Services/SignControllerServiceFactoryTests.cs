@@ -2,8 +2,8 @@ using Microsoft.Extensions.Hosting;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
-using TSISP003.Configuration;
-using TSISP003.Services;
+using TSISP003.Infrastructure.Configuration;
+using TSISP003.Infrastructure.Services;
 
 namespace TSISP003.Tests.Services;
 

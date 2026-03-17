@@ -1,0 +1,7 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>TSISP003.Domain</RootNamespace>
+  </PropertyGroup>
+
+</Project>

@@ -14,10 +14,10 @@ TSISP003-Net is a .NET 10 web API application that implements the TSI-SP-003 com
 dotnet build TSISP003-Net.slnx
 
 # Run the application (development)
-dotnet run --project src/TSISP003-Net
+dotnet run --project src/TSISP003.Api
 
 # Run with specific profile
-dotnet run --project src/TSISP003-Net --launch-profile https
+dotnet run --project src/TSISP003.Api --launch-profile https
 ```
 
 ### Testing
@@ -40,41 +40,82 @@ dotnet clean TSISP003-Net.slnx
 
 ## Architecture
 
+The project follows **Clean Architecture** with four layers and strict dependency rules.
+
 ### Repository Structure
 
 ```
 TSISP003-Net/
 ├── src/
-│   └── TSISP003-Net/             # Main web API project
-│       ├── Controllers/          # REST API endpoints
-│       ├── Domain/
-│       │   └── Entities/         # Domain entities (Sign, Frame, etc.)
-│       ├── Services/             # SignControllerService, Factory, Config
-│       ├── Infrastructure/
-│       │   ├── Tcp/              # TCP client for sign communication
-│       │   └── DataStore/        # Data store implementation
-│       ├── DTOs/                 # Data Transfer Objects
-│       ├── Configuration/        # Settings classes
-│       ├── Utilities/            # Helper classes, extensions, constants
-│       └── Program.cs
+│   ├── TSISP003.Domain/              # Core domain layer (no dependencies)
+│   │   ├── Entities/                  # Domain entities (Sign, Frame, etc.)
+│   │   ├── Enums/                     # SignType, ResetLevel, RequestType
+│   │   ├── Constants/                 # ErrorCodes
+│   │   ├── Exceptions/               # SignRequestRejectedException
+│   │   └── Interfaces/               # ISignResponse marker interface
+│   │
+│   ├── TSISP003.Application/         # Application layer (depends on Domain)
+│   │   ├── DTOs/                      # Data Transfer Objects by concern
+│   │   ├── Mapping/                   # Entity ↔ DTO mapping extensions
+│   │   └── Interfaces/               # ISignControllerService, ISignControllerServiceFactory, ITcpClient
+│   │
+│   ├── TSISP003.Infrastructure/      # Infrastructure layer (depends on Domain + Application)
+│   │   ├── Tcp/                       # TcpClientAdapter implementation
+│   │   ├── Protocol/                  # ProtocolConstants, ProtocolHelper (CRC, password, hex)
+│   │   ├── Services/                  # SignControllerService, SignControllerServiceFactory
+│   │   ├── Configuration/             # SignControllerConnectionOptions, SignControllerServiceOptions
+│   │   ├── DataStore/                 # Data store interface and implementation
+│   │   └── DependencyInjection.cs     # IServiceCollection extension for DI registration
+│   │
+│   └── TSISP003.Api/                 # Presentation layer (depends on Application + Infrastructure)
+│       ├── Controllers/               # Split into focused controllers
+│       │   ├── SystemController.cs    # SystemReset, UpdateTime, ExtendedRequest
+│       │   ├── FrameController.cs     # SetTextFrame, SetGraphicsFrame, RequestStored
+│       │   ├── MessageController.cs   # SetMessage, DisplayMessage
+│       │   ├── DisplayController.cs   # DisplayFrame, DisplayAtomicFrames
+│       │   ├── PlanController.cs      # SetPlan, EnablePlan, DisablePlan
+│       │   ├── StatusController.cs    # ExtendedStatus, FaultLog, Configuration
+│       │   ├── DeviceController.cs    # PowerOnOff, DisableEnable, DimmingLevel
+│       │   └── HARController.cs       # HAR voice/strategy/plan operations
+│       ├── Program.cs
+│       └── Properties/launchSettings.json
+│
 ├── tests/
-│   └── TSISP003.Tests/           # Unit tests (xUnit)
-├── Directory.Build.props         # Common build settings
-└── TSISP003-Net.slnx             # Solution file
+│   └── TSISP003.Tests/               # Unit tests (xUnit + Moq)
+├── Directory.Build.props              # Common build settings (net10.0)
+└── TSISP003-Net.slnx                  # Solution file
 ```
+
+### Dependency Flow
+
+```
+Domain ← Application ← Infrastructure
+                    ↖       ↙
+                      Api
+```
+
+- **Domain**: Pure C# classes, no external dependencies
+- **Application**: Depends only on Domain. Defines service interfaces and DTOs
+- **Infrastructure**: Implements Application interfaces. Contains protocol logic, TCP communication
+- **Api**: Composes everything via DI. References Application (for DTOs/interfaces) and Infrastructure (for DI registration)
 
 ### Core Components
 
-1. **SignControllerService** (`Services/`) - Manages TCP connections and protocol communication with sign controllers
-2. **Domain Entities** (`Domain/Entities/`) - Data models for the TSI-SP-003 protocol
-3. **TCP Client** (`Infrastructure/Tcp/`) - Low-level TCP communication handling
-4. **Controllers** (`Controllers/`) - REST API endpoints for device management
+1. **SignControllerService** (`Infrastructure/Services/`) - Manages TCP connections, protocol state (N(S)/N(R) sequence numbers), heartbeat polling, and all TSI-SP-003 protocol operations
+2. **SignControllerServiceFactory** (`Infrastructure/Services/`) - Creates and manages per-device service instances as a hosted service
+3. **Domain Entities** (`Domain/Entities/`) - Data models for the TSI-SP-003 protocol
+4. **TcpClientAdapter** (`Infrastructure/Tcp/`) - TCP communication with retry logic and semaphore-based thread safety
+5. **ProtocolHelper** (`Infrastructure/Protocol/`) - CRC generation, password computation, hex/ASCII conversion, packet parsing
+6. **Controllers** (`Api/Controllers/`) - 8 focused REST API controllers split by domain concern
 
 ### Key Patterns
 
+- **Clean Architecture**: Strict dependency inversion with interfaces defined in Application layer
+- **Dependency Injection**: Infrastructure registers services via `AddInfrastructure()` extension method
 - **Factory Pattern**: `SignControllerServiceFactory` manages multiple sign controller instances
-- **Hosted Service**: Sign controller services run as background services
-- **DTO/Entity Mapping**: Clear separation between API DTOs and internal entities using extension methods
+- **Hosted Service**: Sign controller services run as background services with automatic session management
+- **DTO/Entity Mapping**: Extension methods in `EntityMappingExtensions` handle all conversions
+- **Interface Segregation**: `ISignControllerService` exposes only business operations; protocol internals are encapsulated
 
 ### Configuration Structure
 
@@ -88,6 +129,7 @@ Device configuration is done via `appsettings.json` under `SignControllerService
 The codebase implements the TSI-SP-003 protocol with entities for:
 - Frame types (Text, Graphic, HighResolution, Atomic)
 - Sign operations (SetMessage, DisplayFrame, Status)
+- HAR operations (Voice, Strategy, Plan)
 - Error handling (AckReply, RejectReply, Exceptions)
 
 ### API Endpoints

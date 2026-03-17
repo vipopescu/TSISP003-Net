@@ -24,7 +24,10 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="..\..\src\TSISP003-Net\TSISP003-Net.csproj" />
+    <ProjectReference Include="..\..\src\TSISP003.Domain\TSISP003.Domain.csproj" />
+    <ProjectReference Include="..\..\src\TSISP003.Application\TSISP003.Application.csproj" />
+    <ProjectReference Include="..\..\src\TSISP003.Infrastructure\TSISP003.Infrastructure.csproj" />
+    <ProjectReference Include="..\..\src\TSISP003.Api\TSISP003.Api.csproj" />
   </ItemGroup>
 
 </Project>
