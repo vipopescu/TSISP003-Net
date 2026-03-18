@@ -1,5 +1,5 @@
 using TSISP003.Domain.Entities;
-using TSISP003.Utilities;
+using TSISP003.Domain.Exceptions;
 
 namespace TSISP003.Tests.Utilities;
 
@@ -28,7 +28,7 @@ public class ExceptionsTests
         var exception = new SignRequestRejectedException(rejectReply);
 
         // Assert
-        Assert.Contains("Sign request was rejected", exception.Message);
+        Assert.Contains("Sign request rejected", exception.Message);
         Assert.Contains("2", exception.Message); // Error code in message
     }
 

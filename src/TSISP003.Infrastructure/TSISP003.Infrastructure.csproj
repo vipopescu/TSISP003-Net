@@ -1,0 +1,17 @@
+<Project Sdk="Microsoft.NET.Sdk">
+
+  <PropertyGroup>
+    <RootNamespace>TSISP003.Infrastructure</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <FrameworkReference Include="Microsoft.AspNetCore.App" />
+    <PackageReference Include="Newtonsoft.Json" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="..\TSISP003.Domain\TSISP003.Domain.csproj" />
+    <ProjectReference Include="..\TSISP003.Application\TSISP003.Application.csproj" />
+  </ItemGroup>
+
+</Project>

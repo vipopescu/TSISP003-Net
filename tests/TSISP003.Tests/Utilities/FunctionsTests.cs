@@ -1,5 +1,4 @@
-using TSISP003.Utilities;
-using TSISP003.Services;
+using TSISP003.Infrastructure.Protocol;
 
 namespace TSISP003.Tests.Utilities;
 
@@ -14,7 +13,7 @@ public class FunctionsTests
         string hex = "48454C4C4F"; // "HELLO" in hex
 
         // Act
-        string result = Functions.HexToAscii(hex);
+        string result = ProtocolHelper.HexToAscii(hex);
 
         // Assert
         Assert.Equal("HELLO", result);
@@ -24,7 +23,7 @@ public class FunctionsTests
     public void HexToAscii_EmptyString_ReturnsEmptyString()
     {
         // Act
-        string result = Functions.HexToAscii("");
+        string result = ProtocolHelper.HexToAscii("");
 
         // Assert
         Assert.Equal("", result);
@@ -37,7 +36,7 @@ public class FunctionsTests
         string hex = "41";
 
         // Act
-        string result = Functions.HexToAscii(hex);
+        string result = ProtocolHelper.HexToAscii(hex);
 
         // Assert
         Assert.Equal("A", result);
@@ -50,7 +49,7 @@ public class FunctionsTests
         string hex = "48454c4c4f"; // "HELLO" in lowercase hex
 
         // Act
-        string result = Functions.HexToAscii(hex);
+        string result = ProtocolHelper.HexToAscii(hex);
 
         // Assert
         Assert.Equal("HELLO", result);
@@ -60,7 +59,7 @@ public class FunctionsTests
     public void HexToAscii_NullInput_ThrowsArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() => Functions.HexToAscii(null!));
+        Assert.Throws<ArgumentNullException>(() => ProtocolHelper.HexToAscii(null!));
     }
 
     [Fact]
@@ -70,7 +69,7 @@ public class FunctionsTests
         string hex = "48454C4C4"; // Odd length
 
         // Act & Assert
-        Assert.Throws<ArgumentException>(() => Functions.HexToAscii(hex));
+        Assert.Throws<ArgumentException>(() => ProtocolHelper.HexToAscii(hex));
     }
 
     [Fact]
@@ -80,7 +79,7 @@ public class FunctionsTests
         string hex = "214023";
 
         // Act
-        string result = Functions.HexToAscii(hex);
+        string result = ProtocolHelper.HexToAscii(hex);
 
         // Assert
         Assert.Equal("!@#", result);
@@ -93,7 +92,7 @@ public class FunctionsTests
         string hex = "313233";
 
         // Act
-        string result = Functions.HexToAscii(hex);
+        string result = ProtocolHelper.HexToAscii(hex);
 
         // Assert
         Assert.Equal("123", result);
@@ -110,7 +109,7 @@ public class FunctionsTests
         string ascii = "HELLO";
 
         // Act
-        string result = Functions.AsciiToHex(ascii);
+        string result = ProtocolHelper.AsciiToHex(ascii);
 
         // Assert
         Assert.Equal("48454C4C4F", result);
@@ -120,7 +119,7 @@ public class FunctionsTests
     public void AsciiToHex_EmptyString_ReturnsEmptyString()
     {
         // Act
-        string result = Functions.AsciiToHex("");
+        string result = ProtocolHelper.AsciiToHex("");
 
         // Assert
         Assert.Equal("", result);
@@ -133,7 +132,7 @@ public class FunctionsTests
         string ascii = "A";
 
         // Act
-        string result = Functions.AsciiToHex(ascii);
+        string result = ProtocolHelper.AsciiToHex(ascii);
 
         // Assert
         Assert.Equal("41", result);
@@ -143,7 +142,7 @@ public class FunctionsTests
     public void AsciiToHex_NullInput_ThrowsArgumentNullException()
     {
         // Act & Assert
-        Assert.Throws<ArgumentNullException>(() => Functions.AsciiToHex(null!));
+        Assert.Throws<ArgumentNullException>(() => ProtocolHelper.AsciiToHex(null!));
     }
 
     [Fact]
@@ -153,7 +152,7 @@ public class FunctionsTests
         string ascii = "!@#";
 
         // Act
-        string result = Functions.AsciiToHex(ascii);
+        string result = ProtocolHelper.AsciiToHex(ascii);
 
         // Assert
         Assert.Equal("214023", result);
@@ -166,7 +165,7 @@ public class FunctionsTests
         string ascii = "123";
 
         // Act
-        string result = Functions.AsciiToHex(ascii);
+        string result = ProtocolHelper.AsciiToHex(ascii);
 
         // Assert
         Assert.Equal("313233", result);
@@ -179,7 +178,7 @@ public class FunctionsTests
         string ascii = "abc";
 
         // Act
-        string result = Functions.AsciiToHex(ascii);
+        string result = ProtocolHelper.AsciiToHex(ascii);
 
         // Assert
         Assert.Equal("616263", result);
@@ -192,8 +191,8 @@ public class FunctionsTests
         string original = "Test String 123!";
 
         // Act
-        string hex = Functions.AsciiToHex(original);
-        string result = Functions.HexToAscii(hex);
+        string hex = ProtocolHelper.AsciiToHex(original);
+        string result = ProtocolHelper.HexToAscii(hex);
 
         // Assert
         Assert.Equal(original, result);
@@ -210,7 +209,7 @@ public class FunctionsTests
         byte[] data = System.Text.Encoding.ASCII.GetBytes("TEST");
 
         // Act
-        string result = Functions.PacketCRC(data);
+        string result = ProtocolHelper.PacketCRC(data);
 
         // Assert
         Assert.NotNull(result);
@@ -224,7 +223,7 @@ public class FunctionsTests
         byte[] data = Array.Empty<byte>();
 
         // Act
-        string result = Functions.PacketCRC(data);
+        string result = ProtocolHelper.PacketCRC(data);
 
         // Assert
         Assert.Equal("0000", result);
@@ -237,7 +236,7 @@ public class FunctionsTests
         byte[] data = new byte[] { 0x41 }; // 'A'
 
         // Act
-        string result = Functions.PacketCRC(data);
+        string result = ProtocolHelper.PacketCRC(data);
 
         // Assert
         Assert.NotNull(result);
@@ -252,8 +251,8 @@ public class FunctionsTests
         byte[] data2 = System.Text.Encoding.ASCII.GetBytes("HELLO");
 
         // Act
-        string result1 = Functions.PacketCRC(data1);
-        string result2 = Functions.PacketCRC(data2);
+        string result1 = ProtocolHelper.PacketCRC(data1);
+        string result2 = ProtocolHelper.PacketCRC(data2);
 
         // Assert
         Assert.Equal(result1, result2);
@@ -267,8 +266,8 @@ public class FunctionsTests
         byte[] data2 = System.Text.Encoding.ASCII.GetBytes("WORLD");
 
         // Act
-        string result1 = Functions.PacketCRC(data1);
-        string result2 = Functions.PacketCRC(data2);
+        string result1 = ProtocolHelper.PacketCRC(data1);
+        string result2 = ProtocolHelper.PacketCRC(data2);
 
         // Assert
         Assert.NotEqual(result1, result2);
@@ -281,7 +280,7 @@ public class FunctionsTests
         byte[] data = System.Text.Encoding.ASCII.GetBytes("TEST");
 
         // Act
-        ushort result = Functions.PacketCRCushort(data);
+        ushort result = ProtocolHelper.PacketCRCushort(data);
 
         // Assert
         Assert.True(result >= 0);
@@ -294,7 +293,7 @@ public class FunctionsTests
         byte[] data = Array.Empty<byte>();
 
         // Act
-        ushort result = Functions.PacketCRCushort(data);
+        ushort result = ProtocolHelper.PacketCRCushort(data);
 
         // Assert
         Assert.Equal((ushort)0, result);
@@ -307,8 +306,8 @@ public class FunctionsTests
         byte[] data = System.Text.Encoding.ASCII.GetBytes("TEST");
 
         // Act
-        string crcString = Functions.PacketCRC(data);
-        ushort crcUshort = Functions.PacketCRCushort(data);
+        string crcString = ProtocolHelper.PacketCRC(data);
+        ushort crcUshort = ProtocolHelper.PacketCRCushort(data);
 
         // Assert
         Assert.Equal(crcUshort.ToString("X4"), crcString);
@@ -322,7 +321,7 @@ public class FunctionsTests
     public void CRCGenerator_ZeroData_ZeroAccum_ReturnsExpected()
     {
         // Act
-        ushort result = Functions.CRCGenerator(0, 0);
+        ushort result = ProtocolHelper.CRCGenerator(0, 0);
 
         // Assert
         Assert.Equal((ushort)0, result);
@@ -332,7 +331,7 @@ public class FunctionsTests
     public void CRCGenerator_NonZeroData_ZeroAccum_ReturnsNonZero()
     {
         // Act
-        ushort result = Functions.CRCGenerator(0x41, 0); // 'A'
+        ushort result = ProtocolHelper.CRCGenerator(0x41, 0); // 'A'
 
         // Assert
         Assert.NotEqual((ushort)0, result);
@@ -342,8 +341,8 @@ public class FunctionsTests
     public void CRCGenerator_SameInputs_ReturnsSameResult()
     {
         // Act
-        ushort result1 = Functions.CRCGenerator(0x41, 0x1234);
-        ushort result2 = Functions.CRCGenerator(0x41, 0x1234);
+        ushort result1 = ProtocolHelper.CRCGenerator(0x41, 0x1234);
+        ushort result2 = ProtocolHelper.CRCGenerator(0x41, 0x1234);
 
         // Assert
         Assert.Equal(result1, result2);
@@ -362,7 +361,7 @@ public class FunctionsTests
         string passwordOffset = "20";
 
         // Act
-        string result = Functions.GeneratePassword(passwordSeed, seedOffset, passwordOffset);
+        string result = ProtocolHelper.GeneratePassword(passwordSeed, seedOffset, passwordOffset);
 
         // Assert
         Assert.NotNull(result);
@@ -378,7 +377,7 @@ public class FunctionsTests
         string passwordOffset = "00";
 
         // Act
-        string result = Functions.GeneratePassword(passwordSeed, seedOffset, passwordOffset);
+        string result = ProtocolHelper.GeneratePassword(passwordSeed, seedOffset, passwordOffset);
 
         // Assert
         Assert.NotNull(result);
@@ -394,7 +393,7 @@ public class FunctionsTests
         string passwordOffset = "FFFF";
 
         // Act
-        string result = Functions.GeneratePassword(passwordSeed, seedOffset, passwordOffset);
+        string result = ProtocolHelper.GeneratePassword(passwordSeed, seedOffset, passwordOffset);
 
         // Assert
         Assert.NotNull(result);
@@ -410,8 +409,8 @@ public class FunctionsTests
         string passwordOffset = "20";
 
         // Act
-        string result1 = Functions.GeneratePassword(passwordSeed, seedOffset, passwordOffset);
-        string result2 = Functions.GeneratePassword(passwordSeed, seedOffset, passwordOffset);
+        string result1 = ProtocolHelper.GeneratePassword(passwordSeed, seedOffset, passwordOffset);
+        string result2 = ProtocolHelper.GeneratePassword(passwordSeed, seedOffset, passwordOffset);
 
         // Assert
         Assert.Equal(result1, result2);
@@ -427,8 +426,8 @@ public class FunctionsTests
         string passwordOffset = "20";
 
         // Act
-        string result1 = Functions.GeneratePassword(passwordSeed1, seedOffset, passwordOffset);
-        string result2 = Functions.GeneratePassword(passwordSeed2, seedOffset, passwordOffset);
+        string result1 = ProtocolHelper.GeneratePassword(passwordSeed1, seedOffset, passwordOffset);
+        string result2 = ProtocolHelper.GeneratePassword(passwordSeed2, seedOffset, passwordOffset);
 
         // Assert
         Assert.NotEqual(result1, result2);
@@ -443,7 +442,7 @@ public class FunctionsTests
         string passwordOffset = "20";
 
         // Act
-        string result = Functions.GeneratePassword(passwordSeed, seedOffset, passwordOffset);
+        string result = ProtocolHelper.GeneratePassword(passwordSeed, seedOffset, passwordOffset);
 
         // Assert
         Assert.NotNull(result);
@@ -461,7 +460,7 @@ public class FunctionsTests
         string input = "";
 
         // Act
-        var result = Functions.GetChunks(input, out string remaining);
+        var result = ProtocolHelper.GetChunks(input, out string remaining);
 
         // Assert
         Assert.Empty(result);
@@ -475,7 +474,7 @@ public class FunctionsTests
         string input = "\u0001DATA\u0003";
 
         // Act
-        var result = Functions.GetChunks(input, out string remaining);
+        var result = ProtocolHelper.GetChunks(input, out string remaining);
 
         // Assert
         Assert.Single(result);
@@ -490,7 +489,7 @@ public class FunctionsTests
         string input = "\u0001DATA1\u0003\u0001DATA2\u0003";
 
         // Act
-        var result = Functions.GetChunks(input, out string remaining);
+        var result = ProtocolHelper.GetChunks(input, out string remaining);
 
         // Assert
         Assert.Equal(2, result.Count());
@@ -504,7 +503,7 @@ public class FunctionsTests
         string input = "\u0001INCOMPLETE";
 
         // Act
-        var result = Functions.GetChunks(input, out string remaining);
+        var result = ProtocolHelper.GetChunks(input, out string remaining);
 
         // Assert
         Assert.Empty(result);
@@ -518,7 +517,7 @@ public class FunctionsTests
         string input = "\u0001COMPLETE\u0003\u0001INCOMPLETE";
 
         // Act
-        var result = Functions.GetChunks(input, out string remaining);
+        var result = ProtocolHelper.GetChunks(input, out string remaining);
 
         // Assert
         Assert.Single(result);
@@ -533,7 +532,7 @@ public class FunctionsTests
         string input = "\u0006DATA\u0003";
 
         // Act
-        var result = Functions.GetChunks(input, out string remaining);
+        var result = ProtocolHelper.GetChunks(input, out string remaining);
 
         // Assert
         Assert.Single(result);
@@ -546,7 +545,7 @@ public class FunctionsTests
         string input = "\u0015DATA\u0003";
 
         // Act
-        var result = Functions.GetChunks(input, out string remaining);
+        var result = ProtocolHelper.GetChunks(input, out string remaining);
 
         // Assert
         Assert.Single(result);
@@ -559,7 +558,7 @@ public class FunctionsTests
         string input = "NOSTART\u0003";
 
         // Act
-        var result = Functions.GetChunks(input, out string remaining);
+        var result = ProtocolHelper.GetChunks(input, out string remaining);
 
         // Assert
         Assert.Empty(result);
@@ -572,7 +571,7 @@ public class FunctionsTests
         string input = "GARBAGE\u0001DATA\u0003";
 
         // Act
-        var result = Functions.GetChunks(input, out string remaining);
+        var result = ProtocolHelper.GetChunks(input, out string remaining);
 
         // Assert
         Assert.Single(result);
@@ -593,7 +592,7 @@ public class FunctionsTests
         string packet = "\u0001\u0002DATA\u0003\u0004\u0006\u0015";
 
         // Act - Should not throw
-        Functions.PrintMessagePacket(packet, "=>");
+        ProtocolHelper.PrintMessagePacket(packet, "=>");
     }
 
     [Fact]
@@ -603,14 +602,14 @@ public class FunctionsTests
         string packet = "TEST";
 
         // Act & Assert - Should not throw
-        Functions.PrintMessagePacket(packet, "=>", null);
+        ProtocolHelper.PrintMessagePacket(packet, "=>", null);
     }
 
     [Fact]
     public void PrintMessagePacket_EmptyPacket_DoesNotThrow()
     {
         // Act & Assert - Should not throw
-        Functions.PrintMessagePacket("", "=>");
+        ProtocolHelper.PrintMessagePacket("", "=>");
     }
 
     #endregion

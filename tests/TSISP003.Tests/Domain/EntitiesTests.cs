@@ -1,5 +1,6 @@
 using TSISP003.Domain.Entities;
-using static TSISP003.Services.SignControllerServiceConfig;
+using TSISP003.Domain.Enums;
+using TSISP003.Domain.Interfaces;
 
 namespace TSISP003.Tests.Domain;
 
@@ -42,7 +43,7 @@ public class EntitiesTests
             MessageRevision = 6,
             PlanID = 7,
             PlanRevision = 8,
-            SignType = SignType.SING_TYPE_GRAPHIC_MONOCOLOR,
+            SignType = SignType.GraphicMonocolor,
             SignWidth = 100,
             SignHeight = 50
         };
@@ -57,7 +58,7 @@ public class EntitiesTests
         Assert.Equal(6, sign.MessageRevision);
         Assert.Equal(7, sign.PlanID);
         Assert.Equal(8, sign.PlanRevision);
-        Assert.Equal(SignType.SING_TYPE_GRAPHIC_MONOCOLOR, sign.SignType);
+        Assert.Equal(SignType.GraphicMonocolor, sign.SignType);
         Assert.Equal(100, sign.SignWidth);
         Assert.Equal(50, sign.SignHeight);
     }
@@ -76,7 +77,7 @@ public class EntitiesTests
         Assert.Equal(0, group.GroupID);
         Assert.NotNull(group.Signs);
         Assert.Empty(group.Signs);
-        Assert.Equal(string.Empty, group.Signature);
+        Assert.Null(group.Signature);
     }
 
     [Fact]
@@ -1059,6 +1060,7 @@ public class EntitiesTests
             Hour = 14,
             Minute = 30,
             Second = 0,
+            DateTime = new DateTime(2024, 6, 15, 14, 30, 0),
             ControllerChecksum = 0x1234,
             ControllerErrorCode = 0,
             HAREnabled = true,

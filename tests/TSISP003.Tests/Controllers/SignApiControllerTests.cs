@@ -3,44 +3,21 @@ using Microsoft.AspNetCore.Mvc;
 using Microsoft.Extensions.Logging;
 using Microsoft.Extensions.Options;
 using Moq;
-using TSISP003.Configuration;
-using TSISP003.Controllers;
+using TSISP003.Infrastructure.Configuration;
+using TSISP003.Api.Controllers;
 using TSISP003.Domain.Entities;
-using TSISP003.DTOs;
-using TSISP003.Services;
-using TSISP003.Utilities;
+using TSISP003.Application.DTOs;
+using TSISP003.Application.Interfaces;
+using TSISP003.Application.Mapping;
+using TSISP003.Domain.Exceptions;
 
 namespace TSISP003.Tests.Controllers;
 
 /// <summary>
-/// Helper class to create testable instances of SignApiController
-/// </summary>
-public class TestableSignApiController : SignApiController
-{
-    private readonly Dictionary<string, ISignControllerService> _testServices;
-
-    public TestableSignApiController(
-        ILogger<SignApiController> logger,
-        SignControllerServiceFactory factory,
-        Dictionary<string, ISignControllerService> testServices)
-        : base(logger, factory)
-    {
-        _testServices = testServices;
-    }
-}
-
-/// <summary>
-/// Tests for SignApiController focusing on error handling and response formatting
+/// Tests for controllers focusing on error handling and response formatting
 /// </summary>
 public class SignApiControllerTests
 {
-    private readonly Mock<ILogger<SignApiController>> _mockLogger;
-
-    public SignApiControllerTests()
-    {
-        _mockLogger = new Mock<ILogger<SignApiController>>();
-    }
-
     #region DTO Mapping Tests
 
     [Fact]
