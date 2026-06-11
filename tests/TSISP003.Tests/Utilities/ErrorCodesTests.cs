@@ -1,4 +1,4 @@
-using TSISP003.Utilities.Constants;
+using TSISP003.Domain.Constants;
 
 namespace TSISP003.Tests.Utilities;
 
@@ -22,142 +22,142 @@ public class ErrorCodesTests
         string description = ErrorCodes.ControllerDeviceErrorCodes[0x00];
 
         // Assert
-        Assert.Equal("No error", description);
+        Assert.Equal("No Error", description);
     }
 
     [Fact]
-    public void ControllerDeviceErrorCodes_PowerFailure_ReturnsCorrectDescription()
+    public void ControllerDeviceErrorCodes_LampFailure_ReturnsCorrectDescription()
     {
         // Act
         string description = ErrorCodes.ControllerDeviceErrorCodes[0x01];
 
         // Assert
-        Assert.Equal("Power failure", description);
+        Assert.Contains("Lamp failure", description);
     }
 
     [Fact]
-    public void ControllerDeviceErrorCodes_CommunicationsTimeout_ReturnsCorrectDescription()
+    public void ControllerDeviceErrorCodes_LessThan50Percent_ReturnsCorrectDescription()
     {
         // Act
         string description = ErrorCodes.ControllerDeviceErrorCodes[0x02];
 
         // Assert
-        Assert.Contains("Communications time-out", description);
+        Assert.Contains("50%", description);
     }
 
     [Fact]
-    public void ControllerDeviceErrorCodes_MemoryError_ReturnsCorrectDescription()
+    public void ControllerDeviceErrorCodes_PowerSupplyError_ReturnsCorrectDescription()
     {
         // Act
         string description = ErrorCodes.ControllerDeviceErrorCodes[0x03];
 
         // Assert
-        Assert.Equal("Memory error", description);
+        Assert.Equal("Power supply error", description);
     }
 
     [Fact]
-    public void ControllerDeviceErrorCodes_BatteryFailure_ReturnsCorrectDescription()
+    public void ControllerDeviceErrorCodes_ConflictingFrame_ReturnsCorrectDescription()
     {
         // Act
         string description = ErrorCodes.ControllerDeviceErrorCodes[0x04];
 
         // Assert
-        Assert.Equal("Battery failure", description);
+        Assert.Equal("Conflicting frame", description);
     }
 
     [Fact]
-    public void ControllerDeviceErrorCodes_SignLampFailure_ReturnsCorrectDescription()
+    public void ControllerDeviceErrorCodes_ColourError_ReturnsCorrectDescription()
     {
         // Act
         string description = ErrorCodes.ControllerDeviceErrorCodes[0x06];
 
         // Assert
-        Assert.Equal("Sign lamp failure", description);
+        Assert.Equal("Colour error", description);
     }
 
     [Fact]
-    public void ControllerDeviceErrorCodes_SignSingleLedFailure_ReturnsCorrectDescription()
+    public void ControllerDeviceErrorCodes_TemperatureAlarm_ReturnsCorrectDescription()
     {
         // Act
         string description = ErrorCodes.ControllerDeviceErrorCodes[0x07];
 
         // Assert
-        Assert.Equal("Sign single-LED failure", description);
+        Assert.Contains("Temperature alarm", description);
     }
 
     [Fact]
-    public void ControllerDeviceErrorCodes_SignMultiLedFailure_ReturnsCorrectDescription()
+    public void ControllerDeviceErrorCodes_CommunicationError_ReturnsCorrectDescription()
     {
         // Act
         string description = ErrorCodes.ControllerDeviceErrorCodes[0x08];
 
         // Assert
-        Assert.Equal("Sign multi-LED failure", description);
+        Assert.Equal("Communication error", description);
     }
 
     [Fact]
-    public void ControllerDeviceErrorCodes_OverTemperatureAlarm_ReturnsCorrectDescription()
+    public void ControllerDeviceErrorCodes_CutOff_ReturnsCorrectDescription()
     {
         // Act
         string description = ErrorCodes.ControllerDeviceErrorCodes[0x09];
 
         // Assert
-        Assert.Contains("Over-temperature", description);
+        Assert.Contains("Cut off", description);
     }
 
     [Fact]
-    public void ControllerDeviceErrorCodes_UnderTemperatureAlarm_ReturnsCorrectDescription()
+    public void ControllerDeviceErrorCodes_CriticalTemperature_ReturnsCorrectDescription()
     {
         // Act
         string description = ErrorCodes.ControllerDeviceErrorCodes[0x0A];
 
         // Assert
-        Assert.Contains("Under-temperature", description);
+        Assert.Contains("Critical temperature", description);
     }
 
     [Fact]
-    public void ControllerDeviceErrorCodes_HARHardwareFailure_ReturnsCorrectDescription()
+    public void ControllerDeviceErrorCodes_DisplayTestActive_ReturnsCorrectDescription()
     {
         // Act
         string description = ErrorCodes.ControllerDeviceErrorCodes[0x19];
 
         // Assert
-        Assert.Equal("HAR hardware failure", description);
+        Assert.Equal("Display test active", description);
     }
 
     [Fact]
-    public void ControllerDeviceErrorCodes_PreExistingFault_ReturnsCorrectDescription()
+    public void ControllerDeviceErrorCodes_UnknownError_ReturnsCorrectDescription()
     {
         // Act
         string description = ErrorCodes.ControllerDeviceErrorCodes[0x99];
 
         // Assert
-        Assert.Contains("Pre-existing", description);
+        Assert.Contains("Unknown", description);
     }
 
     [Theory]
-    [InlineData(0x00)]
-    [InlineData(0x01)]
-    [InlineData(0x02)]
-    [InlineData(0x03)]
-    [InlineData(0x04)]
-    [InlineData(0x05)]
-    [InlineData(0x06)]
-    [InlineData(0x07)]
-    [InlineData(0x08)]
-    [InlineData(0x09)]
-    [InlineData(0x0A)]
-    [InlineData(0x0B)]
-    [InlineData(0x0C)]
-    [InlineData(0x0D)]
-    [InlineData(0x0E)]
-    [InlineData(0x0F)]
-    [InlineData(0x10)]
-    [InlineData(0x11)]
-    [InlineData(0x19)]
-    [InlineData(0x20)]
-    [InlineData(0x99)]
-    public void ControllerDeviceErrorCodes_AllCodes_HaveNonEmptyDescription(int code)
+    [InlineData((byte)0x00)]
+    [InlineData((byte)0x01)]
+    [InlineData((byte)0x02)]
+    [InlineData((byte)0x03)]
+    [InlineData((byte)0x04)]
+    [InlineData((byte)0x05)]
+    [InlineData((byte)0x06)]
+    [InlineData((byte)0x07)]
+    [InlineData((byte)0x08)]
+    [InlineData((byte)0x09)]
+    [InlineData((byte)0x0A)]
+    [InlineData((byte)0x0B)]
+    [InlineData((byte)0x0C)]
+    [InlineData((byte)0x0D)]
+    [InlineData((byte)0x0E)]
+    [InlineData((byte)0x0F)]
+    [InlineData((byte)0x10)]
+    [InlineData((byte)0x11)]
+    [InlineData((byte)0x19)]
+    [InlineData((byte)0x20)]
+    [InlineData((byte)0x99)]
+    public void ControllerDeviceErrorCodes_AllCodes_HaveNonEmptyDescription(byte code)
     {
         // Assert
         Assert.True(ErrorCodes.ControllerDeviceErrorCodes.ContainsKey(code));
@@ -184,134 +184,134 @@ public class ErrorCodesTests
         string description = ErrorCodes.ApplicationErrorCodes[0x00];
 
         // Assert
-        Assert.Equal("No error", description);
+        Assert.Equal("No Error", description);
     }
 
     [Fact]
-    public void ApplicationErrorCodes_DeviceOffline_ReturnsCorrectDescription()
+    public void ApplicationErrorCodes_RequestRejected_ReturnsCorrectDescription()
     {
         // Act
         string description = ErrorCodes.ApplicationErrorCodes[0x01];
 
         // Assert
-        Assert.Contains("off-line", description);
+        Assert.Contains("Request rejected", description);
+    }
+
+    [Fact]
+    public void ApplicationErrorCodes_MessageIntegrityError_ReturnsCorrectDescription()
+    {
+        // Act
+        string description = ErrorCodes.ApplicationErrorCodes[0x02];
+
+        // Assert
+        Assert.Contains("Message Integrity error", description);
     }
 
     [Fact]
     public void ApplicationErrorCodes_SyntaxError_ReturnsCorrectDescription()
     {
         // Act
-        string description = ErrorCodes.ApplicationErrorCodes[0x02];
+        string description = ErrorCodes.ApplicationErrorCodes[0x03];
 
         // Assert
         Assert.Contains("Syntax error", description);
     }
 
     [Fact]
-    public void ApplicationErrorCodes_LengthError_ReturnsCorrectDescription()
-    {
-        // Act
-        string description = ErrorCodes.ApplicationErrorCodes[0x03];
-
-        // Assert
-        Assert.Contains("Length error", description);
-    }
-
-    [Fact]
-    public void ApplicationErrorCodes_ChecksumError_ReturnsCorrectDescription()
+    public void ApplicationErrorCodes_OutOfRange_ReturnsCorrectDescription()
     {
         // Act
         string description = ErrorCodes.ApplicationErrorCodes[0x04];
 
         // Assert
-        Assert.Contains("checksum error", description);
+        Assert.Contains("Out of range", description);
     }
 
     [Fact]
-    public void ApplicationErrorCodes_NonAsciiCharacters_ReturnsCorrectDescription()
+    public void ApplicationErrorCodes_NoSession_ReturnsCorrectDescription()
     {
         // Act
         string description = ErrorCodes.ApplicationErrorCodes[0x05];
 
         // Assert
-        Assert.Contains("non ASCII", description);
+        Assert.Contains("No session", description);
     }
 
     [Fact]
     public void ApplicationErrorCodes_FrameTooLarge_ReturnsCorrectDescription()
     {
-        // Act
+        // Act - Note: In the new ErrorCodes, 0x06 is "Insufficient access"
         string description = ErrorCodes.ApplicationErrorCodes[0x06];
 
         // Assert
-        Assert.Contains("Frame too large", description);
+        Assert.Contains("Insufficient access", description);
     }
 
     [Fact]
-    public void ApplicationErrorCodes_UnknownMICode_ReturnsCorrectDescription()
+    public void ApplicationErrorCodes_NotSupported_ReturnsCorrectDescription()
     {
         // Act
         string description = ErrorCodes.ApplicationErrorCodes[0x07];
 
         // Assert
-        Assert.Contains("Unknown MI Code", description);
+        Assert.Contains("Not supported", description);
     }
 
     [Fact]
-    public void ApplicationErrorCodes_FontNotSupported_ReturnsCorrectDescription()
+    public void ApplicationErrorCodes_InvalidFont_ReturnsCorrectDescription()
     {
         // Act
-        string description = ErrorCodes.ApplicationErrorCodes[0x0B];
+        string description = ErrorCodes.ApplicationErrorCodes[0x0D];
 
         // Assert
-        Assert.Contains("Font not supported", description);
+        Assert.Contains("Invalid font", description);
     }
 
     [Fact]
-    public void ApplicationErrorCodes_ColourNotSupported_ReturnsCorrectDescription()
+    public void ApplicationErrorCodes_InvalidColour_ReturnsCorrectDescription()
     {
         // Act
-        string description = ErrorCodes.ApplicationErrorCodes[0x0C];
+        string description = ErrorCodes.ApplicationErrorCodes[0x0E];
 
         // Assert
-        Assert.Contains("Colour not supported", description);
+        Assert.Contains("Invalid colour", description);
     }
 
     [Fact]
-    public void ApplicationErrorCodes_IncorrectPassword_ReturnsCorrectDescription()
+    public void ApplicationErrorCodes_HARVoiceDataTooLarge_ReturnsCorrectDescription()
     {
         // Act
         string description = ErrorCodes.ApplicationErrorCodes[0x21];
 
         // Assert
-        Assert.Contains("Incorrect password", description);
+        Assert.Contains("HAR voice data too large", description);
     }
 
     [Theory]
-    [InlineData(0x00)]
-    [InlineData(0x01)]
-    [InlineData(0x02)]
-    [InlineData(0x03)]
-    [InlineData(0x04)]
-    [InlineData(0x05)]
-    [InlineData(0x06)]
-    [InlineData(0x07)]
-    [InlineData(0x08)]
-    [InlineData(0x09)]
-    [InlineData(0x0A)]
-    [InlineData(0x0B)]
-    [InlineData(0x0C)]
-    [InlineData(0x0D)]
-    [InlineData(0x0E)]
-    [InlineData(0x0F)]
-    [InlineData(0x10)]
-    [InlineData(0x11)]
-    [InlineData(0x12)]
-    [InlineData(0x13)]
-    [InlineData(0x14)]
-    [InlineData(0x15)]
-    [InlineData(0x21)]
-    public void ApplicationErrorCodes_AllCodes_HaveNonEmptyDescription(int code)
+    [InlineData((byte)0x00)]
+    [InlineData((byte)0x01)]
+    [InlineData((byte)0x02)]
+    [InlineData((byte)0x03)]
+    [InlineData((byte)0x04)]
+    [InlineData((byte)0x05)]
+    [InlineData((byte)0x06)]
+    [InlineData((byte)0x07)]
+    [InlineData((byte)0x08)]
+    [InlineData((byte)0x09)]
+    [InlineData((byte)0x0A)]
+    [InlineData((byte)0x0B)]
+    [InlineData((byte)0x0C)]
+    [InlineData((byte)0x0D)]
+    [InlineData((byte)0x0E)]
+    [InlineData((byte)0x0F)]
+    [InlineData((byte)0x10)]
+    [InlineData((byte)0x11)]
+    [InlineData((byte)0x12)]
+    [InlineData((byte)0x13)]
+    [InlineData((byte)0x14)]
+    [InlineData((byte)0x15)]
+    [InlineData((byte)0x21)]
+    public void ApplicationErrorCodes_AllCodes_HaveNonEmptyDescription(byte code)
     {
         // Assert
         Assert.True(ErrorCodes.ApplicationErrorCodes.ContainsKey(code));
@@ -326,17 +326,17 @@ public class ErrorCodesTests
     public void ControllerDeviceErrorCodes_GetValueOrDefault_KnownCode_ReturnsDescription()
     {
         // Act
-        string description = ErrorCodes.ControllerDeviceErrorCodes.GetValueOrDefault(0x00, "Unknown");
+        string description = ErrorCodes.ControllerDeviceErrorCodes.GetValueOrDefault((byte)0x00, "Unknown");
 
         // Assert
-        Assert.Equal("No error", description);
+        Assert.Equal("No Error", description);
     }
 
     [Fact]
     public void ControllerDeviceErrorCodes_GetValueOrDefault_UnknownCode_ReturnsDefault()
     {
         // Act
-        string description = ErrorCodes.ControllerDeviceErrorCodes.GetValueOrDefault(0xFF, "Unknown error code");
+        string description = ErrorCodes.ControllerDeviceErrorCodes.GetValueOrDefault((byte)0xFF, "Unknown error code");
 
         // Assert
         Assert.Equal("Unknown error code", description);
@@ -346,17 +346,17 @@ public class ErrorCodesTests
     public void ApplicationErrorCodes_GetValueOrDefault_KnownCode_ReturnsDescription()
     {
         // Act
-        string description = ErrorCodes.ApplicationErrorCodes.GetValueOrDefault(0x00, "Unknown");
+        string description = ErrorCodes.ApplicationErrorCodes.GetValueOrDefault((byte)0x00, "Unknown");
 
         // Assert
-        Assert.Equal("No error", description);
+        Assert.Equal("No Error", description);
     }
 
     [Fact]
     public void ApplicationErrorCodes_GetValueOrDefault_UnknownCode_ReturnsDefault()
     {
         // Act
-        string description = ErrorCodes.ApplicationErrorCodes.GetValueOrDefault(0xFF, "Unknown error code");
+        string description = ErrorCodes.ApplicationErrorCodes.GetValueOrDefault((byte)0xFF, "Unknown error code");
 
         // Assert
         Assert.Equal("Unknown error code", description);

@@ -1,4 +1,4 @@
-using TSISP003.Configuration;
+using TSISP003.Infrastructure.Configuration;
 
 namespace TSISP003.Tests.Configuration;
 

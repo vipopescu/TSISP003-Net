@@ -1,4 +1,4 @@
-using TSISP003.DTOs;
+using TSISP003.Application.DTOs;
 
 namespace TSISP003.Tests.DTOs;
 

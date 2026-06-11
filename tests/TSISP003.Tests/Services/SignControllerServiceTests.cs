@@ -1,24 +1,25 @@
 using Microsoft.Extensions.Logging;
 using Moq;
-using TSISP003.Configuration;
-using TSISP003.Infrastructure.Tcp;
-using TSISP003.Services;
+using TSISP003.Infrastructure.Configuration;
+using TSISP003.Application.Interfaces;
+using TSISP003.Infrastructure.Services;
 using TSISP003.Domain.Entities;
-using TSISP003.Utilities;
-using static TSISP003.Services.SignControllerServiceConfig;
+using TSISP003.Domain.Exceptions;
+using TSISP003.Domain.Enums;
+using TSISP003.Infrastructure.Protocol;
 
 namespace TSISP003.Tests.Services;
 
 public class SignControllerServiceTests : IDisposable
 {
-    private readonly Mock<ITCPClient> _mockTcpClient;
+    private readonly Mock<ITcpClient> _mockTcpClient;
     private readonly Mock<ILogger<SignControllerService>> _mockLogger;
     private readonly SignControllerConnectionOptions _deviceSettings;
     private readonly SignControllerService _service;
 
     public SignControllerServiceTests()
     {
-        _mockTcpClient = new Mock<ITCPClient>();
+        _mockTcpClient = new Mock<ITcpClient>();
         _mockLogger = new Mock<ILogger<SignControllerService>>();
         _deviceSettings = new SignControllerConnectionOptions
         {
@@ -1799,7 +1800,7 @@ public class SignControllerServiceTests : IDisposable
 
         // Act & Assert - expect timeout since we're not simulating the full protocol
         await Assert.ThrowsAsync<TimeoutException>(() =>
-            _service.SignRequestStoredFrameMessagePlan(TSISP003.Utilities.Enums.RequestType.Frame, 1));
+            _service.SignRequestStoredFrameMessagePlan(RequestType.Frame, 1));
 
         _mockTcpClient.Verify(x => x.SendAsync(It.IsAny<string>()), Times.Once());
     }
@@ -2506,9 +2507,9 @@ public class SignControllerServiceTests : IDisposable
         _mockTcpClient.Setup(x => x.SendAsync(It.IsAny<string>()))
             .Returns(Task.CompletedTask);
 
-        var request = new TSISP003.DTOs.ExtendedRequestMessageDto
+        var request = new TSISP003.Application.DTOs.ExtendedRequestMessageDto
         {
-            Frame1 = new TSISP003.DTOs.ExtendedTextFrameDto
+            Frame1 = new TSISP003.Application.DTOs.ExtendedTextFrameDto
             {
                 Font = 1,
                 Colour = 1,
@@ -2532,9 +2533,9 @@ public class SignControllerServiceTests : IDisposable
         _mockTcpClient.Setup(x => x.SendAsync(It.IsAny<string>()))
             .Returns(Task.CompletedTask);
 
-        var request = new TSISP003.DTOs.ExtendedRequestMessageDto
+        var request = new TSISP003.Application.DTOs.ExtendedRequestMessageDto
         {
-            Frame1 = new TSISP003.DTOs.ExtendedTextFrameDto
+            Frame1 = new TSISP003.Application.DTOs.ExtendedTextFrameDto
             {
                 Font = 1,
                 Colour = 1,
@@ -2542,7 +2543,7 @@ public class SignControllerServiceTests : IDisposable
                 Text = "4142"
             },
             Frame1Time = 5,
-            Frame2 = new TSISP003.DTOs.ExtendedTextFrameDto
+            Frame2 = new TSISP003.Application.DTOs.ExtendedTextFrameDto
             {
                 Font = 1,
                 Colour = 2,
@@ -2566,19 +2567,19 @@ public class SignControllerServiceTests : IDisposable
         _mockTcpClient.Setup(x => x.SendAsync(It.IsAny<string>()))
             .Returns(Task.CompletedTask);
 
-        var request = new TSISP003.DTOs.ExtendedRequestMessageDto
+        var request = new TSISP003.Application.DTOs.ExtendedRequestMessageDto
         {
-            Frame1 = new TSISP003.DTOs.ExtendedTextFrameDto { Font = 1, Colour = 1, Conspicuity = 0, Text = "41" },
+            Frame1 = new TSISP003.Application.DTOs.ExtendedTextFrameDto { Font = 1, Colour = 1, Conspicuity = 0, Text = "41" },
             Frame1Time = 1,
-            Frame2 = new TSISP003.DTOs.ExtendedTextFrameDto { Font = 1, Colour = 1, Conspicuity = 0, Text = "42" },
+            Frame2 = new TSISP003.Application.DTOs.ExtendedTextFrameDto { Font = 1, Colour = 1, Conspicuity = 0, Text = "42" },
             Frame2Time = 1,
-            Frame3 = new TSISP003.DTOs.ExtendedTextFrameDto { Font = 1, Colour = 1, Conspicuity = 0, Text = "43" },
+            Frame3 = new TSISP003.Application.DTOs.ExtendedTextFrameDto { Font = 1, Colour = 1, Conspicuity = 0, Text = "43" },
             Frame3Time = 1,
-            Frame4 = new TSISP003.DTOs.ExtendedTextFrameDto { Font = 1, Colour = 1, Conspicuity = 0, Text = "44" },
+            Frame4 = new TSISP003.Application.DTOs.ExtendedTextFrameDto { Font = 1, Colour = 1, Conspicuity = 0, Text = "44" },
             Frame4Time = 1,
-            Frame5 = new TSISP003.DTOs.ExtendedTextFrameDto { Font = 1, Colour = 1, Conspicuity = 0, Text = "45" },
+            Frame5 = new TSISP003.Application.DTOs.ExtendedTextFrameDto { Font = 1, Colour = 1, Conspicuity = 0, Text = "45" },
             Frame5Time = 1,
-            Frame6 = new TSISP003.DTOs.ExtendedTextFrameDto { Font = 1, Colour = 1, Conspicuity = 0, Text = "46" },
+            Frame6 = new TSISP003.Application.DTOs.ExtendedTextFrameDto { Font = 1, Colour = 1, Conspicuity = 0, Text = "46" },
             Frame6Time = 1
         };
 
@@ -2596,13 +2597,13 @@ public class SignControllerServiceTests : IDisposable
         _mockTcpClient.Setup(x => x.SendAsync(It.IsAny<string>()))
             .Returns(Task.CompletedTask);
 
-        var request = new TSISP003.DTOs.ExtendedRequestMessageDto
+        var request = new TSISP003.Application.DTOs.ExtendedRequestMessageDto
         {
             Frame1 = null,
-            Frame2 = new TSISP003.DTOs.ExtendedTextFrameDto { Font = 1, Colour = 1, Conspicuity = 0, Text = "42" },
+            Frame2 = new TSISP003.Application.DTOs.ExtendedTextFrameDto { Font = 1, Colour = 1, Conspicuity = 0, Text = "42" },
             Frame2Time = 2,
             Frame3 = null,
-            Frame4 = new TSISP003.DTOs.ExtendedTextFrameDto { Font = 1, Colour = 1, Conspicuity = 0, Text = "44" },
+            Frame4 = new TSISP003.Application.DTOs.ExtendedTextFrameDto { Font = 1, Colour = 1, Conspicuity = 0, Text = "44" },
             Frame4Time = 2
         };
 
@@ -2620,12 +2621,12 @@ public class SignControllerServiceTests : IDisposable
         _mockTcpClient.Setup(x => x.SendAsync(It.IsAny<string>()))
             .Returns(Task.CompletedTask);
 
-        var request = new TSISP003.DTOs.ExtendedRequestMessageDto
+        var request = new TSISP003.Application.DTOs.ExtendedRequestMessageDto
         {
-            Frame1 = new TSISP003.DTOs.ExtendedTextFrameDto { Font = 1, Colour = 1, Conspicuity = 0, Text = "41" },
+            Frame1 = new TSISP003.Application.DTOs.ExtendedTextFrameDto { Font = 1, Colour = 1, Conspicuity = 0, Text = "41" },
             Frame1Time = 1,
             Frame2 = null,
-            Frame3 = new TSISP003.DTOs.ExtendedTextFrameDto { Font = 1, Colour = 1, Conspicuity = 0, Text = "43" },
+            Frame3 = new TSISP003.Application.DTOs.ExtendedTextFrameDto { Font = 1, Colour = 1, Conspicuity = 0, Text = "43" },
             Frame3Time = 1
         };
 
@@ -2643,11 +2644,11 @@ public class SignControllerServiceTests : IDisposable
         _mockTcpClient.Setup(x => x.SendAsync(It.IsAny<string>()))
             .Returns(Task.CompletedTask);
 
-        var request = new TSISP003.DTOs.ExtendedRequestMessageDto
+        var request = new TSISP003.Application.DTOs.ExtendedRequestMessageDto
         {
-            Frame1 = new TSISP003.DTOs.ExtendedTextFrameDto { Font = 1, Colour = 1, Conspicuity = 0, Text = "41" },
+            Frame1 = new TSISP003.Application.DTOs.ExtendedTextFrameDto { Font = 1, Colour = 1, Conspicuity = 0, Text = "41" },
             Frame1Time = 1,
-            Frame5 = new TSISP003.DTOs.ExtendedTextFrameDto { Font = 1, Colour = 1, Conspicuity = 0, Text = "45" },
+            Frame5 = new TSISP003.Application.DTOs.ExtendedTextFrameDto { Font = 1, Colour = 1, Conspicuity = 0, Text = "45" },
             Frame5Time = 1
         };
 
