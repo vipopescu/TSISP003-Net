@@ -1,14 +1,19 @@
 namespace TSISP003.Simulator.Storage;
 
+/// <summary>
+/// In-memory store for the simulator's frames, messages, plans, and display state.
+/// Not internally synchronized: callers must hold <see cref="Gate"/> when reading or
+/// mutating state from more than one thread.
+/// </summary>
 public class SimulatorMemory
 {
     public object Gate { get; } = new();
 
-    private readonly Dictionary<byte, StoredTextFrame> _text = new();
-    private readonly Dictionary<byte, StoredGraphicsFrame> _graphics = new();
-    private readonly Dictionary<byte, StoredHiResFrame> _hiRes = new();
-    private readonly Dictionary<byte, StoredMessage> _messages = new();
-    private readonly Dictionary<byte, StoredPlan> _plans = new();
+    private readonly Dictionary<byte, StoredTextFrame> _text = [];
+    private readonly Dictionary<byte, StoredGraphicsFrame> _graphics = [];
+    private readonly Dictionary<byte, StoredHiResFrame> _hiRes = [];
+    private readonly Dictionary<byte, StoredMessage> _messages = [];
+    private readonly Dictionary<byte, StoredPlan> _plans = [];
 
     public byte ActiveFrameId { get; private set; }
     public byte ActiveFrameRevision { get; private set; }
