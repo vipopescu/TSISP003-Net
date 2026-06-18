@@ -56,4 +56,13 @@ public class PacketCodecTests
     {
         Assert.False(PacketCodec.TryParse("not a packet", out _, out _));
     }
+
+    [Fact]
+    public void TryParse_DataPacketWithEmptyAppData_ReturnsFalse()
+    {
+        // SOH + NS + NR + ADDR + STX + (no appdata) + CRC(4) + ETX
+        string body = ProtocolConstants.SOH + "0000" + "01" + ProtocolConstants.STX;
+        string packet = body + "0000" + ProtocolConstants.ETX; // dummy 4-char CRC
+        Assert.False(PacketCodec.TryParse(packet, out _, out _));
+    }
 }

@@ -56,6 +56,7 @@ public static class PacketCodec
             int nr = Convert.ToInt32(packet[3..5], 16);
             string addr = packet[5..7];
             string appData = packet[8..^5];
+            if (appData.Length < 2) return false;
             int mi = Convert.ToInt32(appData[0..2], 16);
             kind = 'D';
             data = new DataPacket(ns, nr, addr, mi, appData);
