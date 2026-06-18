@@ -9,7 +9,7 @@ public class SetCommandParserTests
     [Fact]
     public void TextFrame_BuildThenParse_RoundTrips()
     {
-        var f = new StoredTextFrame(7, 1, 0, 0, 0, 5, "48454C4C4F"); // HELLO
+        var f = new StoredTextFrame(7, 1, 2, 3, 4, 5, "48454C4C4F"); // HELLO
         string appData = SetCommandParser.BuildTextFrameAppData(f);
 
         Assert.Equal("0A", appData[0..2]);
@@ -43,6 +43,8 @@ public class SetCommandParserTests
         Assert.Equal("0C", appData[0..2]);
         var parsed = SetCommandParser.ParseMessage(appData);
         Assert.Equal((byte)2, parsed.MessageId);
+        Assert.Equal((byte)1, parsed.Revision);
+        Assert.Equal((byte)5, parsed.TransitionTime);
         Assert.Equal((7, 10), ((int)parsed.Frames[0].Id, (int)parsed.Frames[0].Time));
         Assert.Equal((8, 10), ((int)parsed.Frames[1].Id, (int)parsed.Frames[1].Time));
     }
@@ -55,6 +57,8 @@ public class SetCommandParserTests
         Assert.Equal("0D", appData[0..2]);
         var parsed = SetCommandParser.ParsePlan(appData);
         Assert.Equal((byte)1, parsed.PlanId);
+        Assert.Equal((byte)1, parsed.Revision);
+        Assert.Equal((byte)0x7F, parsed.DayOfWeek);
         Assert.Single(parsed.Entries);
         Assert.Equal(p.Entries[0], parsed.Entries[0]);
     }
