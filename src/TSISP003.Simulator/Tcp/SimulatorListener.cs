@@ -15,15 +15,13 @@ public class SimulatorListener(SimulatorOptions options, ILogger<SimulatorListen
 {
     private readonly TcpListener _listener = new(IPAddress.Any, options.Port);
     private readonly SimulatorMemory _memory = new();
-    private CancellationTokenSource? _cts;
 
     public int BoundPort => ((IPEndPoint)_listener.LocalEndpoint).Port;
 
     public void Start()
     {
         _listener.Start();
-        _cts = new CancellationTokenSource();
-        _ = ExecuteAsync(_cts.Token);
+        StartAsync(CancellationToken.None);
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
@@ -69,15 +67,8 @@ public class SimulatorListener(SimulatorOptions options, ILogger<SimulatorListen
         }
     }
 
-    public override Task StopAsync(CancellationToken cancellationToken)
-    {
-        _cts?.Cancel();
-        return base.StopAsync(cancellationToken);
-    }
-
     public override void Dispose()
     {
-        _cts?.Dispose();
         _listener.Dispose();
         base.Dispose();
     }
