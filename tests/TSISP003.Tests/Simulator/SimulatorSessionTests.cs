@@ -323,6 +323,22 @@ public class SimulatorSessionTests
     }
 
     [Fact]
+    public void MalformedPacket_WithValidCrc_RepliesRejectNotThrow()
+    {
+        // DisplayFrame (MI 0E) with group byte but missing the frame-id byte.
+        // PacketCodec.BuildData produces a CRC-valid packet; Dispatch will throw
+        // ArgumentOutOfRangeException when it tries a[4..6]. Handle must catch it
+        // and reply with a Reject (MI 0x00) rather than propagating the exception.
+        var session = NewSession(new SimulatorMemory());
+        var packet = PacketCodec.BuildData(0, 0, "01", "0E01"); // MI 0E + group 01, frame-id missing
+
+        var outPackets = session.Handle(packet);
+
+        Assert.Contains(outPackets, p =>
+            PacketCodec.TryParse(p, out var d, out var k) && k == 'D' && d.Mi == 0x00);
+    }
+
+    [Fact]
     public void SplitPacket_BufferedAndProcessedWhenComplete()
     {
         var session = NewSession(new SimulatorMemory());

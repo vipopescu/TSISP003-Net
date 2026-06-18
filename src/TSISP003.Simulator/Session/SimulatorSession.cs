@@ -51,7 +51,9 @@ public class SimulatorSession(
             _nr = Increment(data.Ns);
             output.Add(PacketCodec.BuildAck(_nr, options.Address));
 
-            string? reply = Dispatch(data);
+            string? reply;
+            try { reply = Dispatch(data); }
+            catch (Exception) { reply = replies.Reject(data.Mi, UnsupportedErrorCode); }
             if (reply is not null)
             {
                 output.Add(PacketCodec.BuildData(_ns, _nr, options.Address, reply));
@@ -71,6 +73,9 @@ public class SimulatorSession(
                 return replies.PasswordSeed();
 
             case ProtocolConstants.MI_PASSWORD:
+                // Intentionally accepts any password without validation — the simulator is a
+                // test harness, not a security boundary. SimulatorOptions.SeedOffset and
+                // PasswordOffset are therefore unused by the session.
                 _state = State.Online;
                 return replies.Ack();
 

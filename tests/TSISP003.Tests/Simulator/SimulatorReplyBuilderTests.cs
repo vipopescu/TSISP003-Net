@@ -43,6 +43,8 @@ public class SimulatorReplyBuilderTests
         string app = NewBuilder().ConfigReply();
         Assert.Equal("22", app[0..2]);
         Assert.Equal("01", app[22..24]); // number of groups
+        Assert.Equal("3000", app[32..36]); // width 48, little-endian word
+        Assert.Equal("1200", app[36..40]); // height 18, little-endian word
     }
 
     [Fact]

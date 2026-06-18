@@ -20,13 +20,20 @@ public class SimulatorListener(SimulatorOptions options, ILogger<SimulatorListen
 
     public void Start()
     {
+        // Test helper: bind the port synchronously so BoundPort is readable, then
+        // start the BackgroundService accept loop (StartAsync wires up ExecuteTask).
         _listener.Start();
-        StartAsync(CancellationToken.None);
+        _ = StartAsync(CancellationToken.None);
     }
 
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        if (!_listener.Server.IsBound) _listener.Start();
+        try { if (!_listener.Server.IsBound) _listener.Start(); }
+        catch (SocketException ex)
+        {
+            logger.LogCritical(ex, "TSISP003 simulator could not bind port {Port} (in use?). Shutting down.", options.Port);
+            return;
+        }
         logger.LogInformation("TSISP003 simulator listening on port {Port}", BoundPort);
 
         while (!stoppingToken.IsCancellationRequested)
