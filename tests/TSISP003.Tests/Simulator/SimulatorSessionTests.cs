@@ -124,4 +124,219 @@ public class SimulatorSessionTests
         Assert.DoesNotContain(outPackets, p => p[0] == ProtocolConstants.ACK);
         Assert.Null(mem.GetTextFrame(7));
     }
+
+    // ---- Fix 1: state machine ----
+
+    [Fact]
+    public void StateMachine_FreshSession_IsIdle()
+    {
+        var session = NewSession(new SimulatorMemory());
+        Assert.Equal(SimulatorSession.State.Idle, session.CurrentState);
+    }
+
+    [Fact]
+    public void StateMachine_AfterStartAndPassword_IsOnline()
+    {
+        var session = NewSession(new SimulatorMemory());
+        string startPacket = PacketCodec.BuildData(0, 0, "01", "02");
+        session.Handle(startPacket);
+        // After StartSession (MI 02), state should be SeedSent
+        Assert.Equal(SimulatorSession.State.SeedSent, session.CurrentState);
+
+        string passwordPacket = PacketCodec.BuildData(1, 1, "01", "04");
+        session.Handle(passwordPacket);
+        // After Password (MI 04), state should be Online
+        Assert.Equal(SimulatorSession.State.Online, session.CurrentState);
+    }
+
+    // ---- Fix 3: coverage of untested dispatch branches ----
+
+    [Fact]
+    public void ConfigRequest_RepliesConfigReply()
+    {
+        var session = NewSession(new SimulatorMemory());
+        var packet = PacketCodec.BuildData(0, 0, "01", "21");
+
+        var outPackets = session.Handle(packet);
+
+        Assert.Contains(outPackets, p =>
+            PacketCodec.TryParse(p, out var d, out var k) && k == 'D' && d.Mi == 0x22);
+    }
+
+    [Fact]
+    public void SetGraphicsFrame_StoresFrame_AndRepliesStatus()
+    {
+        var mem = new SimulatorMemory();
+        var session = NewSession(mem);
+        string appData = SetCommandParser.BuildGraphicsFrameAppData(
+            new StoredGraphicsFrame(3, 2, 18, 48, 1, 0, 2, "ABCD"));
+        var packet = PacketCodec.BuildData(0, 0, "01", appData);
+
+        var outPackets = session.Handle(packet);
+
+        Assert.NotNull(mem.GetGraphicsFrame(3));
+        Assert.Contains(outPackets, p =>
+            PacketCodec.TryParse(p, out var d, out var k) && k == 'D' && d.Mi == 0x06);
+    }
+
+    [Fact]
+    public void SetMessage_StoresMessage_AndRepliesStatus()
+    {
+        var mem = new SimulatorMemory();
+        var session = NewSession(mem);
+        string appData = SetCommandParser.BuildMessageAppData(
+            new StoredMessage(2, 1, 5, new (byte, byte)[] { (7, 10) }));
+        var packet = PacketCodec.BuildData(0, 0, "01", appData);
+
+        var outPackets = session.Handle(packet);
+
+        Assert.NotNull(mem.GetMessage(2));
+        Assert.Contains(outPackets, p =>
+            PacketCodec.TryParse(p, out var d, out var k) && k == 'D' && d.Mi == 0x06);
+    }
+
+    [Fact]
+    public void SetPlan_StoresPlan_AndRepliesStatus()
+    {
+        var mem = new SimulatorMemory();
+        var session = NewSession(mem);
+        string appData = SetCommandParser.BuildPlanAppData(
+            new StoredPlan(1, 1, 0x7F, new[] { new StoredPlanEntry(1, 7, 8, 0, 17, 30) }));
+        var packet = PacketCodec.BuildData(0, 0, "01", appData);
+
+        var outPackets = session.Handle(packet);
+
+        Assert.NotNull(mem.GetPlan(1));
+        Assert.Contains(outPackets, p =>
+            PacketCodec.TryParse(p, out var d, out var k) && k == 'D' && d.Mi == 0x06);
+    }
+
+    [Fact]
+    public void DisplayMessage_SetsActiveMessage_AndAcks()
+    {
+        var mem = new SimulatorMemory();
+        mem.PutMessage(new StoredMessage(2, 4, 5, new (byte, byte)[] { (1, 3) }));
+        var session = NewSession(mem);
+        // MI=0F, group=01, msgId=02
+        var packet = PacketCodec.BuildData(0, 0, "01", "0F" + "01" + "02");
+
+        var outPackets = session.Handle(packet);
+
+        Assert.Equal(2, mem.ActiveMessageId);
+        Assert.Equal(4, mem.ActiveMessageRevision);
+        Assert.Contains(outPackets, p =>
+            PacketCodec.TryParse(p, out var d, out var k) && k == 'D' && d.Mi == 0x01);
+    }
+
+    [Fact]
+    public void EnablePlan_Then_RequestEnabledPlans_Then_DisablePlan()
+    {
+        var mem = new SimulatorMemory();
+        var session = NewSession(mem);
+
+        // Enable plan: group=01, plan=05
+        var enablePacket = PacketCodec.BuildData(0, 0, "01", "10" + "01" + "05");
+        var enableReply = session.Handle(enablePacket);
+        Assert.Contains(enableReply, p =>
+            PacketCodec.TryParse(p, out var d, out var k) && k == 'D' && d.Mi == 0x01);
+
+        // Request enabled plans → MI 0x13 with one entry "0105"
+        var reqPacket = PacketCodec.BuildData(1, 1, "01", "12");
+        var reqReply = session.Handle(reqPacket);
+        Assert.Contains(reqReply, p =>
+            PacketCodec.TryParse(p, out var d, out var k) && k == 'D' && d.Mi == 0x13
+            && d.AppData.Contains("0105", StringComparison.OrdinalIgnoreCase));
+
+        // Disable plan: group=01, plan=05
+        var disablePacket = PacketCodec.BuildData(2, 2, "01", "11" + "01" + "05");
+        var disableReply = session.Handle(disablePacket);
+        Assert.Contains(disableReply, p =>
+            PacketCodec.TryParse(p, out var d, out var k) && k == 'D' && d.Mi == 0x01);
+
+        // Request enabled plans again → MI 0x13 with count "00"
+        var reqPacket2 = PacketCodec.BuildData(3, 3, "01", "12");
+        var reqReply2 = session.Handle(reqPacket2);
+        Assert.Contains(reqReply2, p =>
+            PacketCodec.TryParse(p, out var d, out var k) && k == 'D' && d.Mi == 0x13
+            && d.AppData[2..4] == "00");
+    }
+
+    [Fact]
+    public void EndSession_AcksAndResetsStateToIdle()
+    {
+        var session = NewSession(new SimulatorMemory());
+        // Drive to Online first
+        session.Handle(PacketCodec.BuildData(0, 0, "01", "02"));
+        session.Handle(PacketCodec.BuildData(1, 1, "01", "04"));
+        Assert.Equal(SimulatorSession.State.Online, session.CurrentState);
+
+        // End session
+        var packet = PacketCodec.BuildData(2, 2, "01", "07");
+        var outPackets = session.Handle(packet);
+
+        Assert.Contains(outPackets, p =>
+            PacketCodec.TryParse(p, out var d, out var k) && k == 'D' && d.Mi == 0x01);
+        Assert.Equal(SimulatorSession.State.Idle, session.CurrentState);
+    }
+
+    [Fact]
+    public void RequestStored_Message_ReturnsMessageAppData()
+    {
+        var mem = new SimulatorMemory();
+        mem.PutMessage(new StoredMessage(2, 3, 5, new (byte, byte)[] { (1, 2) }));
+        var session = NewSession(mem);
+        // RequestType 2 = Message, id 2
+        var packet = PacketCodec.BuildData(0, 0, "01", "17" + "02" + "02");
+
+        var outPackets = session.Handle(packet);
+
+        Assert.Contains(outPackets, p =>
+            PacketCodec.TryParse(p, out var d, out var k) && k == 'D' && d.Mi == 0x0C);
+    }
+
+    [Fact]
+    public void RequestStored_Plan_ReturnsPlanAppData()
+    {
+        var mem = new SimulatorMemory();
+        mem.PutPlan(new StoredPlan(1, 2, 0x7F, new[] { new StoredPlanEntry(1, 7, 8, 0, 17, 30) }));
+        var session = NewSession(mem);
+        // RequestType 3 = Plan, id 1
+        var packet = PacketCodec.BuildData(0, 0, "01", "17" + "03" + "01");
+
+        var outPackets = session.Handle(packet);
+
+        Assert.Contains(outPackets, p =>
+            PacketCodec.TryParse(p, out var d, out var k) && k == 'D' && d.Mi == 0x0D);
+    }
+
+    [Fact]
+    public void RequestStored_NotFound_RejectsWithMiZero()
+    {
+        var session = NewSession(new SimulatorMemory());
+        // RequestType 1 = Frame, id 0x63 — not stored
+        var packet = PacketCodec.BuildData(0, 0, "01", "17" + "01" + "63");
+
+        var outPackets = session.Handle(packet);
+
+        Assert.Contains(outPackets, p =>
+            PacketCodec.TryParse(p, out var d, out var k) && k == 'D' && d.Mi == 0x00);
+    }
+
+    [Fact]
+    public void SplitPacket_BufferedAndProcessedWhenComplete()
+    {
+        var session = NewSession(new SimulatorMemory());
+        // A valid heartbeat packet
+        string p = PacketCodec.BuildData(0, 0, "01", "05");
+
+        // Send first 4 chars — incomplete, no ETX yet
+        var partial = session.Handle(p[..4]);
+        Assert.DoesNotContain(partial, pkt =>
+            PacketCodec.TryParse(pkt, out var d, out var k) && k == 'D');
+
+        // Send the rest — now the buffer has the full packet
+        var full = session.Handle(p[4..]);
+        Assert.Contains(full, pkt =>
+            PacketCodec.TryParse(pkt, out var d, out var k) && k == 'D' && d.Mi == 0x06);
+    }
 }

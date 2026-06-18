@@ -11,7 +11,7 @@ public class SimulatorSession(
     SimulatorOptions options,
     Func<DateTime> clock)
 {
-    private enum State { Idle, SeedSent, Online }
+    public enum State { Idle, SeedSent, Online }
 
     private const byte UnsupportedErrorCode = 0x03;
     private const byte NotFoundErrorCode = 0x04;
@@ -22,6 +22,7 @@ public class SimulatorSession(
     private const int RequestPlan = 3;
 
     private State _state = State.Idle;
+    public State CurrentState => _state;
     private int _ns;
     private int _nr;
     private string _buffer = string.Empty;
@@ -124,7 +125,9 @@ public class SimulatorSession(
                 {
                     int lastFrameOff = 6 + (numSigns - 1) * 4 + 2;
                     byte frameId = Convert.ToByte(a[lastFrameOff..(lastFrameOff + 2)], 16);
-                    byte rev = mem.GetTextFrame(frameId)?.Revision ?? (byte)0;
+                    byte rev = mem.GetTextFrame(frameId)?.Revision
+                               ?? mem.GetGraphicsFrame(frameId)?.Revision
+                               ?? mem.GetHiResFrame(frameId)?.Revision ?? (byte)0;
                     mem.SetActiveFrame(frameId, rev);
                 }
                 return replies.StatusReply(mem, clock());
