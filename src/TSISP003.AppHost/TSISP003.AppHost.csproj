@@ -14,6 +14,7 @@
 
   <ItemGroup>
     <ProjectReference Include="..\TSISP003.Api\TSISP003.Api.csproj" />
+    <ProjectReference Include="..\TSISP003.Simulator\TSISP003.Simulator.csproj" />
   </ItemGroup>
 
 </Project>
