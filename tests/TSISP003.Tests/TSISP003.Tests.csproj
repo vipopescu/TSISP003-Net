@@ -28,6 +28,7 @@
     <ProjectReference Include="..\..\src\TSISP003.Application\TSISP003.Application.csproj" />
     <ProjectReference Include="..\..\src\TSISP003.Infrastructure\TSISP003.Infrastructure.csproj" />
     <ProjectReference Include="..\..\src\TSISP003.Api\TSISP003.Api.csproj" />
+    <ProjectReference Include="..\..\src\TSISP003.Simulator\TSISP003.Simulator.csproj" />
   </ItemGroup>
 
 </Project>
