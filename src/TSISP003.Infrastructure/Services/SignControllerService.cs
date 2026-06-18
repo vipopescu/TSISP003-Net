@@ -3,7 +3,7 @@ using TSISP003.Application.Interfaces;
 using System.Net.Sockets;
 using System.Text;
 using TSISP003.Infrastructure.Configuration;
-using TSISP003.Infrastructure.Protocol;
+using TSISP003.Protocol;
 using TSISP003.Domain.Entities;
 using TSISP003.Domain.Enums;
 using TSISP003.Domain.Exceptions;

@@ -6,7 +6,7 @@ using TSISP003.Infrastructure.Services;
 using TSISP003.Domain.Entities;
 using TSISP003.Domain.Exceptions;
 using TSISP003.Domain.Enums;
-using TSISP003.Infrastructure.Protocol;
+using TSISP003.Protocol;
 
 namespace TSISP003.Tests.Services;
 

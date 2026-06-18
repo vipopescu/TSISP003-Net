@@ -1,7 +1,7 @@
 using System.Text;
 using Microsoft.Extensions.Logging;
 
-namespace TSISP003.Infrastructure.Protocol;
+namespace TSISP003.Protocol;
 
 public static class ProtocolHelper
 {

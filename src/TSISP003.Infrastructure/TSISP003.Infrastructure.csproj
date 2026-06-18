@@ -12,6 +12,7 @@
   <ItemGroup>
     <ProjectReference Include="..\TSISP003.Domain\TSISP003.Domain.csproj" />
     <ProjectReference Include="..\TSISP003.Application\TSISP003.Application.csproj" />
+    <ProjectReference Include="..\TSISP003.Protocol\TSISP003.Protocol.csproj" />
   </ItemGroup>
 
 </Project>

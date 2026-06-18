@@ -1,5 +1,6 @@
 <Solution>
   <Folder Name="/src/">
+    <Project Path="src/TSISP003.Protocol/TSISP003.Protocol.csproj" />
     <Project Path="src/TSISP003.Domain/TSISP003.Domain.csproj" />
     <Project Path="src/TSISP003.Application/TSISP003.Application.csproj" />
     <Project Path="src/TSISP003.Infrastructure/TSISP003.Infrastructure.csproj" />

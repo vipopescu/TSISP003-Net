@@ -1,5 +1,5 @@
 using TSISP003.Domain.Enums;
-using TSISP003.Infrastructure.Protocol;
+using TSISP003.Protocol;
 
 namespace TSISP003.Tests.Services;
 
