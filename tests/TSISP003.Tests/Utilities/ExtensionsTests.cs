@@ -96,7 +96,7 @@ public class ExtensionsTests
         var signGroup = new SignGroup
         {
             GroupID = 1,
-            Signs = null
+            Signs = null! // deliberately null to verify AsDto tolerates a missing dictionary
         };
 
         // Act
