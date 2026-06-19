@@ -14,7 +14,7 @@ public class SimulatorListener(SimulatorOptions options, ILogger<SimulatorListen
     : BackgroundService
 {
     private readonly TcpListener _listener = new(IPAddress.Any, options.Port);
-    private readonly SimulatorMemory _memory = new();
+    private readonly SimulatorMemory _memory = new(options.SignCount);
 
     public int BoundPort => ((IPEndPoint)_listener.LocalEndpoint).Port;
 

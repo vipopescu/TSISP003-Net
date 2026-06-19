@@ -107,44 +107,43 @@ public class SimulatorSession(
 
             case ProtocolConstants.MI_SIGN_DISPLAY_FRAME:
             {
+                // Group-level: display the frame on every sign in the group.
                 byte frameId = Convert.ToByte(a[4..6], 16);
-                byte rev = mem.GetTextFrame(frameId)?.Revision
-                           ?? mem.GetGraphicsFrame(frameId)?.Revision
-                           ?? mem.GetHiResFrame(frameId)?.Revision ?? (byte)0;
-                mem.SetActiveFrame(frameId, rev);
+                mem.SetActiveFrameAll(frameId, FrameRevision(frameId));
                 return replies.Ack();
             }
 
             case ProtocolConstants.MI_SIGN_DISPLAY_MESSAGE:
             {
+                // Group-level: display the message on every sign in the group.
                 byte msgId = Convert.ToByte(a[4..6], 16);
                 byte rev = mem.GetMessage(msgId)?.Revision ?? (byte)0;
-                mem.SetActiveMessage(msgId, rev);
+                mem.SetActiveMessageAll(msgId, rev);
                 return replies.Ack();
             }
 
             case ProtocolConstants.MI_SIGN_DISPLAY_ATOMIC_FRAMES:
             {
+                // Per-sign: each (SignID, FrameID) pair sets that sign's active frame.
                 byte numSigns = Convert.ToByte(a[4..6], 16);
-                if (numSigns > 0)
+                for (int i = 0; i < numSigns; i++)
                 {
-                    int lastFrameOff = 6 + (numSigns - 1) * 4 + 2;
-                    byte frameId = Convert.ToByte(a[lastFrameOff..(lastFrameOff + 2)], 16);
-                    byte rev = mem.GetTextFrame(frameId)?.Revision
-                               ?? mem.GetGraphicsFrame(frameId)?.Revision
-                               ?? mem.GetHiResFrame(frameId)?.Revision ?? (byte)0;
-                    mem.SetActiveFrame(frameId, rev);
+                    int off = 6 + i * 4;
+                    byte signId = Convert.ToByte(a[off..(off + 2)], 16);
+                    byte frameId = Convert.ToByte(a[(off + 2)..(off + 4)], 16);
+                    mem.SetActiveFrameForSign(signId, frameId, FrameRevision(frameId));
                 }
                 return replies.StatusReply(mem, clock());
             }
 
             case ProtocolConstants.MI_ENABLE_PLAN:
             {
+                // Group-level: enable the plan on every sign in the group.
                 byte group = Convert.ToByte(a[2..4], 16);
                 byte planId = Convert.ToByte(a[4..6], 16);
                 _enabledPlans.Add((group, planId));
                 byte rev = mem.GetPlan(planId)?.Revision ?? (byte)0;
-                mem.SetActivePlan(planId, rev);
+                mem.SetActivePlanAll(planId, rev);
                 return replies.Ack();
             }
 
@@ -192,6 +191,12 @@ public class SimulatorSession(
         }
         return replies.Reject(ProtocolConstants.MI_SIGN_REQUEST_STORED_FRAME_MESSAGE_PLAN, NotFoundErrorCode);
     }
+
+    /// <summary>Revision of a stored frame (text, graphics, or hi-res), or 0 if not stored.</summary>
+    private byte FrameRevision(byte frameId)
+        => mem.GetTextFrame(frameId)?.Revision
+           ?? mem.GetGraphicsFrame(frameId)?.Revision
+           ?? mem.GetHiResFrame(frameId)?.Revision ?? (byte)0;
 
     private static int Increment(int current) => current is 0 or >= 255 ? 1 : current + 1;
 }

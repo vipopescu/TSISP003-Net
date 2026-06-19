@@ -67,10 +67,31 @@ public class SimulatorSessionTests
 
         var outPackets = session.Handle(packet);
 
-        Assert.Equal(7, mem.ActiveFrameId);
-        Assert.Equal(3, mem.ActiveFrameRevision); // picked up from stored frame
+        var sign = mem.SnapshotSigns()[0];
+        Assert.Equal((byte)7, sign.FrameId);
+        Assert.Equal((byte)3, sign.FrameRevision); // picked up from stored frame
         Assert.Contains(outPackets, p =>
             PacketCodec.TryParse(p, out var d, out var k) && k == 'D' && d.Mi == 0x01);
+    }
+
+    [Fact]
+    public void DisplayAtomicFrames_SetsPerSignFrames_AndRepliesStatus()
+    {
+        var mem = new SimulatorMemory(3);
+        mem.PutTextFrame(new StoredTextFrame(7, 1, 0, 0, 0, 5, "48454C4C4F"));
+        mem.PutTextFrame(new StoredTextFrame(9, 2, 0, 0, 0, 5, "48454C4C4F"));
+        var session = NewSession(mem);
+        // MI=2B, group=01, numSigns=02, (sign 01 -> frame 07), (sign 02 -> frame 09)
+        var packet = PacketCodec.BuildData(0, 0, "01", "2B" + "01" + "02" + "0107" + "0209");
+
+        var outPackets = session.Handle(packet);
+
+        var signs = mem.SnapshotSigns();
+        Assert.Equal((byte)7, signs[0].FrameId); // sign 1 -> frame 7
+        Assert.Equal((byte)9, signs[1].FrameId); // sign 2 -> frame 9
+        Assert.Equal((byte)0, signs[2].FrameId); // sign 3 untouched
+        Assert.Contains(outPackets, p =>
+            PacketCodec.TryParse(p, out var d, out var k) && k == 'D' && d.Mi == 0x06);
     }
 
     [Fact]
@@ -222,8 +243,9 @@ public class SimulatorSessionTests
 
         var outPackets = session.Handle(packet);
 
-        Assert.Equal(2, mem.ActiveMessageId);
-        Assert.Equal(4, mem.ActiveMessageRevision);
+        var sign = mem.SnapshotSigns()[0];
+        Assert.Equal((byte)2, sign.MessageId);
+        Assert.Equal((byte)4, sign.MessageRevision);
         Assert.Contains(outPackets, p =>
             PacketCodec.TryParse(p, out var d, out var k) && k == 'D' && d.Mi == 0x01);
     }

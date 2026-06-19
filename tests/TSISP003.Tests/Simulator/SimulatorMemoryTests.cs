@@ -12,29 +12,51 @@ public class SimulatorMemoryTests
         var frame = new StoredTextFrame(7, 1, 0, 0, 0, 5, "48454C4C4F"); // "HELLO"
         mem.PutTextFrame(frame);
 
-        var got = mem.GetTextFrame(7);
-        Assert.Equal(frame, got);
+        Assert.Equal(frame, mem.GetTextFrame(7));
     }
 
     [Fact]
     public void GetTextFrame_Unknown_ReturnsNull()
+        => Assert.Null(new SimulatorMemory().GetTextFrame(99));
+
+    [Fact]
+    public void DefaultSignCount_IsOneSign()
     {
-        var mem = new SimulatorMemory();
-        Assert.Null(mem.GetTextFrame(99));
+        var snap = new SimulatorMemory().SnapshotSigns();
+        Assert.Single(snap);
+        Assert.Equal((byte)1, snap[0].SignId);
     }
 
     [Fact]
-    public void SetActiveFrame_UpdatesDisplayState()
+    public void SignCount_CreatesSequentialSignIds()
+        => Assert.Equal(new byte[] { 1, 2, 3 }, new SimulatorMemory(3).SignIds);
+
+    [Fact]
+    public void SetActiveFrameAll_UpdatesEverySign()
     {
-        var mem = new SimulatorMemory();
-        mem.SetActiveFrame(7, 1);
-        Assert.Equal(7, mem.ActiveFrameId);
-        Assert.Equal(1, mem.ActiveFrameRevision);
+        var mem = new SimulatorMemory(3);
+        mem.SetActiveFrameAll(7, 2);
+
+        Assert.All(mem.SnapshotSigns(), s =>
+        {
+            Assert.Equal((byte)7, s.FrameId);
+            Assert.Equal((byte)2, s.FrameRevision);
+        });
+    }
+
+    [Fact]
+    public void SetActiveFrameForSign_UpdatesOnlyThatSign()
+    {
+        var mem = new SimulatorMemory(3);
+        mem.SetActiveFrameForSign(2, 9, 1);
+
+        var snap = mem.SnapshotSigns();
+        Assert.Equal((byte)0, snap[0].FrameId); // sign 1 untouched
+        Assert.Equal((byte)9, snap[1].FrameId); // sign 2 updated
+        Assert.Equal((byte)0, snap[2].FrameId); // sign 3 untouched
     }
 
     [Fact]
     public void SignEnabled_DefaultsTrue()
-    {
-        Assert.True(new SimulatorMemory().SignEnabled);
-    }
+        => Assert.All(new SimulatorMemory(3).SnapshotSigns(), s => Assert.True(s.Enabled));
 }
