@@ -29,7 +29,7 @@ public class SignControllerServiceTests : IDisposable
             PasswordOffset = "1234",
             SeedOffset = "56"
         };
-        _service = new SignControllerService(_mockTcpClient.Object, _deviceSettings, _mockLogger.Object);
+        _service = new SignControllerService(_mockTcpClient.Object, _deviceSettings, "test-device", _mockLogger.Object);
     }
 
     public void Dispose()
