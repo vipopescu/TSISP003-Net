@@ -1,3 +1,5 @@
+using TSISP003.Application.Interfaces;
+using TSISP003.Application.Services;
 using TSISP003.Infrastructure;
 using TSISP003.ServiceDefaults;
 
@@ -13,6 +15,9 @@ internal class Program
 
         builder.Services.AddControllers();
         builder.Services.AddInfrastructure(builder.Configuration);
+
+        // Extended (non-protocol) management operations. Singleton: owns rolling per-device IDs.
+        builder.Services.AddSingleton<IExtendedSignService, ExtendedSignService>();
         builder.Services.AddEndpointsApiExplorer();
         builder.Services.AddSwaggerGen();
 

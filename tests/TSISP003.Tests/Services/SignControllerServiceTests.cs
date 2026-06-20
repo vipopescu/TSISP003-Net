@@ -6,7 +6,7 @@ using TSISP003.Infrastructure.Services;
 using TSISP003.Domain.Entities;
 using TSISP003.Domain.Exceptions;
 using TSISP003.Domain.Enums;
-using TSISP003.Infrastructure.Protocol;
+using TSISP003.Protocol;
 
 namespace TSISP003.Tests.Services;
 
@@ -29,7 +29,7 @@ public class SignControllerServiceTests : IDisposable
             PasswordOffset = "1234",
             SeedOffset = "56"
         };
-        _service = new SignControllerService(_mockTcpClient.Object, _deviceSettings, _mockLogger.Object);
+        _service = new SignControllerService(_mockTcpClient.Object, _deviceSettings, "test-device", _mockLogger.Object);
     }
 
     public void Dispose()
@@ -60,7 +60,7 @@ public class SignControllerServiceTests : IDisposable
     }
 
     [Fact]
-    public void NS_ThreadSafe_ConcurrentAccess()
+    public async Task NS_ThreadSafe_ConcurrentAccess()
     {
         // Test thread-safe access
         var tasks = new List<Task>();
@@ -70,7 +70,7 @@ public class SignControllerServiceTests : IDisposable
             tasks.Add(Task.Run(() => _service.NS = value));
         }
 
-        Task.WaitAll(tasks.ToArray());
+        await Task.WhenAll(tasks);
 
         // Just verify it doesn't throw and has a valid value
         Assert.InRange(_service.NS, 0, 255);
@@ -101,7 +101,7 @@ public class SignControllerServiceTests : IDisposable
     }
 
     [Fact]
-    public void NR_ThreadSafe_ConcurrentAccess()
+    public async Task NR_ThreadSafe_ConcurrentAccess()
     {
         var tasks = new List<Task>();
         for (int i = 0; i < 100; i++)
@@ -110,7 +110,7 @@ public class SignControllerServiceTests : IDisposable
             tasks.Add(Task.Run(() => _service.NR = value));
         }
 
-        Task.WaitAll(tasks.ToArray());
+        await Task.WhenAll(tasks);
 
         Assert.InRange(_service.NR, 0, 255);
     }
@@ -705,7 +705,7 @@ public class SignControllerServiceTests : IDisposable
     #region GetStatus Tests
 
     [Fact]
-    public async Task GetStatus_ReturnsTask()
+    public void GetStatus_ReturnsTask()
     {
         // Act
         var statusTask = _service.GetStatus();

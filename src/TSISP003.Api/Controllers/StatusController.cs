@@ -48,34 +48,6 @@ public class StatusController(ILogger<StatusController> logger, ISignControllerS
     }
 
     [HttpGet]
-    [Route("{device}/extended/status")]
-    public async Task<IActionResult> StatusRequestExtended(string device)
-    {
-        try
-        {
-            if (!_signControllerServiceFactory.ContainsSignController(device))
-                return NotFound("Device not found");
-
-            var controller = await _signControllerServiceFactory.GetSignControllerService(device).GetStatus();
-
-            if (controller is null)
-                return NotFound("Status not available");
-
-            return Ok(controller.AsDto());
-        }
-        catch (TimeoutException ex)
-        {
-            _logger.LogWarning(ex, "Sign Status Request timed out for device {Device}", device);
-            return StatusCode(StatusCodes.Status408RequestTimeout, "Sign Status Request timed out.");
-        }
-        catch (Exception ex)
-        {
-            _logger.LogError(ex, "Error requesting status for device {Device}", device);
-            return StatusCode(StatusCodes.Status500InternalServerError, "Error requesting status.");
-        }
-    }
-
-    [HttpGet]
     [Route("{device}/RetrieveFaultLog")]
     public async Task<IActionResult> RetrieveFaultLog(string device)
     {

@@ -26,7 +26,7 @@ public class SignControllerServiceFactory : ISignControllerServiceFactory, IHost
     {
         var tcpLogger = _loggerFactory.CreateLogger<TcpClientAdapter>();
         var serviceLogger = _loggerFactory.CreateLogger<SignControllerService>();
-        return new SignControllerService(new TcpClientAdapter(deviceSettings.IpAddress, deviceSettings.Port, deviceName, tcpLogger), deviceSettings, serviceLogger);
+        return new SignControllerService(new TcpClientAdapter(deviceSettings.IpAddress, deviceSettings.Port, deviceName, tcpLogger), deviceSettings, deviceName, serviceLogger);
     }
 
     public ISignControllerService GetSignControllerService(string deviceName)

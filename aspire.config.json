@@ -1,0 +1,5 @@
+{
+  "appHost": {
+    "path": "src/TSISP003.AppHost/TSISP003.AppHost.csproj"
+  }
+}

@@ -1,4 +1,4 @@
-using TSISP003.Infrastructure.Protocol;
+using TSISP003.Protocol;
 
 namespace TSISP003.Tests.Utilities;
 

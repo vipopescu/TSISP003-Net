@@ -3,7 +3,7 @@ using TSISP003.Application.Interfaces;
 using System.Net.Sockets;
 using System.Text;
 using TSISP003.Infrastructure.Configuration;
-using TSISP003.Infrastructure.Protocol;
+using TSISP003.Protocol;
 using TSISP003.Domain.Entities;
 using TSISP003.Domain.Enums;
 using TSISP003.Domain.Exceptions;
@@ -16,9 +16,13 @@ namespace TSISP003.Infrastructure.Services;
 public class SignControllerService(
     ITcpClient tcpClient,
     SignControllerConnectionOptions deviceSettings,
+    string deviceName,
     ILogger<SignControllerService> logger) : ISignControllerService, IHostedService, IDisposable
 {
     private readonly ILogger<SignControllerService> _logger = logger;
+
+    /// <summary>Friendly identifier for this controller in transaction logs (device name, or address if unnamed).</summary>
+    private readonly string _controller = string.IsNullOrWhiteSpace(deviceName) ? deviceSettings.Address : deviceName;
     private TaskCompletionSource<List<FaultLogEntry>>? _faultLogReplyTaskCompletion;
     private TaskCompletionSource<SignStatusReply>? _signStatusReplyTaskCompletion;
     private TaskCompletionSource<SignSetTextFrame>? _signSetTextFrameTaskCompletion;
@@ -407,11 +411,15 @@ public class SignControllerService(
             // the slave has received from us. This confirms our last packet was received.
             int slaveNR = int.Parse(packet[1..3], System.Globalization.NumberStyles.HexNumber);
 
+            _logger.LogDebug("[SignController {Controller}] RX Ack (N(R)={NR})", _controller, packet[1..3]);
+
             // Increment our send sequence number for the next packet we send
             NS = IncrementSequenceNumber(NS);
         }
         else if (packet[0] == ProtocolConstants.NAK)
         {
+            _logger.LogDebug("[SignController {Controller}] RX Nak (N(R)={NR})", _controller, packet[1..3]);
+
             // NAK received - slave rejected our packet (sequence error or corrupted data)
             // We should retransmit the last packet (not incrementing NS)
             // TODO: Implement retransmission logic
@@ -437,6 +445,9 @@ public class SignControllerService(
 
         string applicationData = packet[8..^5];
         int miCode = Convert.ToInt32(packet[8..10], 16);
+
+        _logger.LogDebug("[SignController {Controller}] RX {Operation} (N(S)={NS}, N(R)={NR})",
+            _controller, MiName(miCode), packet[1..3], packet[3..5]);
 
         if (miCode == ProtocolConstants.MI_SIGN_STATUS_REPLY)
             await ProcessSignStatusReply(applicationData);
@@ -500,6 +511,68 @@ public class SignControllerService(
     }
 
     /// <summary>
+    /// Send a built protocol packet, logging the outgoing transaction at Debug with the
+    /// controller identity, the operation name, and the sequence numbers.
+    /// Packet layout: SOH NS(2) NR(2) ADDR(2) STX MI(2) ...
+    /// </summary>
+    private async Task SendPacketAsync(string message)
+    {
+        if (message.Length >= 10)
+        {
+            string op = MiName(Convert.ToInt32(message[8..10], 16));
+            _logger.LogDebug("[SignController {Controller}] TX {Operation} (N(S)={NS}, N(R)={NR})",
+                _controller, op, message[1..3], message[3..5]);
+        }
+        await _tcpClient.SendAsync(message);
+    }
+
+    /// <summary>Map a Message Information (MI) code to a human-readable operation name for logging.</summary>
+    private static string MiName(int mi) => mi switch
+    {
+        ProtocolConstants.MI_REJECT_MESSAGE => "Reject",
+        ProtocolConstants.MI_ACK_MESSAGE => "Ack",
+        ProtocolConstants.MI_START_SESSION => "StartSession",
+        ProtocolConstants.MI_PASSWORD_SEED => "PasswordSeed",
+        ProtocolConstants.MI_PASSWORD => "Password",
+        ProtocolConstants.MI_HEARTBEAT_POLL => "Heartbeat",
+        ProtocolConstants.MI_SIGN_STATUS_REPLY => "SignStatusReply",
+        ProtocolConstants.MI_END_SESSION => "EndSession",
+        ProtocolConstants.MI_SYSTEM_RESET => "SystemReset",
+        ProtocolConstants.MI_UPDATE_TIME => "UpdateTime",
+        ProtocolConstants.MI_SIGN_SET_TEXT_FRAME => "SignSetTextFrame",
+        ProtocolConstants.MI_SIGN_SET_GRAPHIC_FRAME => "SignSetGraphicsFrame",
+        ProtocolConstants.MI_SIGN_SET_MESSAGE => "SignSetMessage",
+        ProtocolConstants.MI_SIGN_SET_PLAN => "SignSetPlan",
+        ProtocolConstants.MI_SIGN_DISPLAY_FRAME => "SignDisplayFrame",
+        ProtocolConstants.MI_SIGN_DISPLAY_MESSAGE => "SignDisplayMessage",
+        ProtocolConstants.MI_ENABLE_PLAN => "EnablePlan",
+        ProtocolConstants.MI_DISABLE_PLAN => "DisablePlan",
+        ProtocolConstants.MI_REQUEST_ENABLED_PLANS => "RequestEnabledPlans",
+        ProtocolConstants.MI_REPORT_ENABLED_PLANS => "ReportEnabledPlans",
+        ProtocolConstants.MI_SIGN_SET_DIMMING_LEVEL => "SignSetDimmingLevel",
+        ProtocolConstants.MI_POWER_ON_OFF => "PowerOnOff",
+        ProtocolConstants.MI_DISABLE_ENABLE_DEVICE => "DisableEnableDevice",
+        ProtocolConstants.MI_SIGN_REQUEST_STORED_FRAME_MESSAGE_PLAN => "RequestStoredFrameMessagePlan",
+        ProtocolConstants.MI_RETRIEVE_FAULT_LOG => "RetrieveFaultLog",
+        ProtocolConstants.MI_FAULT_LOG_REPLY => "FaultLogReply",
+        ProtocolConstants.MI_RESET_FAULT_LOG => "ResetFaultLog",
+        ProtocolConstants.MI_SIGN_EXTENDED_STATUS_REQUEST => "SignExtendedStatusRequest",
+        ProtocolConstants.MI_SIGN_EXTENDED_STATUS_REPLY => "SignExtendedStatusReply",
+        ProtocolConstants.MI_SIGN_SET_HIGH_RESOLUTION_GRAPHICS_FRAME => "SignSetHighResolutionGraphicsFrame",
+        ProtocolConstants.MI_SIGN_CONFIGURATION_REQUEST => "SignConfigurationRequest",
+        ProtocolConstants.MI_SIGN_CONFIGURATION_REPLY => "SignConfigurationReply",
+        ProtocolConstants.MI_SIGN_DISPLAY_ATOMIC_FRAMES => "SignDisplayAtomicFrames",
+        ProtocolConstants.MI_HAR_STATUS_REPLY => "HARStatusReply",
+        ProtocolConstants.MI_HAR_SET_STRATEGY => "HARSetStrategy",
+        ProtocolConstants.MI_HAR_ACTIVATE_STRATEGY => "HARActivateStrategy",
+        ProtocolConstants.MI_HAR_SET_PLAN => "HARSetPlan",
+        ProtocolConstants.MI_HAR_REQUEST_STORED_VOICE_STRATEGY_PLAN => "HARRequestStoredVoiceStrategyPlan",
+        ProtocolConstants.MI_HAR_SET_VOICE_DATA_ACK => "HARVoiceDataAck",
+        ProtocolConstants.MI_HAR_SET_VOICE_DATA_NAK => "HARVoiceDataNak",
+        _ => $"MI(0x{mi:X2})",
+    };
+
+    /// <summary>
     /// Send a heartbeat poll
     /// </summary>
     /// <returns></returns>
@@ -517,7 +590,7 @@ public class SignControllerService(
                     + ProtocolHelper.PacketCRC(Encoding.ASCII.GetBytes(message))
                     + ProtocolConstants.ETX;
 
-        await _tcpClient.SendAsync(message);
+        await SendPacketAsync(message);
     }
 
     /// <summary>
@@ -544,7 +617,7 @@ public class SignControllerService(
                     + ProtocolHelper.PacketCRC(Encoding.ASCII.GetBytes(message))
                     + ProtocolConstants.ETX;
 
-        await _tcpClient.SendAsync(message);
+        await SendPacketAsync(message);
     }
 
     /// <summary>
@@ -567,7 +640,7 @@ public class SignControllerService(
         message = message + crc
                     + ProtocolConstants.ETX;
 
-        await _tcpClient.SendAsync(message);
+        await SendPacketAsync(message);
     }
 
     /// <summary>
@@ -594,7 +667,7 @@ public class SignControllerService(
                     + ProtocolHelper.PacketCRC(Encoding.ASCII.GetBytes(message))
                     + ProtocolConstants.ETX;
 
-        await _tcpClient.SendAsync(message);
+        await SendPacketAsync(message);
     }
 
     /// <summary>
@@ -633,7 +706,7 @@ public class SignControllerService(
                     + ProtocolHelper.PacketCRC(Encoding.ASCII.GetBytes(message))
                     + ProtocolConstants.ETX;
 
-        await _tcpClient.SendAsync(message);
+        await SendPacketAsync(message);
 
         // Wait for either the ack reply to be received or a timeout after 3 seconds.
         var delayTask = Task.Delay(TimeSpan.FromSeconds(3));
@@ -700,7 +773,7 @@ public class SignControllerService(
                     + ProtocolHelper.PacketCRC(Encoding.ASCII.GetBytes(message))
                     + ProtocolConstants.ETX;
 
-        await _tcpClient.SendAsync(message);
+        await SendPacketAsync(message);
 
         // Wait for either the reply to be received or a timeout after 3 seconds.
         var delayTask = Task.Delay(TimeSpan.FromSeconds(3));
@@ -751,7 +824,7 @@ public class SignControllerService(
                     + ProtocolHelper.PacketCRC(Encoding.ASCII.GetBytes(message))
                     + ProtocolConstants.ETX;
 
-        await _tcpClient.SendAsync(message);
+        await SendPacketAsync(message);
 
         // Wait for either the fault log reply to be received or a timeout after 3 seconds.
         var delayTask = Task.Delay(TimeSpan.FromSeconds(3));
@@ -840,7 +913,7 @@ public class SignControllerService(
                     + ProtocolHelper.PacketCRC(Encoding.ASCII.GetBytes(message))
                     + ProtocolConstants.ETX;
 
-        await _tcpClient.SendAsync(message);
+        await SendPacketAsync(message);
 
         // Wait for either the sign status reply to be received or a timeout after 3 seconds.
         var delayTask = Task.Delay(TimeSpan.FromSeconds(3));
@@ -952,7 +1025,7 @@ public class SignControllerService(
                     + ProtocolHelper.PacketCRC(Encoding.ASCII.GetBytes(message))
                     + ProtocolConstants.ETX;
 
-        await _tcpClient.SendAsync(message);
+        await SendPacketAsync(message);
 
         // Wait for either the sign status reply to be received or a timeout after 3 seconds.
         var delayTask = Task.Delay(TimeSpan.FromSeconds(3));
@@ -987,7 +1060,7 @@ public class SignControllerService(
                     + ProtocolHelper.PacketCRC(Encoding.ASCII.GetBytes(message))
                     + ProtocolConstants.ETX;
 
-        await _tcpClient.SendAsync(message);
+        await SendPacketAsync(message);
     }
 
     /// <summary>
@@ -1022,7 +1095,7 @@ public class SignControllerService(
                     + ProtocolHelper.PacketCRC(Encoding.ASCII.GetBytes(message))
                     + ProtocolConstants.ETX;
 
-        await _tcpClient.SendAsync(message);
+        await SendPacketAsync(message);
 
         // Wait for either the fault log reply to be received or a timeout after 3 seconds.
         var delayTask = Task.Delay(TimeSpan.FromSeconds(3));
@@ -1069,7 +1142,7 @@ public class SignControllerService(
                     + ProtocolHelper.PacketCRC(Encoding.ASCII.GetBytes(message))
                     + ProtocolConstants.ETX;
 
-        await _tcpClient.SendAsync(message);
+        await SendPacketAsync(message);
 
         // Wait for either the fault log reply to be received or a timeout after 3 seconds.
         var delayTask = Task.Delay(TimeSpan.FromSeconds(3));
@@ -1140,7 +1213,7 @@ public class SignControllerService(
                     + ProtocolHelper.PacketCRC(Encoding.ASCII.GetBytes(message))
                     + ProtocolConstants.ETX;
 
-        await _tcpClient.SendAsync(message);
+        await SendPacketAsync(message);
 
         // Wait for either the sign status reply to be received or a timeout after 3 seconds.
         var delayTask = Task.Delay(TimeSpan.FromSeconds(3));
@@ -1189,7 +1262,7 @@ public class SignControllerService(
                     + ProtocolHelper.PacketCRC(Encoding.ASCII.GetBytes(message))
                     + ProtocolConstants.ETX;
 
-        await _tcpClient.SendAsync(message);
+        await SendPacketAsync(message);
 
         // Wait for either the reply to be received or a timeout after 3 seconds.
         var delayTask = Task.Delay(TimeSpan.FromSeconds(3));
@@ -1233,7 +1306,7 @@ public class SignControllerService(
                     + ProtocolHelper.PacketCRC(Encoding.ASCII.GetBytes(message))
                     + ProtocolConstants.ETX;
 
-        await _tcpClient.SendAsync(message);
+        await SendPacketAsync(message);
 
         // Wait for either the reply to be received or a timeout after 3 seconds.
         var delayTask = Task.Delay(TimeSpan.FromSeconds(3));
@@ -1282,7 +1355,7 @@ public class SignControllerService(
                     + ProtocolHelper.PacketCRC(Encoding.ASCII.GetBytes(message))
                     + ProtocolConstants.ETX;
 
-        await _tcpClient.SendAsync(message);
+        await SendPacketAsync(message);
 
         // Wait for either the ack reply to be received or a timeout after 3 seconds.
         var delayTask = Task.Delay(TimeSpan.FromSeconds(3));
@@ -1331,7 +1404,7 @@ public class SignControllerService(
                     + ProtocolHelper.PacketCRC(Encoding.ASCII.GetBytes(message))
                     + ProtocolConstants.ETX;
 
-        await _tcpClient.SendAsync(message);
+        await SendPacketAsync(message);
 
         // Wait for either the ack reply to be received or a timeout after 3 seconds.
         var delayTask = Task.Delay(TimeSpan.FromSeconds(3));
@@ -1375,7 +1448,7 @@ public class SignControllerService(
                     + ProtocolHelper.PacketCRC(Encoding.ASCII.GetBytes(message))
                     + ProtocolConstants.ETX;
 
-        await _tcpClient.SendAsync(message);
+        await SendPacketAsync(message);
 
         // Wait for either the reply to be received or a timeout after 3 seconds.
         var delayTask = Task.Delay(TimeSpan.FromSeconds(3));
@@ -1432,7 +1505,7 @@ public class SignControllerService(
                     + ProtocolHelper.PacketCRC(Encoding.ASCII.GetBytes(message))
                     + ProtocolConstants.ETX;
 
-        await _tcpClient.SendAsync(message);
+        await SendPacketAsync(message);
 
         // Wait for either the ack reply to be received or a timeout after 3 seconds.
         var delayTask = Task.Delay(TimeSpan.FromSeconds(3));
@@ -1471,7 +1544,7 @@ public class SignControllerService(
                     + ProtocolHelper.PacketCRC(Encoding.ASCII.GetBytes(message))
                     + ProtocolConstants.ETX;
 
-        await _tcpClient.SendAsync(message);
+        await SendPacketAsync(message);
 
         // Wait for either the fault log reply to be received or a timeout after 3 seconds.
         var delayTask = Task.Delay(TimeSpan.FromSeconds(3));
@@ -1528,7 +1601,7 @@ public class SignControllerService(
                     + ProtocolHelper.PacketCRC(Encoding.ASCII.GetBytes(message))
                     + ProtocolConstants.ETX;
 
-        await _tcpClient.SendAsync(message);
+        await SendPacketAsync(message);
 
         // Wait for either the reply to be received or a timeout after 3 seconds.
         var delayTask = Task.Delay(TimeSpan.FromSeconds(3));
@@ -1582,7 +1655,7 @@ public class SignControllerService(
                     + ProtocolHelper.PacketCRC(Encoding.ASCII.GetBytes(message))
                     + ProtocolConstants.ETX;
 
-        await _tcpClient.SendAsync(message);
+        await SendPacketAsync(message);
 
         // Wait for either the reply to be received or a timeout after 3 seconds.
         var delayTask = Task.Delay(TimeSpan.FromSeconds(3));
@@ -1658,7 +1731,7 @@ public class SignControllerService(
                     + ProtocolHelper.PacketCRC(Encoding.ASCII.GetBytes(message))
                     + ProtocolConstants.ETX;
 
-        await _tcpClient.SendAsync(message);
+        await SendPacketAsync(message);
 
         // Wait for either the reply to be received or a timeout after 3 seconds.
         var delayTask = Task.Delay(TimeSpan.FromSeconds(3));
@@ -1699,7 +1772,7 @@ public class SignControllerService(
                     + ProtocolHelper.PacketCRC(Encoding.ASCII.GetBytes(message))
                     + ProtocolConstants.ETX;
 
-        await _tcpClient.SendAsync(message);
+        await SendPacketAsync(message);
 
         // Wait for either the fault log reply to be received or a timeout after 3 seconds.
         var delayTask = Task.Delay(TimeSpan.FromSeconds(3));
@@ -1737,7 +1810,7 @@ public class SignControllerService(
                     + ProtocolHelper.PacketCRC(Encoding.ASCII.GetBytes(message))
                     + ProtocolConstants.ETX;
 
-        await _tcpClient.SendAsync(message);
+        await SendPacketAsync(message);
 
         // Wait for either the reply to be received or a timeout after 3 seconds.
         var delayTask = Task.Delay(TimeSpan.FromSeconds(3));
@@ -1813,7 +1886,7 @@ public class SignControllerService(
         message += ProtocolHelper.PacketCRC(Encoding.ASCII.GetBytes(message));
         message += ProtocolConstants.ETX;
 
-        await _tcpClient.SendAsync(message);
+        await SendPacketAsync(message);
 
         // Wait for HAR Status Reply or timeout
         var delayTask = Task.Delay(TimeSpan.FromSeconds(3));
@@ -1861,7 +1934,7 @@ public class SignControllerService(
         message += ProtocolHelper.PacketCRC(Encoding.ASCII.GetBytes(message));
         message += ProtocolConstants.ETX;
 
-        await _tcpClient.SendAsync(message);
+        await SendPacketAsync(message);
 
         // Wait for ACK or timeout
         var delayTask = Task.Delay(TimeSpan.FromSeconds(3));
@@ -1922,7 +1995,7 @@ public class SignControllerService(
         message += ProtocolHelper.PacketCRC(Encoding.ASCII.GetBytes(message));
         message += ProtocolConstants.ETX;
 
-        await _tcpClient.SendAsync(message);
+        await SendPacketAsync(message);
 
         // Wait for HAR Status Reply or timeout
         var delayTask = Task.Delay(TimeSpan.FromSeconds(3));
@@ -1979,7 +2052,7 @@ public class SignControllerService(
         message += ProtocolHelper.PacketCRC(Encoding.ASCII.GetBytes(message));
         message += ProtocolConstants.ETX;
 
-        await _tcpClient.SendAsync(message);
+        await SendPacketAsync(message);
 
         // Wait for the appropriate reply or timeout
         var delayTask = Task.Delay(TimeSpan.FromSeconds(3));
